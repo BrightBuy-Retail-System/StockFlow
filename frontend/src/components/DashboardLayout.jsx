@@ -57,7 +57,7 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Cart
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
@@ -83,11 +83,11 @@ export default function DashboardLayout() {
             </div>
 
             {/* Retail Action Buttons */}
-            <Link to="/auth-cart" className="btn-ghost">
+            <Link to="/login" className="btn-ghost">
               <UserIcon className="btn-icon" />
               <span>Login</span>
             </Link>
-            <Link to="/auth-cart" className="btn-register">
+            <Link to="/register" className="btn-register">
               <span>Register</span>
             </Link>
 
@@ -140,7 +140,7 @@ export default function DashboardLayout() {
             <div className="footer-links-col">
               <span className="footer-col-header">Platform</span>
               <Link to="/catalog">Products Catalog</Link>
-              <Link to="/auth-cart">Cart & User Accounts</Link>
+              <Link to="/login">Cart & User Accounts</Link>
               <Link to="/orders">Order Tracking</Link>
             </div>
 

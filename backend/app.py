@@ -23,7 +23,7 @@ CORS(
 
 # Mount blueprints to their agreed API prefixes
 app.register_blueprint(catalog_bp, url_prefix='/api/catalog')
-app.register_blueprint(auth_cart_bp, url_prefix='/api/auth-cart')
+app.register_blueprint(auth_cart_bp, url_prefix='/api/auth_cart')
 app.register_blueprint(orders_bp, url_prefix='/api/orders')
 app.register_blueprint(logistics_bp, url_prefix='/api/logistics')
 app.register_blueprint(analytics_bp, url_prefix='/api/analytics')

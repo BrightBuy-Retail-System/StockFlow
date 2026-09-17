@@ -1,0 +1,79 @@
+import { useState } from 'react';
+
+export default function RegisterPage() {
+    const [name, setName] = useState("");
+    const [password, setPassword] = useState("");
+    const [email, setEmail] = useState("");
+    const [message, setMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    function handleChange(event) {
+        setName(event.target.value);
+    }
+
+    function handlePasswordChange(event) {
+        setPassword(event.target.value);
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        setLoading(true);
+        setMessage("");
+
+        try {
+            const response = await fetch('http://localhost:5000/api/auth_cart/register', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username: name, password: password, email: email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage(`Registration Successful! Welcome, ${data.user?.username || name}`);
+            } else {
+                setMessage(data.message || "Invalid credentials. Please try again.");
+            }
+
+        } catch (error) {
+            console.error("Registration error:", error);
+            setMessage("An error occurred during registration. Please try again.");
+
+        } finally {
+            setLoading(false);
+        }
+
+    }
+
+    return (
+        <div className="card">
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px' }}>Welcome to BrightBuy</h2>
+            <p style={{ color: 'var(--text-muted)' }}>Customer accounts, authentication, and shopping carts.</p>
+            {message && <p style={{ margin: '12px 0', color: message.startsWith('Login') ? 'green' : 'crimson' }}>{message}</p>}
+
+            <form onSubmit={handleSubmit}>
+
+                <label>Username:
+                    <input type="text" value={name} onChange={(e) => { setName(e.target.value) }} required />
+                </label>
+                <br />
+
+                <label>Password:
+                    <input type="password" value={password} onChange={(e) => { setPassword(e.target.value) }} required />
+                </label>
+                <br />
+
+                <label>Email:
+                    <input type="email" value={email} onChange={(e) => { setEmail(e.target.value) }} required />
+                </label>
+                <br />
+
+                <button type="submit" disabled={loading}> {loading ? 'Registering...' : 'Register'}</button>
+            </form>
+        </div>
+
+
+    );
+}
