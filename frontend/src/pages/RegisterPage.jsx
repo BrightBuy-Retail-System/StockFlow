@@ -1,19 +1,21 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function RegisterPage() {
+    const navigate = useNavigate();
     const [name, setName] = useState("");
     const [password, setPassword] = useState("");
     const [email, setEmail] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    function handleChange(event) {
+    /*function handleChange(event) {
         setName(event.target.value);
     }
 
     function handlePasswordChange(event) {
         setPassword(event.target.value);
-    }
+    }*/
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -32,7 +34,8 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage(`Registration Successful! Welcome, ${data.user?.username || name}`);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                navigate('/customer-dashboard');
             } else {
                 setMessage(data.message || "Invalid credentials. Please try again.");
             }

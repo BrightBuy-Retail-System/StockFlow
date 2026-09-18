@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import get_db_connection
-import bcrypt  # bcrypt is already installed in your requirements
+import bcrypt  
 
 auth_cart_bp = Blueprint('auth_cart', __name__)
 
@@ -78,9 +78,12 @@ def register():
             role_id, username, email, password_hash,
         ))
         conn.commit()
+        new_user_id = cursor.lastrowid
+
         return jsonify({
             "message": "Registration successful",
-        }), 200
+            "user": {"id": new_user_id, "username": username, "role_id": role_id}
+        }), 201
         
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500
