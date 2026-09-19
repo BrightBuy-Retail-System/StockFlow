@@ -8,3 +8,11 @@ def ping():
         "status": "healthy",
         "module": "orders"
     }), 200
+
+@orders_bp.route('/<int:order_id>', methods=['GET'])
+def get_order_by_id(order_id):
+    return jsonify({
+        "status": "success",
+        "message": f"Route reached for Order ID: {order_id}",
+        "order_id": order_id
+    }), 200
