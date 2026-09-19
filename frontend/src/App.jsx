@@ -8,6 +8,9 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/RegisterPage';
 import CustomerDashboard from './pages/CustomerDashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
+import SystemAdministrator from './pages/SystemAdministrator';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -21,6 +24,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+          <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+          <Route path="/system-administrator" element={<SystemAdministrator />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -34,7 +34,13 @@ export default function LoginPage() {
 
             if (response.ok) {
                 localStorage.setItem('user', JSON.stringify(data.user));
-                navigate('/customer-dashboard');
+                if (data.role_id == 1) {
+                    navigate('/customer-dashboard');
+                } else if (data.role_id == 2) {
+                    navigate('/manager-dashboard');
+                } else if (data.role_id == 3) {
+                    navigate('/system-administrator');
+                }
             } else {
                 setMessage(data.message || "Invalid credentials. Please try again.");
             }
