@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { ShoppingBagIcon, UserIcon } from './Icons';
@@ -8,8 +8,25 @@ export default function DashboardLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Close dropdown when clicking anywhere outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -41,6 +58,19 @@ export default function DashboardLayout() {
     navigate('/login');
   }
 
+  const getDashboardRoute = () => {
+    if (!user) return '/login';
+    if (user.role_id === 2) return '/manager-dashboard';
+    if (user.role_id === 3) return '/system-administrator';
+    return '/customer-dashboard';
+  };
+
+  const getRoleLabel = () => {
+    if (!user) return '';
+    if (user.role_id === 2) return 'Manager / Warehouse Admin';
+    if (user.role_id === 3) return 'System Administrator';
+    return 'Customer Account';
+  };
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -97,7 +127,7 @@ export default function DashboardLayout() {
 
             {/* Retail Action Buttons */}
             {user ? (
-              <div style={{ position: 'relative' }}>
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
                 <button
                   type="button"
                   className="btn-ghost"
@@ -128,12 +158,11 @@ export default function DashboardLayout() {
                   >
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                       <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.username || user.full_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Customer Account</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{getRoleLabel()}</div>
                     </div>
 
-
                     <Link
-                      to="/customer-dashboard"
+                      to={getDashboardRoute()}
                       className="btn-ghost"
                       style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
                       onClick={() => setDropdownOpen(false)}
