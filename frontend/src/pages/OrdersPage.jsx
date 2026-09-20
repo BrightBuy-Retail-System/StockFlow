@@ -307,6 +307,79 @@ export default function OrdersPage() {
               </div>
             </div>
           </div>
+
+          {/* Line Items Section */}
+          <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '24px' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 16px 0' }}>
+              Order Line Items
+            </h3>
+
+            {(!order.items || order.items.length === 0) ? (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-subtle, #f8fafc)',
+                  border: '1px dashed var(--border-color, #e2e8f0)',
+                  color: 'var(--text-muted, #64748b)',
+                  fontSize: '0.9rem',
+                  textAlign: 'center',
+                }}
+              >
+                No line items are attached to this record.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {order.items.map((item) => (
+                  <div
+                    key={item.order_item_id || item.variant_id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '16px',
+                      padding: '16px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color, #e2e8f0)',
+                      background: 'var(--bg-card, #ffffff)',
+                    }}
+                  >
+                    {/* Item Info */}
+                    <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', marginBottom: '4px' }}>
+                        {item.product_title}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
+                        {item.attribute_name && item.attribute_value && (
+                          <span style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-light, #e2e8f0)' }}>
+                            {item.attribute_name}: {item.attribute_value}
+                          </span>
+                        )}
+                        {item.sku && (
+                          <span style={{ fontFamily: 'monospace', background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-light, #e2e8f0)' }}>
+                            SKU: {item.sku}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Pricing and Quantity */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexShrink: 0 }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>
+                          {formatCurrency(item.unit_price)} × {item.quantity}
+                        </div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                          {formatCurrency(item.line_total)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
