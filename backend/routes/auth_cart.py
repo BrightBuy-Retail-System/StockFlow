@@ -11,19 +11,19 @@ def login():
     if not data:
         return jsonify({"message": "Missing request body"}), 400
 
-    username = data.get('username')
+    email = data.get('email')
     password = data.get('password')
 
-    if not username or not password:
-        return jsonify({"message": "Username and password are required"}), 400
+    if not email or not password:
+        return jsonify({"message": "Email and password are required"}), 400
 
     # 2. Query database for user
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
-        query = "SELECT user_id, full_name, password_hash, role_id FROM users WHERE full_name = %s"
-        cursor.execute(query, (username,))
+        query = "SELECT user_id, full_name, password_hash, role_id FROM users WHERE email = %s"
+        cursor.execute(query, (email,))
         user = cursor.fetchone()
 
         # 3. Check if user exists and verify hashed password
@@ -37,7 +37,7 @@ def login():
                 }
             }), 200
         else:
-            return jsonify({"message": "Invalid username or password"}), 401
+            return jsonify({"message": "Invalid email or password"}), 401
 
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500
@@ -68,11 +68,16 @@ def register():
     cursor = conn.cursor(dictionary=True)
 
     try:
+        checkUser = "SELECT email FROM users WHERE email = %s"
+        cursor.execute(checkUser, (email,))
+        if cursor.fetchone():
+            return jsonify({"message": "Email already exists"}), 409
+
         query = """
-    INSERT INTO users(
-        role_id, full_name, email, password_hash
-    ) VALUES(%s, %s, %s, %s)
-"""
+                INSERT INTO users(
+                    role_id, full_name, email, password_hash
+                ) VALUES(%s, %s, %s, %s)
+                """
         
         cursor.execute(query, (
             role_id, username, email, password_hash,

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
@@ -63,8 +63,8 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit}>
 
-                <label>Username:
-                    <input type="text" value={name} onChange={(e) => { setName(e.target.value) }} required />
+                <label>Email:
+                    <input type="email" value={email} onChange={(e) => { setEmail(e.target.value) }} required />
                 </label>
                 <br />
 
