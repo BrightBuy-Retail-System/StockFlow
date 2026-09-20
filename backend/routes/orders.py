@@ -53,10 +53,35 @@ def get_order_by_id(order_id):
                 "status": "error",
                 "message": f"Order #{order_id} not found."
             }), 404
+        
+        # 2. Fetch line items joined with product and variant metadata
+        items_query = """
+            SELECT 
+                oi.order_item_id,
+                oi.variant_id,
+                oi.quantity,
+                oi.unit_price,
+                (oi.quantity * oi.unit_price) AS line_total,
+                pv.sku,
+                pv.attribute_name,
+                pv.attribute_value,
+                p.title AS product_title
+            FROM order_items oi
+            JOIN product_variants pv ON oi.variant_id = pv.variant_id
+            JOIN products p ON pv.product_id = p.product_id
+            WHERE oi.order_id = %s
+            ORDER BY oi.order_item_id ASC
+        """
+        cursor.execute(items_query, (order_id,))
+        items = cursor.fetchall()
+
+        # 3. Assemble response payload
+        payload = serialize_row(order)
+        payload["items"] = [serialize_row(item) for item in items]
 
         return jsonify({
             "status": "success",
-            "data": serialize_row(order)
+            "data": payload
         }), 200
 
     except Exception as e:
