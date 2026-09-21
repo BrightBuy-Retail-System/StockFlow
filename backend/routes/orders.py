@@ -95,3 +95,48 @@ def get_order_by_id(order_id):
             cursor.close()
         if conn:
             conn.close()
+
+@orders_bp.route('/user/<int:user_id>', methods=['GET'])
+def get_orders_by_user(user_id):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Query all order headers for this user, newest first
+        query = """
+            SELECT 
+                order_id,
+                user_id,
+                shipment_id,
+                total_amount,
+                status,
+                placed_at
+            FROM orders
+            WHERE user_id = %s
+            ORDER BY placed_at DESC
+        """
+        cursor.execute(query, (user_id,))
+        orders = cursor.fetchall()
+
+        # Serialize rows (handles Decimal and datetime conversions)
+        serialized_orders = [serialize_row(order) for order in orders]
+
+        return jsonify({
+            "status": "success",
+            "count": len(serialized_orders),
+            "data": serialized_orders
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
