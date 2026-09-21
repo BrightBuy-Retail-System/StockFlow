@@ -15,7 +15,7 @@ def query(sql, params=None):
 
 
 # get categories
-@catalog_bp.route('/categories', methods=['GET'])
+@catalog_bp.route('/categories')
 def get_categories():
     #Return every product category
     rows = query("SELECT category_id, name, slug FROM categories ORDER BY name")
