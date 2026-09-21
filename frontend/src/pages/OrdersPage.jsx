@@ -255,9 +255,10 @@ export default function OrdersPage() {
             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>
               Past Orders ({orders.length}) — Click an order to inspect details
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {orders.map((ord) => {
                 const isSelected = ord.order_id === selectedOrderId;
+                const items = ord.items || [];
                 return (
                   <div
                     key={ord.order_id}
@@ -265,48 +266,123 @@ export default function OrdersPage() {
                     style={{
                       cursor: 'pointer',
                       background: isSelected ? 'var(--primary-light, #eff6ff)' : 'var(--bg-card, #ffffff)',
-                      borderRadius: '12px',
+                      borderRadius: '14px',
                       border: isSelected
                         ? '2px solid var(--primary, #2563eb)'
                         : '1px solid var(--border-color, #e2e8f0)',
-                      padding: '16px',
+                      padding: '20px',
                       transition: 'all 0.15s ease',
                       boxShadow: isSelected
-                        ? '0 4px 12px rgba(37, 99, 235, 0.12)'
-                        : '0 1px 3px rgba(15, 23, 42, 0.04)',
+                        ? '0 4px 14px rgba(37, 99, 235, 0.12)'
+                        : '0 1px 4px rgba(15, 23, 42, 0.04)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
-                        #{ord.order_id}
-                      </span>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          ...getStatusBadgeStyle(ord.status),
-                        }}
-                      >
-                        {ord.status || 'UNKNOWN'}
-                      </span>
-                    </div>
+                    {/* Header Row: ID, Status, Placed Date, Shipment, and Total */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                          #{ord.order_id}
+                        </span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '3px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            ...getStatusBadgeStyle(ord.status),
+                          }}
+                        >
+                          {ord.status || 'UNKNOWN'}
+                        </span>
+                      </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
                           Placed on {new Date(ord.placed_at).toLocaleDateString()}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>
-                          Shipment: {ord.shipment_id ? `#${ord.shipment_id}` : 'Unassigned'}
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
+                          Shipment: <strong style={{ color: 'var(--text-secondary, #475569)' }}>{ord.shipment_id ? `#${ord.shipment_id}` : 'Unassigned'}</strong>
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>
+                          {formatCurrency(ord.total_amount)}
                         </div>
                       </div>
-                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>
-                        {formatCurrency(ord.total_amount)}
+                    </div>
+
+                    {/* Nested Itemized Breakdown per Order Card */}
+                    <div
+                      style={{
+                        borderTop: '1px solid var(--border-color, #e2e8f0)',
+                        paddingTop: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                      }}
+                    >
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Itemized Products ({items.length})
                       </div>
+
+                      {items.length === 0 ? (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic', padding: '6px 0' }}>
+                          No line items recorded.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {items.map((item) => (
+                            <div
+                              key={item.order_item_id || item.variant_id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: '12px',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                background: isSelected ? '#ffffff' : 'var(--bg-subtle, #f8fafc)',
+                                border: '1px solid var(--border-color, #e2e8f0)',
+                              }}
+                            >
+                              <div style={{ minWidth: '200px', flex: '1 1 auto' }}>
+                                <div style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>
+                                  {item.product_title}
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
+                                  {item.attribute_name && item.attribute_value && (
+                                    <span>
+                                      {item.attribute_name}: {item.attribute_value}
+                                    </span>
+                                  )}
+                                  {item.sku && (
+                                    <span style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.04)', padding: '1px 6px', borderRadius: '4px' }}>
+                                      {item.sku}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
+                                  Qty: {item.quantity}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
+                                  {formatCurrency(item.unit_price)}
+                                </div>
+                                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', minWidth: '70px', textAlign: 'right' }}>
+                                  {formatCurrency(item.line_total)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
