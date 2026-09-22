@@ -1,6 +1,6 @@
 from decimal import Decimal
 from datetime import datetime, date
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from db import get_db_connection
 
 orders_bp = Blueprint('orders', __name__)
@@ -179,3 +179,69 @@ def get_orders_by_user(user_id):
             cursor.close()
         if conn:
             conn.close()
+
+@orders_bp.route('/checkout', methods=['POST'])
+def checkout():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({
+            "status": "error",
+            "message": "Missing or invalid JSON body in request."
+        }), 400
+
+    # 1. Validate customer ID
+    user_id = payload.get('user_id')
+    if not isinstance(user_id, int) or user_id <= 0:
+        return jsonify({
+            "status": "error",
+            "message": "Field 'user_id' must be a positive integer."
+        }), 400
+
+    # 2. Validate destination city ID
+    shipping_city_id = payload.get('shipping_city_id')
+    if not isinstance(shipping_city_id, int) or shipping_city_id <= 0:
+        return jsonify({
+            "status": "error",
+            "message": "Field 'shipping_city_id' must be a positive integer."
+        }), 400
+
+    # 3. Validate items array
+    items = payload.get('items')
+    if not isinstance(items, list) or len(items) == 0:
+        return jsonify({
+            "status": "error",
+            "message": "Field 'items' must be a non-empty list of items."
+        }), 400
+
+    # 4. Validate each line item structure
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            return jsonify({
+                "status": "error",
+                "message": f"Item at index {idx} must be a JSON object."
+            }), 400
+
+        variant_id = item.get('variant_id')
+        quantity = item.get('quantity')
+
+        if not isinstance(variant_id, int) or variant_id <= 0:
+            return jsonify({
+                "status": "error",
+                "message": f"Item at index {idx} has an invalid 'variant_id'."
+            }), 400
+
+        if not isinstance(quantity, int) or quantity <= 0:
+            return jsonify({
+                "status": "error",
+                "message": f"Item at index {idx} must specify an integer 'quantity' greater than zero."
+            }), 400
+
+    return jsonify({
+        "status": "validated",
+        "message": "Payload passed structural validation.",
+        "order_summary": {
+            "user_id": user_id,
+            "shipping_city_id": shipping_city_id,
+            "total_items": len(items)
+        }
+    }), 200
