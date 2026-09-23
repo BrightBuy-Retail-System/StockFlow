@@ -11,6 +11,58 @@ export default function OrdersPage() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
 
+  // User Identity Resolution
+  const storedUser = localStorage.getItem('user');
+  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+  const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
+
+  // Checkout Pre-Flight Validation Form States
+  const [checkoutUserId, setCheckoutUserId] = useState(activeUserId);
+  const [shippingCityId, setShippingCityId] = useState(1);
+  const [variantId, setVariantId] = useState(1);
+  const [quantity, setQuantity] = useState(1);
+
+  const [validating, setValidating] = useState(false);
+  const [validationSuccess, setValidationSuccess] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+
+  const handleValidateCheckout = async (e) => {
+    e.preventDefault();
+    setValidating(true);
+    setValidationSuccess(null);
+    setValidationError(null);
+
+    // Payload contract: positive integers
+    const payload = {
+      user_id: parseInt(checkoutUserId, 10),
+      shipping_city_id: parseInt(shippingCityId, 10),
+      items: [
+        {
+          variant_id: parseInt(variantId, 10),
+          quantity: parseInt(quantity, 10),
+        },
+      ],
+    };
+
+    try {
+      const response = await api.post('/orders/checkout', payload);
+      if (response.data && response.data.status === 'validated') {
+        setValidationSuccess(response.data);
+      } else {
+        setValidationSuccess(response.data);
+      }
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        (err.response?.status === 400
+          ? 'Validation failed: Invalid checkout payload.'
+          : err.message || 'Error occurred while validating payload.');
+      setValidationError(msg);
+    } finally {
+      setValidating(false);
+    }
+  };
+
   // 1. Fetch customer past orders on mount
   useEffect(() => {
     let isMounted = true;
@@ -164,6 +216,232 @@ export default function OrdersPage() {
         <p style={{ color: 'var(--text-muted, #64748b)', marginTop: '4px', fontSize: '0.95rem' }}>
           Live customer order history and itemized inspection powered by TiDB & Flask API.
         </p>
+      </div>
+
+      {/* Checkout Pre-Flight Validation Panel */}
+      <div
+        style={{
+          background: 'var(--bg-card, #ffffff)',
+          borderRadius: '16px',
+          border: '1px solid var(--border-color, #e2e8f0)',
+          boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
+          padding: '24px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+              Checkout Pre-Flight Validation
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
+              Validates order payload structure against backend endpoint (<code>POST /api/orders/checkout</code>).
+            </p>
+          </div>
+          <span
+            style={{
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              background: 'var(--info-bg, #f0f9ff)',
+              color: 'var(--info-text, #0369a1)',
+              border: '1px solid var(--info-border, #bae6fd)',
+            }}
+          >
+            Structural Check Only
+          </span>
+        </div>
+
+        {/* Validation Form */}
+        <form onSubmit={handleValidateCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '14px',
+            }}
+          >
+            {/* User ID */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                User ID
+              </label>
+              <input
+                type="number"
+                value={checkoutUserId}
+                onChange={(e) => setCheckoutUserId(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  background: '#ffffff',
+                }}
+              />
+            </div>
+
+            {/* Shipping City ID */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                Shipping City ID
+              </label>
+              <input
+                type="number"
+                value={shippingCityId}
+                onChange={(e) => setShippingCityId(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  background: '#ffffff',
+                }}
+              />
+            </div>
+
+            {/* Variant ID */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                Variant ID
+              </label>
+              <input
+                type="number"
+                value={variantId}
+                onChange={(e) => setVariantId(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  background: '#ffffff',
+                }}
+              />
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                Quantity
+              </label>
+              <input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  background: '#ffffff',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button
+              type="submit"
+              disabled={validating}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                background: 'var(--primary, #2563eb)',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                border: 'none',
+                cursor: validating ? 'not-allowed' : 'pointer',
+                opacity: validating ? 0.75 : 1,
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              {validating && (
+                <svg
+                  style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+                </svg>
+              )}
+              <span>{validating ? 'Validating...' : 'Validate Checkout Payload'}</span>
+            </button>
+          </div>
+        </form>
+
+        {/* Validation Success Banner */}
+        {validationSuccess && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '14px 18px',
+              borderRadius: '10px',
+              background: 'var(--success-bg, #ecfdf5)',
+              border: '1px solid var(--success-border, #a7f3d0)',
+              color: 'var(--success-text, #047857)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.92rem' }}>
+              <svg style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>{validationSuccess.message || 'Payload passed structural validation.'}</span>
+            </div>
+            {validationSuccess.order_summary && (
+              <div style={{ fontSize: '0.82rem', marginTop: '2px', opacity: 0.95 }}>
+                Order Summary: User #{validationSuccess.order_summary.user_id} · Destination City #{validationSuccess.order_summary.shipping_city_id} · Total Items: {validationSuccess.order_summary.total_items}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Validation Failure Alert */}
+        {validationError && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '14px 18px',
+              borderRadius: '10px',
+              background: 'var(--danger-bg, #fef2f2)',
+              border: '1px solid var(--danger-border, #fecaca)',
+              color: 'var(--danger-text, #b91c1c)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '0.88rem',
+            }}
+          >
+            <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" />
+              <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" />
+            </svg>
+            <div>
+              <strong>Validation Error:</strong> {validationError}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Loading Orders State */}
