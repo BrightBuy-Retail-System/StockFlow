@@ -34,7 +34,7 @@ def get_order_by_id(order_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        query = """
+        header_query = """
             SELECT 
                 order_id,
                 user_id,
@@ -45,7 +45,7 @@ def get_order_by_id(order_id):
             FROM orders
             WHERE order_id = %s
         """
-        cursor.execute(query, (order_id,))
+        cursor.execute(header_query, (order_id,))
         order = cursor.fetchone()
 
         if not order:
@@ -53,8 +53,7 @@ def get_order_by_id(order_id):
                 "status": "error",
                 "message": f"Order #{order_id} not found."
             }), 404
-        
-        # 2. Fetch line items joined with product and variant metadata
+
         items_query = """
             SELECT 
                 oi.order_item_id,
@@ -75,7 +74,6 @@ def get_order_by_id(order_id):
         cursor.execute(items_query, (order_id,))
         items = cursor.fetchall()
 
-        # 3. Assemble response payload
         payload = serialize_row(order)
         payload["items"] = [serialize_row(item) for item in items]
 
@@ -104,7 +102,6 @@ def get_orders_by_user(user_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Fetch all order headers for the user (newest first)
         orders_query = """
             SELECT 
                 order_id,
@@ -127,12 +124,10 @@ def get_orders_by_user(user_id):
                 "data": []
             }), 200
 
-        # Convert headers to JSON-safe dictionaries
         orders_dict = {o['order_id']: serialize_row(o) for o in raw_orders}
         for o in orders_dict.values():
             o['items'] = []
 
-        # 2. Batch fetch line items for all retrieved orders
         order_ids = tuple(orders_dict.keys())
         format_strings = ','.join(['%s'] * len(order_ids))
         items_query = f"""
@@ -156,7 +151,6 @@ def get_orders_by_user(user_id):
         cursor.execute(items_query, order_ids)
         raw_items = cursor.fetchall()
 
-        # 3. Nest items into their respective parent order
         for item in raw_items:
             oid = item['order_id']
             if oid in orders_dict:
@@ -189,7 +183,6 @@ def checkout():
             "message": "Missing or invalid JSON body in request."
         }), 400
 
-    # 1. Validate customer ID format
     user_id = payload.get('user_id')
     if not isinstance(user_id, int) or user_id <= 0:
         return jsonify({
@@ -197,7 +190,6 @@ def checkout():
             "message": "Field 'user_id' must be a positive integer."
         }), 400
 
-    # 2. Validate destination city ID format
     shipping_city_id = payload.get('shipping_city_id')
     if not isinstance(shipping_city_id, int) or shipping_city_id <= 0:
         return jsonify({
@@ -205,7 +197,6 @@ def checkout():
             "message": "Field 'shipping_city_id' must be a positive integer."
         }), 400
 
-    # 3. Validate items array format
     items = payload.get('items')
     if not isinstance(items, list) or len(items) == 0:
         return jsonify({
@@ -235,14 +226,13 @@ def checkout():
                 "message": f"Item at index {idx} must specify an integer 'quantity' greater than zero."
             }), 400
 
-    # --- Database Pre-Flight Verification ---
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        # A. Check customer existence
+        # 1. Verify User
         cursor.execute("SELECT user_id, full_name FROM users WHERE user_id = %s", (user_id,))
         user_row = cursor.fetchone()
         if not user_row:
@@ -251,9 +241,9 @@ def checkout():
                 "message": f"User #{user_id} does not exist."
             }), 404
 
-        # B. Check shipping city existence and read base fee
+        # 2. Verify Texas City (shipping_fee)
         cursor.execute(
-            "SELECT city_id, city_name, base_shipping_fee FROM texas_cities WHERE city_id = %s",
+            "SELECT city_id, city_name, shipping_fee FROM texas_cities WHERE city_id = %s",
             (shipping_city_id,)
         )
         city_row = cursor.fetchone()
@@ -263,16 +253,23 @@ def checkout():
                 "message": f"Texas shipping city #{shipping_city_id} does not exist."
             }), 404
 
-        # C. Look up all submitted variant IDs and their official prices
+        # 3. Join Variants + Products + Inventory for pricing and stock
         requested_variant_ids = [item['variant_id'] for item in items]
         format_strings = ','.join(['%s'] * len(requested_variant_ids))
-        cursor.execute(
-            f"SELECT variant_id, sku, price, stock_quantity FROM product_variants WHERE variant_id IN ({format_strings})",
-            requested_variant_ids
-        )
+        pricing_query = f"""
+            SELECT 
+                pv.variant_id,
+                pv.sku,
+                COALESCE(pv.price_override, p.base_price) AS effective_price,
+                COALESCE(inv.stock_quantity, 0) AS stock_quantity
+            FROM product_variants pv
+            JOIN products p ON pv.product_id = p.product_id
+            LEFT JOIN inventory inv ON pv.variant_id = inv.variant_id
+            WHERE pv.variant_id IN ({format_strings})
+        """
+        cursor.execute(pricing_query, requested_variant_ids)
         variants_db = {v['variant_id']: v for v in cursor.fetchall()}
 
-        # Verify every requested variant actually exists in the database
         verified_items = []
         subtotal = Decimal('0.00')
 
@@ -286,7 +283,7 @@ def checkout():
                 }), 404
 
             variant_record = variants_db[vid]
-            unit_price = Decimal(str(variant_record['price']))
+            unit_price = Decimal(str(variant_record['effective_price']))
             line_total = unit_price * qty
             subtotal += line_total
 
@@ -299,7 +296,7 @@ def checkout():
                 "available_stock": variant_record['stock_quantity']
             })
 
-        shipping_fee = Decimal(str(city_row['base_shipping_fee']))
+        shipping_fee = Decimal(str(city_row['shipping_fee']))
         total_amount = subtotal + shipping_fee
 
         return jsonify({

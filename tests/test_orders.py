@@ -110,7 +110,48 @@ class TestOrdersAPI(unittest.TestCase):
         res = self.client.post('/api/orders/checkout', json=payload)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
-        self.assertEqual(data.get('status'), 'validated')
+        self.assertEqual(data.get('status'), 'verified')
+
+    def test_09_checkout_nonexistent_user(self):
+        """Verifies checkout returns 404 if the user ID does not exist in the database."""
+        payload = {
+            "user_id": 99999,
+            "shipping_city_id": 1,
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload)
+        self.assertEqual(res.status_code, 404)
+        data = res.get_json()
+        self.assertIn("user #99999 does not exist", data.get('message', '').lower())
+
+    def test_10_checkout_nonexistent_city(self):
+        """Verifies checkout returns 404 if the Texas city ID does not exist."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 99999,
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload)
+        self.assertEqual(res.status_code, 404)
+        data = res.get_json()
+        self.assertIn("shipping city #99999 does not exist", data.get('message', '').lower())
+
+    def test_11_checkout_verified_pricing(self):
+        """Verifies server fetches real prices and computes subtotal + shipping fee accurately."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get('status'), 'verified')
+
+        calc = data.get('calculation', {})
+        self.assertIn('shipping_fee', calc)
+        self.assertIn('subtotal', calc)
+        self.assertEqual(calc['total_amount'], round(calc['subtotal'] + calc['shipping_fee'], 2))
 
 
 if __name__ == '__main__':
