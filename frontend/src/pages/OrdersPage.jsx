@@ -24,12 +24,14 @@ export default function OrdersPage() {
 
   const [validating, setValidating] = useState(false);
   const [validationSuccess, setValidationSuccess] = useState(null);
+  const [calculationData, setCalculationData] = useState(null);
   const [validationError, setValidationError] = useState(null);
 
   const handleValidateCheckout = async (e) => {
     e.preventDefault();
     setValidating(true);
     setValidationSuccess(null);
+    setCalculationData(null);
     setValidationError(null);
 
     // Payload contract: positive integers
@@ -46,15 +48,21 @@ export default function OrdersPage() {
 
     try {
       const response = await api.post('/orders/checkout', payload);
-      if (response.data && response.data.status === 'validated') {
+      if (response.data && (response.data.status === 'verified' || response.data.status === 'validated')) {
         setValidationSuccess(response.data);
+        if (response.data.calculation) {
+          setCalculationData(response.data.calculation);
+        }
       } else {
         setValidationSuccess(response.data);
       }
     } catch (err) {
+      setCalculationData(null);
       const msg =
         err.response?.data?.message ||
-        (err.response?.status === 400
+        (err.response?.status === 404
+          ? 'Entity not found (404).'
+          : err.response?.status === 400
           ? 'Validation failed: Invalid checkout payload.'
           : err.message || 'Error occurred while validating payload.');
       setValidationError(msg);
@@ -406,13 +414,156 @@ export default function OrdersPage() {
               <svg style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span>{validationSuccess.message || 'Payload passed structural validation.'}</span>
+              <span>{validationSuccess.message || 'Payload passed verification.'}</span>
             </div>
             {validationSuccess.order_summary && (
               <div style={{ fontSize: '0.82rem', marginTop: '2px', opacity: 0.95 }}>
                 Order Summary: User #{validationSuccess.order_summary.user_id} · Destination City #{validationSuccess.order_summary.shipping_city_id} · Total Items: {validationSuccess.order_summary.total_items}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Authoritative Cost Summary Breakdown */}
+        {calculationData && (
+          <div
+            style={{
+              marginTop: '20px',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              background: 'var(--bg-subtle, #f8fafc)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header / Verified Entities */}
+            <div
+              style={{
+                padding: '14px 18px',
+                borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                background: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    color: 'var(--primary, #2563eb)',
+                    letterSpacing: '0.04em',
+                    display: 'block',
+                    marginBottom: '2px',
+                  }}
+                >
+                  Verified Database Pricing
+                </span>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                  Authoritative Cost Summary
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.82rem', color: 'var(--text-secondary, #475569)' }}>
+                <div>
+                  Customer: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{calculationData.user || 'Unknown'}</strong>
+                </div>
+                <div>
+                  Destination: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{calculationData.destination_city || 'Texas'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Verified Line Items Table */}
+            <div style={{ padding: '16px 18px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
+                Verified Line Items ({calculationData.items?.length || 0})
+              </div>
+
+              {(!calculationData.items || calculationData.items.length === 0) ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>
+                  No items calculated.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {calculationData.items.map((item, idx) => (
+                    <div
+                      key={item.variant_id || idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        background: '#ffffff',
+                        border: '1px solid var(--border-color, #e2e8f0)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1 1 auto', minWidth: '180px' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main, #0f172a)', background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px' }}>
+                          {item.sku || `Variant #${item.variant_id}`}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--success-text, #047857)', background: 'var(--success-bg, #ecfdf5)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--success-border, #a7f3d0)' }}>
+                          In Stock: {item.available_stock ?? 'N/A'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
+                          Qty: <strong>{item.quantity}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
+                          {formatCurrency(item.unit_price)}
+                        </div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', minWidth: '70px', textAlign: 'right' }}>
+                          {formatCurrency(item.line_total)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Financial Summary */}
+            <div
+              style={{
+                borderTop: '1px solid var(--border-color, #e2e8f0)',
+                padding: '16px 18px',
+                background: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: 'var(--text-secondary, #475569)' }}>
+                <span>Subtotal</span>
+                <span>{formatCurrency(calculationData.subtotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: 'var(--text-secondary, #475569)' }}>
+                <span>Texas Shipping Fee</span>
+                <span>{formatCurrency(calculationData.shipping_fee)}</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '1.08rem',
+                  fontWeight: 800,
+                  color: 'var(--primary, #2563eb)',
+                  borderTop: '1px dashed var(--border-color, #e2e8f0)',
+                  paddingTop: '8px',
+                  marginTop: '4px',
+                }}
+              >
+                <span>Total Amount</span>
+                <span>{formatCurrency(calculationData.total_amount)}</span>
+              </div>
+            </div>
           </div>
         )}
 
