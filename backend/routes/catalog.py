@@ -53,3 +53,42 @@ def get_products():
         )
 
     return jsonify(rows)
+
+@catalog_bp.route('/products/<int:product_id>')
+def get_product_detail(product_id):
+    """
+    Return one product with all its variants and current stock levels.
+    """
+    products = query(
+        """
+        SELECT p.product_id, p.title AS name, p.description, p.base_price,
+               p.is_active, c.name AS category_name
+        FROM   products p
+        JOIN   categories c ON c.category_id = p.category_id
+        WHERE  p.product_id = %s
+        """,
+        (product_id,)
+    )
+
+    if not products:
+        return jsonify({"error": "Product not found"}), 404
+
+    product = products[0]
+
+    # Variants + stock for this product
+    variants = query(
+        """
+        SELECT pv.variant_id, pv.sku, pv.attribute_name, pv.attribute_value,
+               COALESCE(pv.price_override, p.base_price) AS price,
+               COALESCE(i.stock_quantity, 0) AS stock
+        FROM   product_variants pv
+        JOIN   products p ON p.product_id = pv.product_id
+        LEFT JOIN inventory i ON i.variant_id = pv.variant_id
+        WHERE  pv.product_id = %s
+        ORDER  BY pv.sku
+        """,
+        (product_id,)
+    )
+
+    product['variants'] = variants
+    return jsonify(product)
