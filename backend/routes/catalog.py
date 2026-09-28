@@ -93,19 +93,27 @@ def get_product_detail(product_id):
     product['variants'] = variants
     return jsonify(product)
 
-@catalog_bp.route('/products/<int:product_id>/stock')
-def get_product_stock(product_id):
-    stock_history = query(
+# get low stock
+@catalog_bp.route('/inventory/low-stock', methods=['GET'])
+def get_low_stock():
+    """
+    Return all variants where stock is below a threshold
+    """
+    threshold = int(request.args.get('threshold', 10))
+
+    rows = query(
         """
-        SELECT timestamp,
-               quantity_change,
-               new_quantity_on_hand,
-               source,
-               reference_doc_id
-        FROM   stock_movement
-        WHERE  product_id = %s
-        ORDER  BY timestamp DESC
+        SELECT p.title AS product_name,
+               pv.sku, pv.attribute_name, pv.attribute_value,
+               COALESCE(i.stock_quantity, 0) AS stock,
+               COALESCE(i.low_stock_threshold, 10) AS threshold
+        FROM   product_variants pv
+        JOIN   products p ON p.product_id = pv.product_id
+        LEFT JOIN inventory i ON i.variant_id = pv.variant_id
+        WHERE  COALESCE(i.stock_quantity, 0) <= %s
+        ORDER  BY stock ASC
         """,
-        (product_id,)
+        (threshold,)
     )
-    return jsonify(stock_history)
+
+    return jsonify(rows)
