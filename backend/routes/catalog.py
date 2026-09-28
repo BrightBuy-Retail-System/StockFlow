@@ -92,3 +92,20 @@ def get_product_detail(product_id):
 
     product['variants'] = variants
     return jsonify(product)
+
+@catalog_bp.route('/products/<int:product_id>/stock')
+def get_product_stock(product_id):
+    stock_history = query(
+        """
+        SELECT timestamp,
+               quantity_change,
+               new_quantity_on_hand,
+               source,
+               reference_doc_id
+        FROM   stock_movement
+        WHERE  product_id = %s
+        ORDER  BY timestamp DESC
+        """,
+        (product_id,)
+    )
+    return jsonify(stock_history)
