@@ -28,31 +28,27 @@ def get_products():
     Return all products.
     """
     category_id = request.args.get('category_id')
+    q = request.args.get('q', '').strip()
+    like = f"%{q}%"
 
-    if category_id:
-        rows = query(
-            """
-            SELECT p.product_id, p.title AS name, p.description, p.base_price,
-                   p.is_active, c.name AS category_name
-            FROM   products p
-            JOIN   categories c ON c.category_id = p.category_id
-            WHERE  p.category_id = %s
-            ORDER  BY p.title
-            """,
-            (category_id,)
-        )
+    sql = """
+        SELECT p.product_id, p.title AS name, p.description, p.base_price,
+               p.is_active, c.name AS category_name
+        FROM   products p
+        JOIN   categories c ON c.category_id = p.category_id
+        """
+
+    if category_id and q:
+        rows = query(sql + "WHERE p.category_id = %s AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (category_id, like, like))
+    elif category_id:
+        rows = query(sql + "WHERE p.category_id = %s ORDER BY p.title", (category_id,))
+    elif q:
+        rows = query(sql + "WHERE (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (like, like))
     else:
-        rows = query(
-            """
-            SELECT p.product_id, p.title AS name, p.description, p.base_price,
-                   p.is_active, c.name AS category_name
-            FROM   products p
-            JOIN   categories c ON c.category_id = p.category_id
-            ORDER  BY p.title
-            """
-        )
+        rows = query(sql + "ORDER BY p.title")
 
     return jsonify(rows)
+
 
 @catalog_bp.route('/products/<int:product_id>')
 def get_product_detail(product_id):
