@@ -1,14 +1,37 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { ShoppingBagIcon, UserIcon } from './Icons';
 
 export default function DashboardLayout() {
   const [isOnline, setIsOnline] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Close dropdown when clicking anywhere outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
 
   useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    setUser(savedUser ? JSON.parse(savedUser) : null);
+
     let isMounted = true;
     const checkHealth = () => {
       api
@@ -27,11 +50,31 @@ export default function DashboardLayout() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [location.pathname]);
 
-  // Close mobile navigation on route navigation
+  function handleLogout() {
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login');
+  }
+
+  const getDashboardRoute = () => {
+    if (!user) return '/login';
+    if (user.role_id === 2) return '/manager-dashboard';
+    if (user.role_id === 3) return '/system-administrator';
+    return '/customer-dashboard';
+  };
+
+  const getRoleLabel = () => {
+    if (!user) return '';
+    if (user.role_id === 2) return 'Manager / Warehouse Admin';
+    if (user.role_id === 3) return 'System Administrator';
+    return 'Customer Account';
+  };
+
   useEffect(() => {
     setMobileMenuOpen(false);
+    setDropdownOpen(false);
   }, [location.pathname]);
 
   return (
@@ -57,18 +100,18 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Cart
+            <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              About US
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Orders
+              Contact
             </NavLink>
-            <NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            {/*<NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Logistics
             </NavLink>
             <NavLink to="/analytics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Analytics
-            </NavLink>
+            </NavLink>*/}
           </nav>
 
           {/* Right: Actions & Connectivity Status */}
@@ -83,15 +126,97 @@ export default function DashboardLayout() {
             </div>
 
             {/* Retail Action Buttons */}
-            <Link to="/auth-cart" className="btn-ghost">
-              <UserIcon className="btn-icon" />
-              <span>Login</span>
-            </Link>
-            <Link to="/auth-cart" className="btn-register">
-              <span>Register</span>
-            </Link>
+            {user ? (
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent', }}>
+                  <UserIcon className="btn-icon" />
+                  <span>{user.username || user.full_name}</span>
+                  <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{dropdownOpen ? '▲' : '▼'}</span>
+                </button>
 
-            {/* Mobile Hamburger Toggle */}
+                {dropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 'calc(100% + 8px)',
+                      minWidth: '200px',
+                      background: 'var(--bg-card, #1e222d)',
+                      border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
+                      borderRadius: '10px',
+                      padding: '8px',
+                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
+                      zIndex: 1000,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.username || user.full_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{getRoleLabel()}</div>
+                    </div>
+
+                    <Link
+                      to={getDashboardRoute()}
+                      className="btn-ghost"
+                      style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <UserIcon className="btn-icon" />
+                      My Dashboard
+                    </Link>
+
+                    <Link
+                      to="/orders"
+                      className="btn-ghost"
+                      style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      {/*<PackageIcon className="btn-icon" />*/}
+                      My Orders
+                    </Link>
+
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="btn-ghost"
+                      style={{
+                        justifyContent: 'flex-start',
+                        padding: '8px 12px',
+                        width: '100%',
+                        borderRadius: '6px',
+                        color: 'crimson',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {/*<LogoutIcon className="btn-icon" />*/}
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="btn-ghost">
+                  <UserIcon className="btn-icon" />
+                  <span>Login</span>
+                </Link>
+                <Link to="/register" className="btn-register">
+                  <span>Register</span>
+                </Link>
+              </>
+            )}
+
             <button
               type="button"
               className="mobile-toggle"
@@ -140,7 +265,7 @@ export default function DashboardLayout() {
             <div className="footer-links-col">
               <span className="footer-col-header">Platform</span>
               <Link to="/catalog">Products Catalog</Link>
-              <Link to="/auth-cart">Cart & User Accounts</Link>
+              <Link to="/login">Cart & User Accounts</Link>
               <Link to="/orders">Order Tracking</Link>
             </div>
 
