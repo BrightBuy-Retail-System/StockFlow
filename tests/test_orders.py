@@ -153,6 +153,20 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertIn('subtotal', calc)
         self.assertEqual(calc['total_amount'], round(calc['subtotal'] + calc['shipping_fee'], 2))
 
+    def test_12_checkout_insufficient_stock_conflict(self):
+        """Verifies requesting more stock than available triggers HTTP 409 Conflict."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "items": [{"variant_id": 1, "quantity": 999999}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload)
+        self.assertEqual(res.status_code, 409)
+        data = res.get_json()
+        self.assertEqual(data.get('status'), 'error')
+        self.assertEqual(data.get('code'), 'OUT_OF_STOCK')
+        self.assertIn('insufficient stock', data.get('message', '').lower())
+
 
 if __name__ == '__main__':
     unittest.main()

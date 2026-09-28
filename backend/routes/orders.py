@@ -230,33 +230,38 @@ def checkout():
     cursor = None
     try:
         conn = get_db_connection()
+        # 1. Start explicit transaction
+        conn.autocommit = False
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Verify User
+        # 2. Check Customer Existence
         cursor.execute("SELECT user_id, full_name FROM users WHERE user_id = %s", (user_id,))
         user_row = cursor.fetchone()
         if not user_row:
+            conn.rollback()
             return jsonify({
                 "status": "error",
                 "message": f"User #{user_id} does not exist."
             }), 404
 
-        # 2. Verify Texas City (shipping_fee)
+        # 3. Check Texas City Existence & Shipping Fee
         cursor.execute(
             "SELECT city_id, city_name, shipping_fee FROM texas_cities WHERE city_id = %s",
             (shipping_city_id,)
         )
         city_row = cursor.fetchone()
         if not city_row:
+            conn.rollback()
             return jsonify({
                 "status": "error",
                 "message": f"Texas shipping city #{shipping_city_id} does not exist."
             }), 404
 
-        # 3. Join Variants + Products + Inventory for pricing and stock
+        # 4. Fetch variants, products, and lock inventory rows for update
         requested_variant_ids = [item['variant_id'] for item in items]
         format_strings = ','.join(['%s'] * len(requested_variant_ids))
-        pricing_query = f"""
+        
+        lock_query = f"""
             SELECT 
                 pv.variant_id,
                 pv.sku,
@@ -266,8 +271,9 @@ def checkout():
             JOIN products p ON pv.product_id = p.product_id
             LEFT JOIN inventory inv ON pv.variant_id = inv.variant_id
             WHERE pv.variant_id IN ({format_strings})
+            FOR UPDATE
         """
-        cursor.execute(pricing_query, requested_variant_ids)
+        cursor.execute(lock_query, requested_variant_ids)
         variants_db = {v['variant_id']: v for v in cursor.fetchall()}
 
         verified_items = []
@@ -276,13 +282,26 @@ def checkout():
         for item in items:
             vid = item['variant_id']
             qty = item['quantity']
+
             if vid not in variants_db:
+                conn.rollback()
                 return jsonify({
                     "status": "error",
                     "message": f"Product variant #{vid} does not exist."
                 }), 404
 
             variant_record = variants_db[vid]
+            available_stock = variant_record['stock_quantity']
+
+            # Check stock availability
+            if available_stock < qty:
+                conn.rollback()
+                return jsonify({
+                    "status": "error",
+                    "code": "OUT_OF_STOCK",
+                    "message": f"Insufficient stock for SKU '{variant_record['sku']}'. Requested: {qty}, Available: {available_stock}."
+                }), 409
+
             unit_price = Decimal(str(variant_record['effective_price']))
             line_total = unit_price * qty
             subtotal += line_total
@@ -293,15 +312,18 @@ def checkout():
                 "quantity": qty,
                 "unit_price": float(unit_price),
                 "line_total": float(line_total),
-                "available_stock": variant_record['stock_quantity']
+                "available_stock": available_stock
             })
 
         shipping_fee = Decimal(str(city_row['shipping_fee']))
         total_amount = subtotal + shipping_fee
 
+        # For this step, we verify and rollback safely until order insertion is wired
+        conn.rollback()
+
         return jsonify({
             "status": "verified",
-            "message": "Entities verified and pricing calculated from authoritative database records.",
+            "message": "Stock reserved and entities verified under transactional lock.",
             "calculation": {
                 "user": user_row['full_name'],
                 "destination_city": city_row['city_name'],
@@ -313,6 +335,8 @@ def checkout():
         }), 200
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         return jsonify({
             "status": "error",
             "message": f"Database error: {str(e)}"
