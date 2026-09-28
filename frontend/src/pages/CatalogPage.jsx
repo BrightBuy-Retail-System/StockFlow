@@ -8,6 +8,12 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // State for single product detail (variants & stock)
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [productDetail, setProductDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+
   // Fetch categories
   useEffect(() => {
     api.get('/catalog/categories')
@@ -28,11 +34,25 @@ export default function CatalogPage() {
       .finally(() => setLoading(false));
   }, [selectedCategory]);
 
+  // Fetch product detail with variants and stock when a product is selected
+  useEffect(() => {
+    if (!selectedProductId) {
+      setProductDetail(null);
+      return;
+    }
+    setDetailLoading(true);
+    setDetailError(null);
+    api.get(`/catalog/products/${selectedProductId}`)
+      .then((res) => setProductDetail(res.data))
+      .catch((err) => setDetailError(err.message))
+      .finally(() => setDetailLoading(false));
+  }, [selectedProductId]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Product Catalog</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Browse products and filter by category</p>
+        <p style={{ color: 'var(--text-muted)' }}>Browse products, filter by category, and view variants & inventory</p>
       </div>
 
       {/* Category Filters */}
@@ -40,14 +60,16 @@ export default function CatalogPage() {
         <button
           onClick={() => setSelectedCategory('')}
           style={{
-            padding: '6px 14px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-color)',
-            background: selectedCategory === '' ? 'var(--primary)' : 'var(--bg-card)',
-            color: selectedCategory === '' ? '#fff' : 'var(--text-main)',
+            padding: '6px 16px',
+            borderRadius: '999px',
+            border: 'none',
+            background: selectedCategory === '' ? 'var(--primary)' : 'rgba(128,128,128,0.1)',
+            color: selectedCategory === '' ? '#fff' : 'var(--text-muted)',
             cursor: 'pointer',
-            fontWeight: 500,
-            fontSize: '0.875rem'
+            fontWeight: 600,
+            fontSize: '0.82rem',
+            transition: 'background 0.2s, color 0.2s',
+            letterSpacing: '0.01em'
           }}
         >
           All
@@ -57,14 +79,16 @@ export default function CatalogPage() {
             key={cat.category_id}
             onClick={() => setSelectedCategory(cat.category_id)}
             style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              background: selectedCategory === cat.category_id ? 'var(--primary)' : 'var(--bg-card)',
-              color: selectedCategory === cat.category_id ? '#fff' : 'var(--text-main)',
+              padding: '6px 16px',
+              borderRadius: '999px',
+              border: 'none',
+              background: selectedCategory === cat.category_id ? 'var(--primary)' : 'rgba(128,128,128,0.1)',
+              color: selectedCategory === cat.category_id ? '#fff' : 'var(--text-muted)',
               cursor: 'pointer',
-              fontWeight: 500,
-              fontSize: '0.875rem'
+              fontWeight: 600,
+              fontSize: '0.82rem',
+              transition: 'background 0.2s, color 0.2s',
+              letterSpacing: '0.01em'
             }}
           >
             {cat.name}
@@ -81,48 +105,224 @@ export default function CatalogPage() {
         products.length === 0 ? (
           <div className="card"><p style={{ color: 'var(--text-muted)' }}>No products found.</p></div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
             {products.map((p) => (
-              <div key={p.product_id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span
-                    style={{
-                      fontSize: '0.80rem',
-                      fontWeight: 600,
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      background: 'var(--primary-light)',
-                      color: 'var(--primary)',
-                    }}
-                  >
-                    {p.category_name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: p.is_active ? 'var(--success)' : 'var(--danger)',
-                    }}
-                  >
-                    {p.is_active ? 'Active' : 'Inactive'}
+              <div
+                key={p.product_id}
+                style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: '20px',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  cursor: 'default',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.13)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.08)';
+                }}
+              >
+                {/* Image / Visual Area */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)',
+                  height: '160px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  padding: '16px',
+                }}>
+                  {/* Brand initial badge */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    background: '#fff',
+                    borderRadius: '10px',
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    color: 'var(--primary)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  }}>
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  {/* Product name initial as large graphic */}
+                  <span style={{
+                    fontSize: '6rem',
+                    fontWeight: 900,
+                    color: 'rgba(99,102,241,0.12)',
+                    lineHeight: 1,
+                    userSelect: 'none',
+                    letterSpacing: '-4px',
+                  }}>
+                    {p.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>{p.name}</h3>
+                {/* Card Body */}
+                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', flexGrow: 1 }}>
+                  {/* Product Name */}
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, lineHeight: 1.3 }}>{p.name}</h3>
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', flexGrow: 1 }}>
-                  {p.description || 'No description'}
-                </p>
+                  {/* Description */}
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0, flexGrow: 1, lineHeight: 1.5 }}>
+                    {p.description || 'No description available'}
+                  </p>
 
-                <div style={{ marginTop: 'auto', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)' }}>
-                    ${Number(p.base_price).toFixed(2)}
-                  </span>
+                  {/* Price + CTA */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4px' }}>
+                    <div>
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: '0 0 2px 0', fontWeight: 500 }}>Price</p>
+                      <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)' }}>
+                        ${Number(p.base_price).toFixed(2)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedProductId(p.product_id)}
+                      style={{
+                        padding: '10px 18px',
+                        borderRadius: '999px',
+                        border: 'none',
+                        background: '#111827',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        letterSpacing: '0.02em',
+                        transition: 'background 0.2s, transform 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#1f2937'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#111827'}
+                    >
+                      View Variants
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         )
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProductId && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}
+          onClick={() => setSelectedProductId(null)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '620px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              margin: 0,
+              padding: '24px',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                  {productDetail ? productDetail.name : 'Loading Details...'}
+                </h3>
+                {productDetail && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
+                    Category: <strong>{productDetail.category_name}</strong> | Base Price: <strong>${Number(productDetail.base_price).toFixed(2)}</strong>
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setSelectedProductId(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {detailLoading && <p>Loading variants & inventory...</p>}
+            {detailError && <p style={{ color: 'red' }}>Error: {detailError}</p>}
+
+            {productDetail && !detailLoading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  {productDetail.description || 'No description available'}
+                </p>
+
+                <div>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '8px' }}>Variants & Live Stock</h4>
+                  {productDetail.variants && productDetail.variants.length > 0 ? (
+                    <div className="table-container">
+                      <table className="enterprise-table">
+                        <thead>
+                          <tr>
+                            <th>SKU</th>
+                            <th>Attribute</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productDetail.variants.map((v) => (
+                            <tr key={v.variant_id}>
+                              <td><code>{v.sku}</code></td>
+                              <td>{v.attribute_name ? `${v.attribute_name}: ${v.attribute_value}` : 'Standard'}</td>
+                              <td><strong>${Number(v.price).toFixed(2)}</strong></td>
+                              <td>
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    color: v.stock > 0 ? 'var(--success)' : 'var(--danger)'
+                                  }}
+                                >
+                                  {v.stock > 0 ? `${v.stock} in stock` : 'Out of stock'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No variants found for this product.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
