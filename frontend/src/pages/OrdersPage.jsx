@@ -26,6 +26,7 @@ export default function OrdersPage() {
   const [validationSuccess, setValidationSuccess] = useState(null);
   const [calculationData, setCalculationData] = useState(null);
   const [validationError, setValidationError] = useState(null);
+  const [stockConflict, setStockConflict] = useState(null);
 
   const handleValidateCheckout = async (e) => {
     e.preventDefault();
@@ -33,6 +34,7 @@ export default function OrdersPage() {
     setValidationSuccess(null);
     setCalculationData(null);
     setValidationError(null);
+    setStockConflict(null);
 
     // Payload contract: positive integers
     const payload = {
@@ -58,14 +60,21 @@ export default function OrdersPage() {
       }
     } catch (err) {
       setCalculationData(null);
-      const msg =
-        err.response?.data?.message ||
-        (err.response?.status === 404
-          ? 'Entity not found (404).'
-          : err.response?.status === 400
-          ? 'Validation failed: Invalid checkout payload.'
-          : err.message || 'Error occurred while validating payload.');
-      setValidationError(msg);
+      const resData = err.response?.data;
+      if (err.response?.status === 409 || resData?.code === 'OUT_OF_STOCK') {
+        setStockConflict(
+          resData?.message || 'Insufficient stock for requested items. Database quantity exceeds available inventory.'
+        );
+      } else {
+        const msg =
+          resData?.message ||
+          (err.response?.status === 404
+            ? 'Entity not found (404).'
+            : err.response?.status === 400
+            ? 'Validation failed: Invalid checkout payload.'
+            : err.message || 'Error occurred while validating payload.');
+        setValidationError(msg);
+      }
     } finally {
       setValidating(false);
     }
@@ -562,6 +571,49 @@ export default function OrdersPage() {
               >
                 <span>Total Amount</span>
                 <span>{formatCurrency(calculationData.total_amount)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stock Conflict Warning Banner (HTTP 409 OUT_OF_STOCK) */}
+        {stockConflict && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '16px 20px',
+              borderRadius: '10px',
+              background: 'var(--warning-bg, #fffbeb)',
+              border: '1px solid var(--warning-border, #fde68a)',
+              color: 'var(--warning-text, #b45309)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.1)',
+            }}
+          >
+            <svg
+              style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>
+                Inventory Conflict (Out of Stock)
+              </div>
+              <div style={{ fontSize: '0.88rem', lineHeight: 1.45 }}>
+                {stockConflict}
+              </div>
+              <div style={{ fontSize: '0.78rem', marginTop: '6px', opacity: 0.9 }}>
+                The requested quantity exceeds live TiDB database stock under transactional lock.
               </div>
             </div>
           </div>
