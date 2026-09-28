@@ -14,6 +14,23 @@ export default function CatalogPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
+  // State for low-stock alerts
+  const [threshold, setThreshold] = useState(10);
+  const [lowStock, setLowStock] = useState([]);
+  const [lowStockLoading, setLowStockLoading] = useState(false);
+  const [lowStockError, setLowStockError] = useState(null);
+  const [showLowStock, setShowLowStock] = useState(false);
+
+  // Fetch low-stock variants
+  const fetchLowStock = (t) => {
+    setLowStockLoading(true);
+    setLowStockError(null);
+    api.get(`/catalog/inventory/low-stock?threshold=${t}`)
+      .then((res) => setLowStock(res.data))
+      .catch((err) => setLowStockError(err.message))
+      .finally(() => setLowStockLoading(false));
+  };
+
   // Fetch categories
   useEffect(() => {
     api.get('/catalog/categories')
@@ -50,10 +67,130 @@ export default function CatalogPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Product Catalog</h2>
-        <p style={{ color: 'var(--text-muted)' }}>Browse products, filter by category, and view variants & inventory</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Product Catalog</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Browse products, filter by category, and view variants &amp; inventory</p>
+        </div>
+        <button
+          onClick={() => { setShowLowStock((v) => !v); if (!showLowStock) fetchLowStock(threshold); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '9px 18px',
+            borderRadius: '999px',
+            border: '1.5px solid #f59e0b',
+            background: showLowStock ? '#f59e0b' : 'rgba(245,158,11,0.08)',
+            color: showLowStock ? '#fff' : '#f59e0b',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            letterSpacing: '0.02em',
+            transition: 'all 0.2s',
+          }}
+        >
+          Low Stock Alerts
+        </button>
       </div>
+
+      {/* Low Stock Panel */}
+      {showLowStock && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(245,158,11,0.07) 0%, rgba(239,68,68,0.05) 100%)',
+          border: '1.5px solid rgba(245,158,11,0.3)',
+          borderRadius: '16px',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#b45309', margin: 0 }}> Low Stock Alerts</h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                Variants at or below the threshold
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Threshold:</label>
+              <input
+                type="number"
+                min="1"
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+                style={{
+                  width: '64px',
+                  padding: '5px 8px',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(245,158,11,0.4)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  textAlign: 'center',
+                }}
+              />
+              <button
+                onClick={() => fetchLowStock(threshold)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#f59e0b',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+
+          {lowStockLoading && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</p>}
+          {lowStockError && <p style={{ color: 'red', fontSize: '0.85rem' }}>Error: {lowStockError}</p>}
+          {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>✓ All variants are above the threshold.</p>
+          )}
+          {!lowStockLoading && lowStock.length > 0 && (
+            <div className="table-container">
+              <table className="enterprise-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Attribute</th>
+                    <th>Stock</th>
+                    <th>Threshold</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStock.map((row, idx) => (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: 600 }}>{row.product_name}</td>
+                      <td><code>{row.sku}</code></td>
+                      <td style={{ fontSize: '0.82rem' }}>
+                        {row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontWeight: 700,
+                          color: row.stock === 0 ? 'var(--danger)' : '#f59e0b',
+                        }}>
+                          {row.stock === 0 ? 'Out of stock' : row.stock}
+                        </span>
+                      </td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{row.threshold}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category Filters */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
