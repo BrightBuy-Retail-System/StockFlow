@@ -1,10 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api/client';
 
 export default function CatalogPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,18 +40,24 @@ export default function CatalogPage() {
       .catch((err) => setError(err.message));
   }, []);
 
-  // Fetch products (all or filtered by category)
+  // Debounce search input (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Fetch products (filtered by category and/or search)
   useEffect(() => {
     setLoading(true);
-    const endpoint = selectedCategory
-      ? `/catalog/products?category_id=${selectedCategory}`
-      : '/catalog/products';
-
-    api.get(endpoint)
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set('category_id', selectedCategory);
+    if (debouncedSearch) params.set('q', debouncedSearch);
+    const qs = params.toString();
+    api.get(`/catalog/products${qs ? '?' + qs : ''}`)
       .then((res) => setProducts(res.data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [selectedCategory]);
+  }, [selectedCategory, debouncedSearch]);
 
   // Fetch product detail with variants and stock when a product is selected
   useEffect(() => {
@@ -191,6 +199,34 @@ export default function CatalogPage() {
           )}
         </div>
       )}
+
+      {/* Search Bar */}
+      <div style={{ position: 'relative', maxWidth: '460px' }}>
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '9px 36px 9px 16px',
+            borderRadius: '999px',
+            border: '1.5px solid rgba(128,128,128,0.2)',
+            background: 'var(--bg-card)',
+            color: 'var(--text-primary)',
+            fontSize: '0.875rem',
+            fontFamily: 'inherit',
+            outline: 'none',
+            boxSizing: 'border-box',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+          }}
+          onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; }}
+          onBlur={(e)  => { e.target.style.borderColor = 'rgba(128,128,128,0.2)'; e.target.style.boxShadow = 'none'; }}
+        />
+        {searchQuery && (
+          <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem' }}>×</button>
+        )}
+      </div>
 
       {/* Category Filters */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
