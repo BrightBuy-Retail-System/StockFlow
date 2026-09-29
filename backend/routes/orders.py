@@ -1,5 +1,6 @@
+import uuid
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint, jsonify, request
 from db import get_db_connection
 
@@ -18,6 +19,27 @@ def serialize_row(row):
         else:
             clean_row[key] = val
     return clean_row
+
+def get_enum_default_or_first(cursor, table_name, column_name, default_fallback):
+    """Query information_schema to extract the first declared enum value or default."""
+    try:
+        cursor.execute("""
+            SELECT COLUMN_TYPE, COLUMN_DEFAULT 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+              AND TABLE_NAME = %s 
+              AND COLUMN_NAME = %s
+        """, (table_name, column_name))
+        row = cursor.fetchone()
+        if row:
+            if row.get('COLUMN_DEFAULT'):
+                return row['COLUMN_DEFAULT']
+            col_type = row.get('COLUMN_TYPE', '')
+            if col_type.startswith('enum('):
+                return col_type[5:].split(',')[0].strip("'\" )")
+    except Exception:
+        pass
+    return default_fallback
 
 @orders_bp.route('/ping', methods=['GET'])
 def ping():
@@ -204,6 +226,8 @@ def checkout():
             "message": "Field 'items' must be a non-empty list of items."
         }), 400
 
+    validate_only = payload.get('validate_only', False)
+
     for idx, item in enumerate(items):
         if not isinstance(item, dict):
             return jsonify({
@@ -230,11 +254,10 @@ def checkout():
     cursor = None
     try:
         conn = get_db_connection()
-        # 1. Start explicit transaction
         conn.autocommit = False
         cursor = conn.cursor(dictionary=True)
 
-        # 2. Check Customer Existence
+        # 1. Customer Verification
         cursor.execute("SELECT user_id, full_name FROM users WHERE user_id = %s", (user_id,))
         user_row = cursor.fetchone()
         if not user_row:
@@ -244,9 +267,9 @@ def checkout():
                 "message": f"User #{user_id} does not exist."
             }), 404
 
-        # 3. Check Texas City Existence & Shipping Fee
+        # 2. Texas City Verification
         cursor.execute(
-            "SELECT city_id, city_name, shipping_fee FROM texas_cities WHERE city_id = %s",
+            "SELECT city_id, city_name, base_lead_time_days, shipping_fee FROM texas_cities WHERE city_id = %s",
             (shipping_city_id,)
         )
         city_row = cursor.fetchone()
@@ -257,7 +280,7 @@ def checkout():
                 "message": f"Texas shipping city #{shipping_city_id} does not exist."
             }), 404
 
-        # 4. Fetch variants, products, and lock inventory rows for update
+        # 3. Pessimistic Row Lock on Variants and Stock
         requested_variant_ids = [item['variant_id'] for item in items]
         format_strings = ','.join(['%s'] * len(requested_variant_ids))
         
@@ -293,7 +316,6 @@ def checkout():
             variant_record = variants_db[vid]
             available_stock = variant_record['stock_quantity']
 
-            # Check stock availability
             if available_stock < qty:
                 conn.rollback()
                 return jsonify({
@@ -310,29 +332,90 @@ def checkout():
                 "variant_id": vid,
                 "sku": variant_record['sku'],
                 "quantity": qty,
-                "unit_price": float(unit_price),
-                "line_total": float(line_total),
+                "unit_price": unit_price,
+                "line_total": line_total,
                 "available_stock": available_stock
             })
 
         shipping_fee = Decimal(str(city_row['shipping_fee']))
         total_amount = subtotal + shipping_fee
 
-        # For this step, we verify and rollback safely until order insertion is wired
-        conn.rollback()
+        # If client requested pre-flight calculation only, safely roll back and return preview
+        if validate_only:
+            conn.rollback()
+            return jsonify({
+                "status": "verified",
+                "message": "Stock reserved and entities verified under transactional lock.",
+                "calculation": {
+                    "user": user_row['full_name'],
+                    "destination_city": city_row['city_name'],
+                    "shipping_fee": float(shipping_fee),
+                    "subtotal": float(subtotal),
+                    "total_amount": float(total_amount),
+                    "items": [
+                        {
+                            "variant_id": it['variant_id'],
+                            "sku": it['sku'],
+                            "quantity": it['quantity'],
+                            "unit_price": float(it['unit_price']),
+                            "line_total": float(it['line_total']),
+                            "available_stock": it['available_stock']
+                        }
+                        for it in verified_items
+                    ]
+                }
+            }), 200
+
+        # --- WRITE PATH: Finalize Order within Transaction ---
+
+        # 4. Create Shipment
+        shipping_status = get_enum_default_or_first(cursor, 'shipments', 'shipping_status', 'Processing')
+        tracking_number = f"TX-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
+        lead_days = city_row.get('base_lead_time_days') or 3
+        estimated_arrival = (datetime.now() + timedelta(days=int(lead_days))).date()
+
+        cursor.execute("""
+            INSERT INTO shipments (tracking_number, destination_city_id, shipping_status, estimated_arrival)
+            VALUES (%s, %s, %s, %s)
+        """, (tracking_number, shipping_city_id, shipping_status, estimated_arrival))
+        shipment_id = cursor.lastrowid
+
+        # 5. Create Order Header
+        order_status = get_enum_default_or_first(cursor, 'orders', 'status', 'Pending')
+        cursor.execute("""
+            INSERT INTO orders (user_id, shipment_id, total_amount, status)
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, shipment_id, total_amount, order_status))
+        order_id = cursor.lastrowid
+
+        # 6. Insert Order Items & Decrement Inventory
+        for it in verified_items:
+            cursor.execute("""
+                INSERT INTO order_items (order_id, variant_id, unit_price, quantity)
+                VALUES (%s, %s, %s, %s)
+            """, (order_id, it['variant_id'], it['unit_price'], it['quantity']))
+
+            cursor.execute("""
+                UPDATE inventory 
+                SET stock_quantity = stock_quantity - %s 
+                WHERE variant_id = %s
+            """, (it['quantity'], it['variant_id']))
+
+        # 7. Commit ACID Transaction
+        conn.commit()
 
         return jsonify({
-            "status": "verified",
-            "message": "Stock reserved and entities verified under transactional lock.",
-            "calculation": {
-                "user": user_row['full_name'],
-                "destination_city": city_row['city_name'],
-                "shipping_fee": float(shipping_fee),
-                "subtotal": float(subtotal),
+            "status": "success",
+            "message": "Order placed successfully.",
+            "data": {
+                "order_id": order_id,
+                "shipment_id": shipment_id,
+                "tracking_number": tracking_number,
                 "total_amount": float(total_amount),
-                "items": verified_items
+                "status": order_status,
+                "items_count": len(verified_items)
             }
-        }), 200
+        }), 201
 
     except Exception as e:
         if conn:
