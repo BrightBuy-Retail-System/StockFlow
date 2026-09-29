@@ -100,18 +100,18 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              About US
+            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              Cart
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Contact
+              Orders
             </NavLink>
-            {/*<NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Logistics
             </NavLink>
             <NavLink to="/analytics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Analytics
-            </NavLink>*/}
+            </NavLink>
           </nav>
 
           {/* Right: Actions & Connectivity Status */}
@@ -265,7 +265,7 @@ export default function DashboardLayout() {
             <div className="footer-links-col">
               <span className="footer-col-header">Platform</span>
               <Link to="/catalog">Products Catalog</Link>
-              <Link to="/login">Cart & User Accounts</Link>
+              <Link to="/auth-cart">Cart & User Accounts</Link>
               <Link to="/orders">Order Tracking</Link>
             </div>
 
