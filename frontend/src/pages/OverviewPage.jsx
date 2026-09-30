@@ -70,10 +70,10 @@ export default function OverviewPage() {
 
             {/* Dual Action CTAs */}
             <div className="hero-cta-group">
-              <Link to="/catalog" className="btn-hero-primary">
+              <Link to="/register" className="btn-hero-primary">
                 <span>Get Started 🚀</span>
               </Link>
-              <Link to="/auth-cart" className="btn-hero-secondary">
+              <Link to="/login" className="btn-hero-secondary">
                 <span>Sign In 👤</span>
               </Link>
             </div>
