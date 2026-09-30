@@ -1,6 +1,12 @@
 from flask import Blueprint, request, jsonify
 from db import get_db_connection
-import bcrypt  
+import bcrypt
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+    get_jwt
+)
 
 auth_cart_bp = Blueprint('auth_cart', __name__)
 
@@ -28,12 +34,22 @@ def login():
 
         # 3. Check if user exists and verify hashed password
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            role_id = user.get("role_id")
+            access_token = create_access_token(
+                identity=str(user["user_id"]),
+                additional_claims={
+                    "username": user["full_name"],
+                    "role_id": role_id,
+                    "email": email
+                }
+            )
             return jsonify({
                 "message": "Login successful",
+                "access_token": access_token,
                 "user": {
                     "id": user["user_id"],
                     "username": user["full_name"],
-                    "role_id": user.get("role_id")
+                    "role_id": role_id
                 }
             }), 200
         else:
@@ -44,6 +60,18 @@ def login():
     finally:
         cursor.close()
         conn.close()
+
+@auth_cart_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    user_id = get_jwt_identity()
+    claims = get_jwt()
+    return jsonify({
+        "user_id": int(user_id) if user_id and user_id.isdigit() else user_id,
+        "username": claims.get("username"),
+        "role_id": claims.get("role_id"),
+        "email": claims.get("email")
+    }), 200
 
 @auth_cart_bp.route('/register', methods=['POST'])
 def register():
@@ -85,8 +113,18 @@ def register():
         conn.commit()
         new_user_id = cursor.lastrowid
 
+        access_token = create_access_token(
+            identity=str(new_user_id),
+            additional_claims={
+                "username": username,
+                "role_id": role_id,
+                "email": email
+            }
+        )
+
         return jsonify({
             "message": "Registration successful",
+            "access_token": access_token,
             "user": {"id": new_user_id, "username": username, "role_id": role_id}
         }), 201
         

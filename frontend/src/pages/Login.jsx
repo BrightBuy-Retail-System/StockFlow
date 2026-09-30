@@ -33,13 +33,20 @@ export default function LoginPage() {
             const data = await response.json();
 
             if (response.ok) {
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                }
                 localStorage.setItem('user', JSON.stringify(data.user));
-                if (data.role_id == 1) {
+
+                const roleId = Number(data.user?.role_id);
+                if (roleId === 1) {
                     navigate('/customer-dashboard');
-                } else if (data.role_id == 2) {
+                } else if (roleId === 2) {
                     navigate('/manager-dashboard');
-                } else if (data.role_id == 3) {
+                } else if (roleId === 3) {
                     navigate('/system-administrator');
+                } else {
+                    navigate('/');
                 }
             } else {
                 setMessage(data.message || "Invalid credentials. Please try again.");

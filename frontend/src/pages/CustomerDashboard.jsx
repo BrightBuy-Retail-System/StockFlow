@@ -14,10 +14,7 @@ export default function CustomerDashboard() {
         }
     }, [navigate]);
 
-    function handleLogout() {
-        localStorage.removeItem('user');
-        navigate('/login');
-    }
+    
 
     if (!user) return null;
 

@@ -1,6 +1,8 @@
 import os
+from datetime import timedelta
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 
 from routes.catalog import catalog_bp
@@ -13,6 +15,10 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', app.config['SECRET_KEY'])
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=8)
+
+jwt = JWTManager(app)
 
 # Enable cross-origin requests and cookie forwarding from React
 CORS(
