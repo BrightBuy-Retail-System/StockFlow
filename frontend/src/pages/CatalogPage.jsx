@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../api/client';
 
 export default function CatalogPage() {
@@ -23,6 +23,14 @@ export default function CatalogPage() {
   const [lowStockError, setLowStockError] = useState(null);
   const [showLowStock, setShowLowStock] = useState(false);
 
+  // State for create/edit form
+  const EMPTY_FORM = { title: '', description: '', base_price: '', category_id: '' };
+  const [showForm, setShowForm] = useState(false);
+  const [editProduct, setEditProduct] = useState(null); // null = create mode
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
+
   // Fetch low-stock variants
   const fetchLowStock = (t) => {
     setLowStockLoading(true);
@@ -31,6 +39,36 @@ export default function CatalogPage() {
       .then((res) => setLowStock(res.data))
       .catch((err) => setLowStockError(err.message))
       .finally(() => setLowStockLoading(false));
+  };
+
+  // Re-fetch products grid after a mutation
+  const refreshProducts = () => {
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set('category_id', selectedCategory);
+    if (debouncedSearch) params.set('q', debouncedSearch);
+    const qs = params.toString();
+    api.get(`/catalog/products${qs ? '?' + qs : ''}`).then((res) => setProducts(res.data));
+  };
+
+  const openCreate = () => { setEditProduct(null); setForm(EMPTY_FORM); setFormError(null); setShowForm(true); };
+  const openEdit = (p) => { setEditProduct(p); setForm({ title: p.name, description: p.description || '', base_price: p.base_price, category_id: p.category_id || '' }); setFormError(null); setShowForm(true); };
+
+  const saveForm = () => {
+    if (!form.title || !form.base_price || !form.category_id) { setFormError('Title, price and category are required.'); return; }
+    setFormSaving(true);
+    setFormError(null);
+    const req = editProduct
+      ? api.patch(`/catalog/products/${editProduct.product_id}`, form)
+      : api.post('/catalog/products', form);
+    req
+      .then(() => { setShowForm(false); refreshProducts(); })
+      .catch((err) => setFormError(err.response?.data?.error || err.message))
+      .finally(() => setFormSaving(false));
+  };
+
+  const deleteProduct = (p) => {
+    if (!window.confirm(`Soft-delete "${p.name}"? It will be hidden from the catalog.`)) return;
+    api.delete(`/catalog/products/${p.product_id}`).then(refreshProducts);
   };
 
   // Fetch categories
@@ -99,6 +137,25 @@ export default function CatalogPage() {
           }}
         >
           Low Stock Alerts
+        </button>
+        <button
+          onClick={openCreate}
+          style={{
+            padding: '9px 18px',
+            borderRadius: '999px',
+            border: 'none',
+            background: 'var(--primary)',
+            color: '#fff',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: '0.82rem',
+            letterSpacing: '0.02em',
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          + Add Product
         </button>
       </div>
 
@@ -221,7 +278,7 @@ export default function CatalogPage() {
             transition: 'border-color 0.2s, box-shadow 0.2s',
           }}
           onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; }}
-          onBlur={(e)  => { e.target.style.borderColor = 'rgba(128,128,128,0.2)'; e.target.style.boxShadow = 'none'; }}
+          onBlur={(e) => { e.target.style.borderColor = 'rgba(128,128,128,0.2)'; e.target.style.boxShadow = 'none'; }}
         />
         {searchQuery && (
           <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1rem' }}>×</button>
@@ -361,25 +418,41 @@ export default function CatalogPage() {
                         ${Number(p.base_price).toFixed(2)}
                       </span>
                     </div>
-                    <button
-                      onClick={() => setSelectedProductId(p.product_id)}
-                      style={{
-                        padding: '10px 18px',
-                        borderRadius: '999px',
-                        border: 'none',
-                        background: '#111827',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        letterSpacing: '0.02em',
-                        transition: 'background 0.2s, transform 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#1f2937'}
-                      onMouseLeave={e => e.currentTarget.style.background = '#111827'}
-                    >
-                      View Variants
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => openEdit(p)}
+                        title="Edit product"
+                        style={{ padding: '7px 10px', borderRadius: '10px', border: '1.5px solid rgba(99,102,241,0.3)', background: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'background 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >Edit</button>
+                      <button
+                        onClick={() => deleteProduct(p)}
+                        title="Delete product"
+                        style={{ padding: '7px 10px', borderRadius: '10px', border: '1.5px solid rgba(239,68,68,0.3)', background: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, transition: 'background 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >Del</button>
+                      <button
+                        onClick={() => setSelectedProductId(p.product_id)}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '999px',
+                          border: 'none',
+                          background: '#111827',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          letterSpacing: '0.02em',
+                          transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#1f2937'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#111827'}
+                      >
+                        View
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -494,6 +567,75 @@ export default function CatalogPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Product Modal */}
+      {showForm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="card"
+            style={{ maxWidth: '480px', width: '100%', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {editProduct ? 'Edit Product' : 'Add New Product'}
+              </h3>
+              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1 }}>&times;</button>
+            </div>
+
+            {/* Fields */}
+            {[
+              { label: 'Title *', key: 'title', type: 'text', placeholder: 'Product title' },
+              { label: 'Description', key: 'description', type: 'text', placeholder: 'Short description' },
+              { label: 'Base Price *', key: 'base_price', type: 'number', placeholder: '0.00' },
+            ].map(({ label, key, type, placeholder }) => (
+              <div key={key}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>{label}</label>
+                <input
+                  type={type}
+                  placeholder={placeholder}
+                  value={form[key]}
+                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid rgba(128,128,128,0.2)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            ))}
+
+            {/* Category dropdown */}
+            <div>
+              <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Category *</label>
+              <select
+                value={form.category_id}
+                onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid rgba(128,128,128,0.2)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '0.875rem', fontFamily: 'inherit', outline: 'none' }}
+              >
+                <option value="">Select a category...</option>
+                {categories.map((c) => (
+                  <option key={c.category_id} value={c.category_id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {formError && <p style={{ color: 'var(--danger)', fontSize: '0.82rem', margin: 0 }}>{formError}</p>}
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowForm(false)} style={{ padding: '9px 18px', borderRadius: '999px', border: '1.5px solid rgba(128,128,128,0.2)', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>Cancel</button>
+              <button
+                onClick={saveForm}
+                disabled={formSaving}
+                style={{ padding: '9px 20px', borderRadius: '999px', border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem', opacity: formSaving ? 0.7 : 1 }}
+              >
+                {formSaving ? 'Saving...' : (editProduct ? 'Save Changes' : 'Create Product')}
+              </button>
+            </div>
           </div>
         </div>
       )}
