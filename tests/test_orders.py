@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from flask_jwt_extended import create_access_token
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
@@ -14,6 +15,19 @@ class TestOrdersAPI(unittest.TestCase):
 
     def setUp(self):
         self.client = app.test_client()
+        with app.app_context():
+            # Mint customer token (user_id: 4, role_id: 1)
+            self.customer_token = create_access_token(
+                identity="4",
+                additional_claims={"username": "Test Customer", "role_id": 1, "email": "customer@brightbuy.test"}
+            )
+            # Mint manager token (user_id: 2, role_id: 2)
+            self.manager_token = create_access_token(
+                identity="2",
+                additional_claims={"username": "Test Manager", "role_id": 2, "email": "manager@brightbuy.test"}
+            )
+        self.customer_headers = {'Authorization': f'Bearer {self.customer_token}'}
+        self.manager_headers = {'Authorization': f'Bearer {self.manager_token}'}
 
     def test_01_ping_health_check(self):
         res = self.client.get('/api/orders/ping')
@@ -22,7 +36,7 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertEqual(data.get('status'), 'healthy')
 
     def test_02_get_order_by_id_success(self):
-        res = self.client.get('/api/orders/1')
+        res = self.client.get('/api/orders/1', headers=self.customer_headers)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data.get('status'), 'success')
@@ -31,23 +45,23 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertIn('items', order)
 
     def test_03_get_order_by_id_not_found(self):
-        res = self.client.get('/api/orders/99999')
+        res = self.client.get('/api/orders/99999', headers=self.manager_headers)
         self.assertEqual(res.status_code, 404)
 
     def test_04_get_user_orders_with_line_items(self):
-        res = self.client.get('/api/orders/user/4')
+        res = self.client.get('/api/orders/user/4', headers=self.customer_headers)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data.get('status'), 'success')
         self.assertTrue(all('items' in o for o in data.get('data', [])))
 
     def test_05_get_user_orders_empty_history(self):
-        res = self.client.get('/api/orders/user/99999')
+        res = self.client.get('/api/orders/user/99999', headers=self.manager_headers)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.get_json().get('count'), 0)
 
     def test_06_checkout_validation_missing_fields(self):
-        res = self.client.post('/api/orders/checkout', json={"user_id": 4, "items": []})
+        res = self.client.post('/api/orders/checkout', json={"user_id": 4, "items": []}, headers=self.customer_headers)
         self.assertEqual(res.status_code, 400)
 
     def test_07_checkout_validation_invalid_quantity(self):
@@ -56,7 +70,7 @@ class TestOrdersAPI(unittest.TestCase):
             "shipping_city_id": 1,
             "items": [{"variant_id": 1, "quantity": 0}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 400)
 
     def test_08_checkout_validation_success(self):
@@ -66,7 +80,7 @@ class TestOrdersAPI(unittest.TestCase):
             "validate_only": True,
             "items": [{"variant_id": 1, "quantity": 1}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.get_json().get('status'), 'verified')
 
@@ -76,7 +90,7 @@ class TestOrdersAPI(unittest.TestCase):
             "shipping_city_id": 1,
             "items": [{"variant_id": 1, "quantity": 1}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.manager_headers)
         self.assertEqual(res.status_code, 404)
 
     def test_10_checkout_nonexistent_city(self):
@@ -85,7 +99,7 @@ class TestOrdersAPI(unittest.TestCase):
             "shipping_city_id": 99999,
             "items": [{"variant_id": 1, "quantity": 1}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 404)
 
     def test_11_checkout_verified_pricing(self):
@@ -95,7 +109,7 @@ class TestOrdersAPI(unittest.TestCase):
             "validate_only": True,
             "items": [{"variant_id": 1, "quantity": 1}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data.get('status'), 'verified')
@@ -108,7 +122,7 @@ class TestOrdersAPI(unittest.TestCase):
             "shipping_city_id": 1,
             "items": [{"variant_id": 1, "quantity": 999999}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 409)
         self.assertEqual(res.get_json().get('code'), 'OUT_OF_STOCK')
 
@@ -128,7 +142,7 @@ class TestOrdersAPI(unittest.TestCase):
             "shipping_city_id": 1,
             "items": [{"variant_id": 1, "quantity": 1}]
         }
-        res = self.client.post('/api/orders/checkout', json=payload)
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
         self.assertEqual(res.status_code, 201)
         data = res.get_json()
         self.assertEqual(data.get('status'), 'success')
@@ -147,11 +161,28 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertEqual(updated_stock, initial_stock - 1)
 
         # 4. Assert the newly created order is immediately retrievable via GET /api/orders/<id>
-        verify_res = self.client.get(f'/api/orders/{created_order_id}')
+        verify_res = self.client.get(f'/api/orders/{created_order_id}', headers=self.customer_headers)
         self.assertEqual(verify_res.status_code, 200)
         verify_data = verify_res.get_json().get('data', {})
         self.assertEqual(verify_data.get('order_id'), created_order_id)
         self.assertEqual(len(verify_data.get('items', [])), 1)
+
+    # --- Role-Based Access Control Verification ---
+    def test_14_unauthenticated_request_rejected(self):
+        """Verifies endpoints reject requests missing a JWT Bearer token with 401."""
+        res = self.client.get('/api/orders/1')
+        self.assertEqual(res.status_code, 401)
+
+    def test_15_customer_forbidden_on_manager_feed(self):
+        """Verifies Customer (role 1) is rejected from the system-wide orders list."""
+        res = self.client.get('/api/orders/', headers=self.customer_headers)
+        self.assertEqual(res.status_code, 403)
+
+    def test_16_manager_can_access_all_orders_feed(self):
+        """Verifies Manager (role 2) can view system-wide orders list."""
+        res = self.client.get('/api/orders/', headers=self.manager_headers)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.get_json().get('status'), 'success')
 
 
 if __name__ == '__main__':
