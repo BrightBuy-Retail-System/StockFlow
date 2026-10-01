@@ -34,6 +34,9 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (response.ok) {
+                if (data.access_token) {
+                    localStorage.setItem('token', data.access_token);
+                }
                 localStorage.setItem('user', JSON.stringify(data.user));
                 navigate('/customer-dashboard');
             } else {
