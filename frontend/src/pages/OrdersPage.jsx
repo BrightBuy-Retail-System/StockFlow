@@ -2,28 +2,47 @@ import { useState, useEffect } from 'react';
 import api from '../api/client';
 
 export default function OrdersPage() {
-  // Navigation Tabs: 'checkout' | 'history' | 'lookup'
+  // User Identity & Role Detection Contract
+  const storedUser = localStorage.getItem('user');
+  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+  const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
+  const activeRoleId = parsedUser?.role_id || 1; // 1 = Customer, 2 = Manager, 3 = System Admin
+  const userName = parsedUser?.full_name || parsedUser?.username || `Customer #${activeUserId}`;
+  const isStaff = activeRoleId === 2 || activeRoleId === 3;
+
+  // Active Navigation Tab
+  // Options: 'checkout' | 'all_orders' (staff only) | 'history' | 'lookup'
   const [activeTab, setActiveTab] = useState('checkout');
 
-  // Customer Order History States
+  // ---------------------------------------------------------
+  // 1. Customer Order History States
+  // ---------------------------------------------------------
+  const [historyTargetUserId, setHistoryTargetUserId] = useState(activeUserId);
   const [orders, setOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
 
-  // Single Order Inspection States
+  // ---------------------------------------------------------
+  // 2. Staff: All Platform Orders States (GET /orders/)
+  // ---------------------------------------------------------
+  const [allOrders, setAllOrders] = useState([]);
+  const [loadingAllOrders, setLoadingAllOrders] = useState(false);
+  const [allOrdersError, setAllOrdersError] = useState(null);
+  const [allOrdersSearch, setAllOrdersSearch] = useState('');
+  const [allOrdersStatusFilter, setAllOrdersStatusFilter] = useState('ALL');
+
+  // ---------------------------------------------------------
+  // 3. Single Order Inspection States (GET /orders/:id)
+  // ---------------------------------------------------------
   const [selectedOrderId, setSelectedOrderId] = useState(1);
   const [lookupInput, setLookupInput] = useState('1');
   const [orderDetails, setOrderDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
 
-  // User Identity Resolution
-  const storedUser = localStorage.getItem('user');
-  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-  const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
-  const userName = parsedUser?.full_name || parsedUser?.name || `Customer #${activeUserId}`;
-
-  // Checkout Pre-Flight Validation Form States
+  // ---------------------------------------------------------
+  // 4. Checkout Pre-Flight & Live Placement States
+  // ---------------------------------------------------------
   const [checkoutUserId, setCheckoutUserId] = useState(activeUserId);
   const [shippingCityId, setShippingCityId] = useState(1);
   const [variantId, setVariantId] = useState(1);
@@ -35,17 +54,26 @@ export default function OrdersPage() {
   const [validationError, setValidationError] = useState(null);
   const [stockConflict, setStockConflict] = useState(null);
 
-  // Live Order Placement (validate_only: false) States
   const [placingOrder, setPlacingOrder] = useState(false);
   const [placementSuccess, setPlacementSuccess] = useState(null);
   const [placementError, setPlacementError] = useState(null);
 
-  // 1. Fetch customer past orders on mount or user change
-  const fetchCustomerOrders = async () => {
+  // Keep checkoutUserId synced if customer
+  useEffect(() => {
+    if (!isStaff) {
+      setCheckoutUserId(activeUserId);
+      setHistoryTargetUserId(activeUserId);
+    }
+  }, [activeUserId, isStaff]);
+
+  // ---------------------------------------------------------
+  // API Call: Fetch Customer Orders (GET /orders/user/:id)
+  // ---------------------------------------------------------
+  const fetchCustomerOrders = async (targetId = historyTargetUserId) => {
     setLoadingOrders(true);
     setOrdersError(null);
     try {
-      const response = await api.get(`/orders/user/${activeUserId}`);
+      const response = await api.get(`/orders/user/${targetId}`);
       if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
         const fetchedOrders = response.data.data;
         setOrders(fetchedOrders);
@@ -63,22 +91,63 @@ export default function OrdersPage() {
         setOrders([]);
       }
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        (err.response?.status === 404
-          ? `No orders found for customer #${activeUserId} (404).`
-          : err.message || 'Failed to fetch customer orders.');
-      setOrdersError(message);
+      const status = err.response?.status;
+      const resMsg = err.response?.data?.message;
+      if (status === 403) {
+        setOrdersError(resMsg || 'Access forbidden: You cannot view order histories of other users.');
+      } else if (status === 404) {
+        setOrdersError(`No orders found for customer #${targetId} (404).`);
+      } else {
+        setOrdersError(resMsg || err.message || 'Failed to fetch customer orders.');
+      }
+      setOrders([]);
     } finally {
       setLoadingOrders(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomerOrders();
-  }, [activeUserId]);
+    fetchCustomerOrders(historyTargetUserId);
+  }, [historyTargetUserId]);
 
-  // 2. Fetch single order details whenever selectedOrderId changes
+  // ---------------------------------------------------------
+  // API Call: Fetch All Platform Orders for Staff (GET /orders/)
+  // ---------------------------------------------------------
+  const fetchAllOrders = async () => {
+    if (!isStaff) return;
+    setLoadingAllOrders(true);
+    setAllOrdersError(null);
+    try {
+      const response = await api.get('/orders/');
+      if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
+        setAllOrders(response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setAllOrders(response.data);
+      } else {
+        setAllOrders([]);
+      }
+    } catch (err) {
+      const status = err.response?.status;
+      const resMsg = err.response?.data?.message;
+      if (status === 403) {
+        setAllOrdersError(resMsg || 'Access forbidden: Staff permissions required.');
+      } else {
+        setAllOrdersError(resMsg || err.message || 'Failed to fetch platform orders.');
+      }
+    } finally {
+      setLoadingAllOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isStaff) {
+      fetchAllOrders();
+    }
+  }, [isStaff]);
+
+  // ---------------------------------------------------------
+  // API Call: Fetch Single Order Details (GET /orders/:id)
+  // ---------------------------------------------------------
   useEffect(() => {
     if (!selectedOrderId) return;
     let isMounted = true;
@@ -97,12 +166,15 @@ export default function OrdersPage() {
         }
       } catch (err) {
         if (isMounted) {
-          const message =
-            err.response?.data?.message ||
-            (err.response?.status === 404
-              ? `Order #${selectedOrderId} does not exist in the database (404).`
-              : err.message || `Failed to fetch Order #${selectedOrderId}.`);
-          setDetailsError(message);
+          const status = err.response?.status;
+          const resMsg = err.response?.data?.message;
+          if (status === 403) {
+            setDetailsError(resMsg || 'Access forbidden: You cannot view orders belonging to another customer.');
+          } else if (status === 404) {
+            setDetailsError(`Order #${selectedOrderId} does not exist in the database (404).`);
+          } else {
+            setDetailsError(resMsg || err.message || `Failed to fetch Order #${selectedOrderId}.`);
+          }
           setOrderDetails(null);
         }
       } finally {
@@ -119,7 +191,9 @@ export default function OrdersPage() {
     };
   }, [selectedOrderId]);
 
-  // Pre-Flight Estimation Handler (validate_only: true)
+  // ---------------------------------------------------------
+  // Pre-Flight Checkout Estimation (validate_only: true)
+  // ---------------------------------------------------------
   const handleValidateCheckout = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setValidating(true);
@@ -155,16 +229,20 @@ export default function OrdersPage() {
     } catch (err) {
       setCalculationData(null);
       const resData = err.response?.data;
-      if (err.response?.status === 409 || resData?.code === 'OUT_OF_STOCK') {
+      const status = err.response?.status;
+
+      if (status === 409 || resData?.code === 'OUT_OF_STOCK') {
         setStockConflict(
           resData?.message || 'Insufficient stock for requested items. Quantity exceeds available warehouse inventory.'
         );
+      } else if (status === 403) {
+        setValidationError(resData?.message || 'Access forbidden: Customers cannot submit orders on behalf of other accounts.');
       } else {
         const msg =
           resData?.message ||
-          (err.response?.status === 404
+          (status === 404
             ? 'Referenced entity not found (User, Texas City, or Product Variant 404).'
-            : err.response?.status === 400
+            : status === 400
             ? 'Validation failed: Invalid checkout payload.'
             : err.message || 'Error occurred while validating payload.');
         setValidationError(msg);
@@ -174,7 +252,9 @@ export default function OrdersPage() {
     }
   };
 
-  // Live Order Placement Handler (validate_only: false)
+  // ---------------------------------------------------------
+  // Live ACID Order Placement (validate_only: false)
+  // ---------------------------------------------------------
   const handlePlaceOrder = async () => {
     setPlacingOrder(true);
     setPlacementSuccess(null);
@@ -198,9 +278,12 @@ export default function OrdersPage() {
       if (response.data && (response.status === 201 || response.data.status === 'success')) {
         const orderData = response.data.data;
         setPlacementSuccess(orderData);
-        // Refresh customer orders history so it immediately includes the new order
-        fetchCustomerOrders();
-        // Update selected order ID for inspection tab
+        // Refresh customer orders and all platform orders immediately
+        fetchCustomerOrders(checkoutUserId);
+        if (isStaff) {
+          fetchAllOrders();
+        }
+        // Update selected order ID for inspection
         if (orderData?.order_id) {
           setSelectedOrderId(orderData.order_id);
           setLookupInput(String(orderData.order_id));
@@ -210,16 +293,20 @@ export default function OrdersPage() {
       }
     } catch (err) {
       const resData = err.response?.data;
-      if (err.response?.status === 409 || resData?.code === 'OUT_OF_STOCK') {
+      const status = err.response?.status;
+
+      if (status === 409 || resData?.code === 'OUT_OF_STOCK') {
         setStockConflict(
           resData?.message || 'Insufficient stock to complete purchase under pessimistic transactional lock.'
         );
+      } else if (status === 403) {
+        setPlacementError(resData?.message || 'Access forbidden: Customers cannot submit orders on behalf of other accounts.');
       } else {
         const msg =
           resData?.message ||
-          (err.response?.status === 404
+          (status === 404
             ? 'Referenced entity not found (404).'
-            : err.response?.status === 400
+            : status === 400
             ? 'Order execution failed: Invalid payload.'
             : err.message || 'Error occurred while placing live order.');
         setPlacementError(msg);
@@ -238,7 +325,41 @@ export default function OrdersPage() {
     }
   };
 
-  // Helper styles for badges
+  // Role Badge and Details
+  const getRoleBadge = (roleId) => {
+    switch (roleId) {
+      case 2:
+        return {
+          title: 'Store Manager',
+          tag: 'Manager (Role 2)',
+          bg: '#eef2ff',
+          color: '#4f46e5',
+          border: '#c7d2fe',
+          desc: 'Staff elevated privileges: Full platform order visibility & cross-user inspection.',
+        };
+      case 3:
+        return {
+          title: 'System Administrator',
+          tag: 'Admin (Role 3)',
+          bg: '#f5f3ff',
+          color: '#7c3aed',
+          border: '#ddd6fe',
+          desc: 'System Administrator: Complete platform and transactional authority.',
+        };
+      default:
+        return {
+          title: 'Customer',
+          tag: 'Customer (Role 1)',
+          bg: '#eff6ff',
+          color: '#2563eb',
+          border: '#bfdbfe',
+          desc: 'Customer account: Customer data isolation enforced by cryptographic JWT.',
+        };
+    }
+  };
+  const roleBadge = getRoleBadge(activeRoleId);
+
+  // Status Badge Styling Helper
   const getStatusBadgeStyle = (status) => {
     const s = (status || '').toUpperCase();
     switch (s) {
@@ -290,10 +411,25 @@ export default function OrdersPage() {
     return isNaN(val) ? '$0.00' : `$${val.toFixed(2)}`;
   };
 
+  // Filtered Platform Orders for Staff
+  const filteredPlatformOrders = allOrders.filter((ord) => {
+    const matchesStatus =
+      allOrdersStatusFilter === 'ALL' ||
+      (ord.status || '').toUpperCase() === allOrdersStatusFilter.toUpperCase();
+    const q = allOrdersSearch.toLowerCase().trim();
+    if (!q) return matchesStatus;
+    const matchesSearch =
+      String(ord.order_id).includes(q) ||
+      String(ord.user_id).includes(q) ||
+      (ord.customer_name || '').toLowerCase().includes(q) ||
+      (ord.tracking_number || '').toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
+
   return (
-    <div style={{ maxWidth: '1060px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '48px' }}>
       
-      {/* Top Header & Identity Card */}
+      {/* Top Header & Identity Card with RBAC Badge */}
       <div
         style={{
           display: 'flex',
@@ -313,22 +449,35 @@ export default function OrdersPage() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '8px',
               fontSize: '0.75rem',
               fontWeight: 700,
-              color: 'var(--primary, #2563eb)',
+              color: roleBadge.color,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               marginBottom: '6px',
             }}
           >
-            <span>StockFlow E-Commerce Operations</span>
+            <span>StockFlow Enterprise Orders Center</span>
+            <span>•</span>
+            <span
+              style={{
+                background: roleBadge.bg,
+                color: roleBadge.color,
+                border: `1px solid ${roleBadge.border}`,
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
+              }}
+            >
+              {roleBadge.tag}
+            </span>
           </div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-            Orders & Checkout Center
+            {isStaff ? 'Operations & Orders Management' : 'My Orders & Checkout'}
           </h1>
-          <p style={{ color: 'var(--text-muted, #64748b)', margin: '4px 0 0 0', fontSize: '0.92rem' }}>
-            ACID transaction execution, pessimistic stock reservation, pre-flight estimation, and live tracking.
+          <p style={{ color: 'var(--text-muted, #64748b)', margin: '4px 0 0 0', fontSize: '0.9rem' }}>
+            {roleBadge.desc}
           </p>
         </div>
 
@@ -337,41 +486,42 @@ export default function OrdersPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '12px',
             background: 'var(--bg-subtle, #f8fafc)',
-            padding: '8px 16px',
+            padding: '10px 18px',
             borderRadius: '12px',
             border: '1px solid var(--border-color, #e2e8f0)',
           }}
         >
           <div
             style={{
-              width: '34px',
-              height: '34px',
+              width: '38px',
+              height: '38px',
               borderRadius: '50%',
-              background: 'var(--primary-light, #eff6ff)',
-              color: 'var(--primary, #2563eb)',
+              background: roleBadge.bg,
+              color: roleBadge.color,
+              border: `1px solid ${roleBadge.border}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.88rem',
+              fontWeight: 800,
+              fontSize: '0.95rem',
             }}
           >
             {activeUserId}
           </div>
           <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', fontWeight: 600 }}>
-              Active Customer
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+              {roleBadge.title}
             </div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
               {userName}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Role-Adaptive Tab Navigation */}
       <div
         style={{
           display: 'flex',
@@ -380,18 +530,20 @@ export default function OrdersPage() {
           padding: '6px',
           borderRadius: '12px',
           border: '1px solid var(--border-color, #e2e8f0)',
+          flexWrap: 'wrap',
         }}
       >
+        {/* Tab 1: Checkout & New Order */}
         <button
           type="button"
           onClick={() => setActiveTab('checkout')}
           style={{
-            flex: 1,
+            flex: '1 1 180px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            padding: '10px 16px',
+            padding: '11px 16px',
             borderRadius: '9px',
             fontSize: '0.9rem',
             fontWeight: activeTab === 'checkout' ? 700 : 500,
@@ -406,19 +558,50 @@ export default function OrdersPage() {
           <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
-          <span>Checkout & Place Order</span>
+          <span>{isStaff ? 'New Order & Checkout' : 'Checkout & Place Order'}</span>
         </button>
 
+        {/* Tab 2 (Staff Only): All Platform Orders (GET /orders/) */}
+        {isStaff && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('all_orders')}
+            style={{
+              flex: '1 1 180px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '11px 16px',
+              borderRadius: '9px',
+              fontSize: '0.9rem',
+              fontWeight: activeTab === 'all_orders' ? 700 : 500,
+              border: 'none',
+              background: activeTab === 'all_orders' ? '#ffffff' : 'transparent',
+              color: activeTab === 'all_orders' ? roleBadge.color : 'var(--text-secondary, #475569)',
+              boxShadow: activeTab === 'all_orders' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            <span>All Platform Orders ({allOrders.length})</span>
+          </button>
+        )}
+
+        {/* Tab 3: Customer History (GET /orders/user/:id) */}
         <button
           type="button"
           onClick={() => setActiveTab('history')}
           style={{
-            flex: 1,
+            flex: '1 1 180px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            padding: '10px 16px',
+            padding: '11px 16px',
             borderRadius: '9px',
             fontSize: '0.9rem',
             fontWeight: activeTab === 'history' ? 700 : 500,
@@ -433,19 +616,20 @@ export default function OrdersPage() {
           <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Order History ({orders.length})</span>
+          <span>{isStaff ? 'Customer History' : `My Order History (${orders.length})`}</span>
         </button>
 
+        {/* Tab 4: Track / Single Order Inspection (GET /orders/:id) */}
         <button
           type="button"
           onClick={() => setActiveTab('lookup')}
           style={{
-            flex: 1,
+            flex: '1 1 180px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            padding: '10px 16px',
+            padding: '11px 16px',
             borderRadius: '9px',
             fontSize: '0.9rem',
             fontWeight: activeTab === 'lookup' ? 700 : 500,
@@ -465,33 +649,32 @@ export default function OrdersPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: CHECKOUT & PLACE ORDER (PRE-FLIGHT + LIVE ACID PLACEMENT)          */}
+      {/* TAB 1: CHECKOUT & PLACE ORDER (PRE-FLIGHT + LIVE ACID TRANSACTION)         */}
       {/* ========================================================================= */}
       {activeTab === 'checkout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Form Card */}
           <div
             style={{
               background: 'var(--bg-card, #ffffff)',
               borderRadius: '16px',
               border: '1px solid var(--border-color, #e2e8f0)',
               boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
-              padding: '24px 28px',
+              padding: '26px 30px',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
               <div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
                   Order Checkout & Pre-Flight Verification
                 </h2>
                 <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748b)', margin: '3px 0 0 0' }}>
-                  Estimate delivery fees and live TiDB pricing with <code>validate_only: true</code>, then execute live purchase.
+                  Execute real-time entity checks under pessimistic database lock, then commit real ACID transactions.
                 </p>
               </div>
               <span
                 style={{
                   fontSize: '0.74rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   padding: '4px 12px',
                   borderRadius: '9999px',
                   background: 'var(--primary-light, #eff6ff)',
@@ -499,11 +682,11 @@ export default function OrdersPage() {
                   border: '1px solid var(--primary-border, #bfdbfe)',
                 }}
               >
-                Pessimistic Lock Protected
+                TiDB Pessimistic Lock Protected
               </span>
             </div>
 
-            {/* Inputs Form */}
+            {/* Checkout Form */}
             <form onSubmit={handleValidateCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
               <div
                 style={{
@@ -512,14 +695,22 @@ export default function OrdersPage() {
                   gap: '16px',
                 }}
               >
-                {/* User ID */}
+                {/* User ID (Locked if Customer, Editable if Staff) */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
-                    Customer User ID
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>
+                      Customer User ID
+                    </label>
+                    {!isStaff && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--primary, #2563eb)', fontWeight: 600 }}>
+                        Locked (JWT Identity)
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="number"
                     value={checkoutUserId}
+                    disabled={!isStaff}
                     onChange={(e) => setCheckoutUserId(e.target.value)}
                     required
                     style={{
@@ -529,17 +720,19 @@ export default function OrdersPage() {
                       border: '1px solid var(--border-color, #cbd5e1)',
                       fontSize: '0.9rem',
                       outline: 'none',
-                      background: '#ffffff',
+                      background: !isStaff ? 'var(--bg-subtle, #f8fafc)' : '#ffffff',
+                      cursor: !isStaff ? 'not-allowed' : 'text',
+                      color: !isStaff ? 'var(--text-muted, #64748b)' : 'var(--text-main, #0f172a)',
                     }}
                   />
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    Active customer is #{activeUserId}
+                    {isStaff ? 'Staff may place on behalf of any customer' : `Strictly scoped to your authenticated account (#${activeUserId})`}
                   </span>
                 </div>
 
                 {/* Shipping City ID */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
                     Texas City ID (Shipping)
                   </label>
                   <input
@@ -564,7 +757,7 @@ export default function OrdersPage() {
 
                 {/* Variant ID */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
                     Product Variant ID
                   </label>
                   <input
@@ -589,7 +782,7 @@ export default function OrdersPage() {
 
                 {/* Quantity */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
                     Purchase Quantity
                   </label>
                   <input
@@ -615,7 +808,7 @@ export default function OrdersPage() {
               </div>
 
               {/* Action Buttons Row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
                 <button
                   type="submit"
                   disabled={validating}
@@ -623,11 +816,11 @@ export default function OrdersPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '10px 20px',
+                    padding: '11px 20px',
                     borderRadius: '8px',
                     background: 'var(--primary, #2563eb)',
                     color: '#ffffff',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: '0.88rem',
                     border: 'none',
                     cursor: validating ? 'not-allowed' : 'pointer',
@@ -655,7 +848,7 @@ export default function OrdersPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '10px 22px',
+                    padding: '11px 22px',
                     borderRadius: '8px',
                     background: 'var(--success, #10b981)',
                     color: '#ffffff',
@@ -806,7 +999,7 @@ export default function OrdersPage() {
                 </div>
 
                 <p style={{ margin: '0 0 12px 0', fontSize: '0.88rem', opacity: 0.95 }}>
-                  The transaction was atomically committed: shipment tracking was created, stock decremented, and order items persisted.
+                  The transaction was atomically committed: shipment tracking created, stock decremented, and order items persisted.
                 </p>
 
                 <div
@@ -896,7 +1089,6 @@ export default function OrdersPage() {
                 overflow: 'hidden',
               }}
             >
-              {/* Header / Verified Entities */}
               <div
                 style={{
                   padding: '18px 24px',
@@ -937,7 +1129,7 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Verified Line Items Table */}
+              {/* Verified Line Items */}
               <div style={{ padding: '20px 24px' }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>
                   Verified Line Items ({calculationData.items?.length || 0})
@@ -990,7 +1182,7 @@ export default function OrdersPage() {
                 )}
               </div>
 
-              {/* Financial Totals & CTA */}
+              {/* Financial Totals */}
               <div
                 style={{
                   borderTop: '1px solid var(--border-color, #e2e8f0)',
@@ -1065,11 +1257,286 @@ export default function OrdersPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: CUSTOMER ORDER HISTORY WITH NESTED LINE ITEMS                     */}
+      {/* TAB 2 (STAFF ONLY): ALL PLATFORM ORDERS (GET /orders/)                    */}
+      {/* ========================================================================= */}
+      {isStaff && activeTab === 'all_orders' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Controls Bar */}
+          <div
+            style={{
+              padding: '20px 24px',
+              background: 'var(--bg-card, #ffffff)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                  System-Wide Platform Orders (`GET /orders/`)
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
+                  Manager & Admin feed displaying transactions, customers, and shipments across the entire marketplace.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={fetchAllOrders}
+                disabled={loadingAllOrders}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-subtle, #f1f5f9)',
+                  color: 'var(--text-secondary, #475569)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  cursor: loadingAllOrders ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <svg style={{ width: '14px', height: '14px', animation: loadingAllOrders ? 'spin 1s linear infinite' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{loadingAllOrders ? 'Refreshing...' : 'Refresh Platform Orders'}</span>
+              </button>
+            </div>
+
+            {/* Filter and Search Row */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Search by Order ID, Customer, or Tracking #..."
+                value={allOrdersSearch}
+                onChange={(e) => setAllOrdersSearch(e.target.value)}
+                style={{
+                  flex: '1 1 240px',
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  fontSize: '0.88rem',
+                  outline: 'none',
+                }}
+              />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Status:</span>
+                <select
+                  value={allOrdersStatusFilter}
+                  onChange={(e) => setAllOrdersStatusFilter(e.target.value)}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color, #cbd5e1)',
+                    fontSize: '0.88rem',
+                    background: '#ffffff',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="PROCESSING">Processing</option>
+                  <option value="CONFIRMED">Confirmed</option>
+                  <option value="DELIVERED">Delivered</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {loadingAllOrders && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: '48px 24px',
+                background: 'var(--bg-card, #ffffff)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                color: 'var(--text-secondary, #475569)',
+                fontSize: '0.95rem',
+              }}
+            >
+              <svg style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+              </svg>
+              <span>Loading all platform orders from database...</span>
+            </div>
+          )}
+
+          {/* Error */}
+          {!loadingAllOrders && allOrdersError && (
+            <div
+              style={{
+                padding: '16px 20px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--danger-bg, #fef2f2)',
+                border: '1px solid var(--danger-border, #fecaca)',
+                color: 'var(--danger-text, #b91c1c)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <svg style={{ width: '20px', height: '20px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div>
+                <strong>Unable to load platform orders:</strong> {allOrdersError}
+              </div>
+            </div>
+          )}
+
+          {/* Table View */}
+          {!loadingAllOrders && !allOrdersError && (
+            <div
+              style={{
+                background: 'var(--bg-card, #ffffff)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-subtle, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Order</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Customer</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Placed At</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Shipment & Tracking</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Status</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'right' }}>Total</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPlatformOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ padding: '40px 18px', textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
+                          No platform orders matched your search or filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPlatformOrders.map((ord) => (
+                        <tr
+                          key={ord.order_id}
+                          style={{
+                            borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                            transition: 'background 0.15s',
+                          }}
+                        >
+                          <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                            #{ord.order_id}
+                          </td>
+                          <td style={{ padding: '14px 18px' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{ord.customer_name || 'Customer'}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>User ID #{ord.user_id}</div>
+                          </td>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-secondary, #475569)', fontSize: '0.82rem' }}>
+                            {formatDate(ord.placed_at)}
+                          </td>
+                          <td style={{ padding: '14px 18px' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #475569)' }}>
+                              Shipment #{ord.shipment_id || 'N/A'}
+                            </div>
+                            {ord.tracking_number && (
+                              <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--primary, #2563eb)' }}>
+                                {ord.tracking_number}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 18px' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '3px 8px',
+                                borderRadius: '9999px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.04em',
+                                ...getStatusBadgeStyle(ord.status),
+                              }}
+                            >
+                              {ord.status || 'PENDING'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', textAlign: 'right' }}>
+                            {formatCurrency(ord.total_amount)}
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedOrderId(ord.order_id);
+                                  setLookupInput(String(ord.order_id));
+                                  setActiveTab('lookup');
+                                }}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  background: 'var(--primary-light, #eff6ff)',
+                                  color: 'var(--primary, #2563eb)',
+                                  border: '1px solid var(--primary-border, #bfdbfe)',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Inspect
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHistoryTargetUserId(ord.user_id);
+                                  setActiveTab('history');
+                                }}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  background: 'var(--bg-subtle, #f1f5f9)',
+                                  color: 'var(--text-secondary, #475569)',
+                                  border: '1px solid var(--border-color, #cbd5e1)',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                User #{ord.user_id}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: CUSTOMER ORDER HISTORY (GET /orders/user/:id)                      */}
       {/* ========================================================================= */}
       {activeTab === 'history' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* History Header Controls */}
+          {/* History Header & Target Customer Switcher for Staff */}
           <div
             style={{
               display: 'flex',
@@ -1077,47 +1544,89 @@ export default function OrdersPage() {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '12px',
-              padding: '18px 24px',
+              padding: '20px 24px',
               background: 'var(--bg-card, #ffffff)',
               borderRadius: '16px',
               border: '1px solid var(--border-color, #e2e8f0)',
             }}
           >
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                Past Order History
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                {isStaff ? `Customer #${historyTargetUserId} Order History` : 'My Order History'}
               </h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
-                All historical purchases for Customer #{activeUserId} ({userName})
+                {isStaff
+                  ? `Staff view: Itemized purchase history for Customer #${historyTargetUserId}.`
+                  : `Authenticated as User #${activeUserId} (${userName}).`}
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={fetchCustomerOrders}
-              disabled={loadingOrders}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                background: 'var(--bg-subtle, #f1f5f9)',
-                color: 'var(--text-secondary, #475569)',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                border: '1px solid var(--border-color, #cbd5e1)',
-                cursor: loadingOrders ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <svg style={{ width: '14px', height: '14px', animation: loadingOrders ? 'spin 1s linear infinite' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>{loadingOrders ? 'Refreshing...' : 'Refresh Orders'}</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              {isStaff && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted, #64748b)' }}>
+                    Customer ID:
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={historyTargetUserId}
+                    onChange={(e) => setHistoryTargetUserId(e.target.value)}
+                    style={{
+                      width: '80px',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      fontSize: '0.84rem',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fetchCustomerOrders(historyTargetUserId)}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      background: 'var(--primary, #2563eb)',
+                      color: '#ffffff',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Load
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => fetchCustomerOrders(historyTargetUserId)}
+                disabled={loadingOrders}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-subtle, #f1f5f9)',
+                  color: 'var(--text-secondary, #475569)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  border: '1px solid var(--border-color, #cbd5e1)',
+                  cursor: loadingOrders ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <svg style={{ width: '14px', height: '14px', animation: loadingOrders ? 'spin 1s linear infinite' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{loadingOrders ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
+            </div>
           </div>
 
-          {/* Loading Orders */}
+          {/* Loading */}
           {loadingOrders && (
             <div
               style={{
@@ -1140,7 +1649,7 @@ export default function OrdersPage() {
             </div>
           )}
 
-          {/* Orders Fetch Error */}
+          {/* Orders Fetch Error (Includes 403 Data Isolation message) */}
           {!loadingOrders && ordersError && (
             <div
               style={{
@@ -1150,22 +1659,23 @@ export default function OrdersPage() {
                 border: '1px solid var(--danger-border, #fecaca)',
                 color: 'var(--danger-text, #b91c1c)',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: '12px',
               }}
             >
-              <svg style={{ width: '20px', height: '20px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '2px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <div>
-                <strong>Unable to load past orders:</strong> {ordersError}
+                <strong style={{ display: 'block', marginBottom: '2px' }}>Access / Query Notice:</strong>
+                <span style={{ fontSize: '0.9rem' }}>{ordersError}</span>
               </div>
             </div>
           )}
 
-          {/* Empty Orders State */}
+          {/* Empty Orders */}
           {!loadingOrders && !ordersError && orders.length === 0 && (
             <div
               style={{
@@ -1184,7 +1694,7 @@ export default function OrdersPage() {
                 No past orders found
               </h3>
               <p style={{ fontSize: '0.88rem', margin: '0 0 16px 0' }}>
-                You have not placed any orders yet. Place your first order using the Checkout tab!
+                No order history was recorded for User #{historyTargetUserId}.
               </p>
               <button
                 type="button"
@@ -1205,7 +1715,7 @@ export default function OrdersPage() {
             </div>
           )}
 
-          {/* Orders List Cards */}
+          {/* Orders Cards List */}
           {!loadingOrders && !ordersError && orders.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {orders.map((ord) => {
@@ -1226,7 +1736,6 @@ export default function OrdersPage() {
                       transition: 'border-color 0.2s',
                     }}
                   >
-                    {/* Header Row: ID, Badge, Date, Shipment, and Total */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
@@ -1359,7 +1868,7 @@ export default function OrdersPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: SINGLE ORDER INSPECTION & TRACKING                                 */}
+      {/* TAB 4: SINGLE ORDER INSPECTION & TRACKING (GET /orders/:id)               */}
       {/* ========================================================================= */}
       {activeTab === 'lookup' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1377,11 +1886,13 @@ export default function OrdersPage() {
             }}
           >
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                Single Order Inspection (`GET /api/orders/:id`)
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                Single Order Inspection (`GET /orders/:id`)
               </h2>
               <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748b)', margin: '3px 0 0 0' }}>
-                Lookup any order record in TiDB by ID to inspect header details, delivery shipment ID, and nested order items.
+                {isStaff
+                  ? 'Staff Mode: Retrieve and inspect any order and delivery shipment across the system.'
+                  : 'Customer Mode: Inspect details and line items for orders placed by your account.'}
               </p>
             </div>
 
@@ -1460,7 +1971,7 @@ export default function OrdersPage() {
             </form>
           </div>
 
-          {/* Loading Details State */}
+          {/* Loading */}
           {loadingDetails && (
             <div
               style={{
@@ -1483,27 +1994,33 @@ export default function OrdersPage() {
             </div>
           )}
 
-          {/* Error Details State */}
+          {/* Error Details State (includes 403 Customer Isolation alert) */}
           {!loadingDetails && detailsError && (
             <div
               style={{
-                padding: '16px 20px',
+                padding: '18px 22px',
                 borderRadius: '12px',
                 backgroundColor: 'var(--danger-bg, #fef2f2)',
                 border: '1px solid var(--danger-border, #fecaca)',
                 color: 'var(--danger-text, #b91c1c)',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: '12px',
               }}
             >
-              <svg style={{ width: '20px', height: '20px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '2px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <div>
-                <strong>Inspection Query Error:</strong> {detailsError}
+                <strong style={{ display: 'block', marginBottom: '2px', fontSize: '0.95rem' }}>Inspection Query Notice:</strong>
+                <span style={{ fontSize: '0.9rem', lineHeight: 1.45 }}>{detailsError}</span>
+                {!isStaff && (
+                  <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                    Security Policy: Customers are prohibited from inspecting orders belonging to other user accounts.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1519,7 +2036,6 @@ export default function OrdersPage() {
                 overflow: 'hidden',
               }}
             >
-              {/* Detail Header */}
               <div
                 style={{
                   padding: '20px 24px',
@@ -1544,7 +2060,7 @@ export default function OrdersPage() {
                       marginBottom: '2px',
                     }}
                   >
-                    Database Record
+                    Verified Database Record
                   </span>
                   <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
                     Order #{orderDetails.order_id}
@@ -1576,29 +2092,29 @@ export default function OrdersPage() {
                 }}
               >
                 <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Customer ID</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>User #{orderDetails.user_id ?? 'N/A'}</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Customer ID</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>User #{orderDetails.user_id ?? 'N/A'}</div>
                 </div>
 
                 <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Shipment ID</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{orderDetails.shipment_id ? `#${orderDetails.shipment_id}` : 'Unassigned'}</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Shipment ID</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>{orderDetails.shipment_id ? `#${orderDetails.shipment_id}` : 'Unassigned'}</div>
                 </div>
 
                 <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Placed Date</div>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>{formatDate(orderDetails.placed_at)}</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Placed Date</div>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{formatDate(orderDetails.placed_at)}</div>
                 </div>
 
                 <div style={{ padding: '14px', background: 'var(--primary-light, #eff6ff)', borderRadius: '10px', border: '1px solid var(--primary-border, #bfdbfe)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--primary, #2563eb)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Total Amount</div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--primary, #2563eb)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Total Amount</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>{formatCurrency(orderDetails.total_amount)}</div>
                 </div>
               </div>
 
               {/* Line Items Section */}
               <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '24px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 16px 0' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: '0 0 16px 0' }}>
                   Itemized Line Items ({orderDetails.items?.length || 0})
                 </h3>
 
@@ -1634,13 +2150,13 @@ export default function OrdersPage() {
                         }}
                       >
                         <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', marginBottom: '4px' }}>
                             {item.product_title}
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
                             {item.attribute_name && item.attribute_value && (
                               <span style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-light, #e2e8f0)' }}>
-                                {item.attribute_name}: {item.attribute_value}
+                                {item.attribute_name}: <strong>{item.attribute_value}</strong>
                               </span>
                             )}
                             {item.sku && (
@@ -1656,7 +2172,7 @@ export default function OrdersPage() {
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
                               {formatCurrency(item.unit_price)} × {item.quantity}
                             </div>
-                            <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
                               {formatCurrency(item.line_total)}
                             </div>
                           </div>
