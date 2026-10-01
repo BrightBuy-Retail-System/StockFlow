@@ -10,12 +10,11 @@ export default function OrdersPage() {
   const userName = parsedUser?.full_name || parsedUser?.username || `Customer #${activeUserId}`;
   const isStaff = activeRoleId === 2 || activeRoleId === 3;
 
-  // Active Navigation Tab
-  // Options: 'checkout' | 'all_orders' (staff only) | 'history' | 'lookup'
+  // Active Navigation Tab: 'checkout' | 'all_orders' (staff only) | 'history' | 'lookup'
   const [activeTab, setActiveTab] = useState('checkout');
 
   // ---------------------------------------------------------
-  // 1. Customer Order History States
+  // 1. Customer Order History States (GET /orders/user/:id)
   // ---------------------------------------------------------
   const [historyTargetUserId, setHistoryTargetUserId] = useState(activeUserId);
   const [orders, setOrders] = useState([]);
@@ -41,7 +40,13 @@ export default function OrdersPage() {
   const [detailsError, setDetailsError] = useState(null);
 
   // ---------------------------------------------------------
-  // 4. Checkout Pre-Flight & Live Placement States
+  // 4. Order Lifecycle & Status Transition States (PATCH /orders/:id/status)
+  // ---------------------------------------------------------
+  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState(null);
+  const [statusUpdateMessage, setStatusUpdateMessage] = useState(null);
+
+  // ---------------------------------------------------------
+  // 5. Checkout Pre-Flight & Live Placement States
   // ---------------------------------------------------------
   const [checkoutUserId, setCheckoutUserId] = useState(activeUserId);
   const [shippingCityId, setShippingCityId] = useState(1);
@@ -58,7 +63,7 @@ export default function OrdersPage() {
   const [placementSuccess, setPlacementSuccess] = useState(null);
   const [placementError, setPlacementError] = useState(null);
 
-  // Keep checkoutUserId synced if customer
+  // Keep customer ID synced to their account
   useEffect(() => {
     if (!isStaff) {
       setCheckoutUserId(activeUserId);
@@ -190,6 +195,86 @@ export default function OrdersPage() {
       isMounted = false;
     };
   }, [selectedOrderId]);
+
+  // ---------------------------------------------------------
+  // API Call: Update Order Status (PATCH /orders/:id/status)
+  // ---------------------------------------------------------
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    if (!isStaff) return;
+    setUpdatingStatusOrderId(orderId);
+    setStatusUpdateMessage(null);
+
+    try {
+      const response = await api.patch(`/orders/${orderId}/status`, {
+        status: newStatus,
+      });
+
+      if (response.data && response.data.status === 'success') {
+        const msg = response.data.message || `Order #${orderId} transitioned to ${newStatus}.`;
+        setStatusUpdateMessage({
+          type: 'success',
+          text: msg,
+          orderId,
+        });
+
+        // 1. Update in inspected orderDetails
+        if (orderDetails && orderDetails.order_id === orderId) {
+          setOrderDetails((prev) => ({
+            ...prev,
+            status: newStatus,
+            shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : prev.shipping_status,
+            dispatched_at: newStatus === 'SHIPPED' ? new Date().toISOString() : prev.dispatched_at,
+          }));
+        }
+
+        // 2. Update in allOrders list
+        setAllOrders((prev) =>
+          prev.map((ord) =>
+            ord.order_id === orderId
+              ? {
+                  ...ord,
+                  status: newStatus,
+                  shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : ord.shipping_status,
+                }
+              : ord
+          )
+        );
+
+        // 3. Update in customer orders list if present
+        setOrders((prev) =>
+          prev.map((ord) =>
+            ord.order_id === orderId
+              ? {
+                  ...ord,
+                  status: newStatus,
+                  shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : ord.shipping_status,
+                }
+              : ord
+          )
+        );
+
+        // 4. Background refresh to sync DB state (like restocked quantities)
+        fetchCustomerOrders(historyTargetUserId);
+        fetchAllOrders();
+      }
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.message ||
+        (err.response?.status === 403
+          ? 'Access forbidden: Only Warehouse Managers or Administrators can update order status.'
+          : err.response?.status === 400
+          ? 'Invalid status update or prohibited lifecycle transition.'
+          : err.message || 'Failed to update order status.');
+
+      setStatusUpdateMessage({
+        type: 'error',
+        text: errMsg,
+        orderId,
+      });
+    } finally {
+      setUpdatingStatusOrderId(null);
+    }
+  };
 
   // ---------------------------------------------------------
   // Pre-Flight Checkout Estimation (validate_only: true)
@@ -335,7 +420,7 @@ export default function OrdersPage() {
           bg: '#eef2ff',
           color: '#4f46e5',
           border: '#c7d2fe',
-          desc: 'Staff elevated privileges: Full platform order visibility & cross-user inspection.',
+          desc: 'Staff elevated privileges: Full platform order visibility, lifecycle status transitions, and restock authority.',
         };
       case 3:
         return {
@@ -344,7 +429,7 @@ export default function OrdersPage() {
           bg: '#f5f3ff',
           color: '#7c3aed',
           border: '#ddd6fe',
-          desc: 'System Administrator: Complete platform and transactional authority.',
+          desc: 'System Administrator: Complete platform lifecycle control and database transactional authority.',
         };
       default:
         return {
@@ -353,7 +438,7 @@ export default function OrdersPage() {
           bg: '#eff6ff',
           color: '#2563eb',
           border: '#bfdbfe',
-          desc: 'Customer account: Customer data isolation enforced by cryptographic JWT.',
+          desc: 'Customer account: Customer data isolation strictly enforced by cryptographic JWT token.',
         };
     }
   };
@@ -364,8 +449,20 @@ export default function OrdersPage() {
     const s = (status || '').toUpperCase();
     switch (s) {
       case 'CONFIRMED':
-      case 'COMPLETED':
+        return {
+          backgroundColor: '#eff6ff',
+          color: '#1d4ed8',
+          border: '1px solid #bfdbfe',
+        };
+      case 'SHIPPED':
+      case 'DISPATCHED':
+        return {
+          backgroundColor: '#f5f3ff',
+          color: '#6d28d9',
+          border: '1px solid #ddd6fe',
+        };
       case 'DELIVERED':
+      case 'COMPLETED':
         return {
           backgroundColor: 'var(--success-bg, #ecfdf5)',
           color: 'var(--success-text, #047857)',
@@ -648,6 +745,53 @@ export default function OrdersPage() {
         </button>
       </div>
 
+      {/* Global Status Transition Notification */}
+      {statusUpdateMessage && (
+        <div
+          style={{
+            padding: '14px 20px',
+            borderRadius: '12px',
+            backgroundColor: statusUpdateMessage.type === 'success' ? 'var(--success-bg, #ecfdf5)' : 'var(--danger-bg, #fef2f2)',
+            border: `1px solid ${statusUpdateMessage.type === 'success' ? 'var(--success-border, #a7f3d0)' : 'var(--danger-border, #fecaca)'}`,
+            color: statusUpdateMessage.type === 'success' ? 'var(--success-text, #047857)' : 'var(--danger-text, #b91c1c)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', fontWeight: 600 }}>
+            {statusUpdateMessage.type === 'success' ? (
+              <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            )}
+            <span>{statusUpdateMessage.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusUpdateMessage(null)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '4px',
+              display: 'flex',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB 1: CHECKOUT & PLACE ORDER (PRE-FLIGHT + LIVE ACID TRANSACTION)         */}
       {/* ========================================================================= */}
@@ -865,7 +1009,7 @@ export default function OrdersPage() {
                       <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
                     </svg>
                   ) : (
-                    <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   )}
@@ -964,8 +1108,8 @@ export default function OrdersPage() {
               >
                 <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 <div>
                   <strong>Checkout Error:</strong> {validationError || placementError}
@@ -1279,7 +1423,7 @@ export default function OrdersPage() {
                   System-Wide Platform Orders (`GET /orders/`)
                 </h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
-                  Manager & Admin feed displaying transactions, customers, and shipments across the entire marketplace.
+                  Manage lifecycle status transitions, track shipment dispatching, and restock cancelled orders.
                 </p>
               </div>
 
@@ -1341,8 +1485,8 @@ export default function OrdersPage() {
                 >
                   <option value="ALL">All Statuses</option>
                   <option value="PENDING">Pending</option>
-                  <option value="PROCESSING">Processing</option>
                   <option value="CONFIRMED">Confirmed</option>
+                  <option value="SHIPPED">Shipped</option>
                   <option value="DELIVERED">Delivered</option>
                   <option value="CANCELLED">Cancelled</option>
                 </select>
@@ -1419,7 +1563,7 @@ export default function OrdersPage() {
                       <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Shipment & Tracking</th>
                       <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Status</th>
                       <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'right' }}>Total</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'center' }}>Actions</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'center' }}>Lifecycle Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1430,98 +1574,179 @@ export default function OrdersPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredPlatformOrders.map((ord) => (
-                        <tr
-                          key={ord.order_id}
-                          style={{
-                            borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                            transition: 'background 0.15s',
-                          }}
-                        >
-                          <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                            #{ord.order_id}
-                          </td>
-                          <td style={{ padding: '14px 18px' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{ord.customer_name || 'Customer'}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>User ID #{ord.user_id}</div>
-                          </td>
-                          <td style={{ padding: '14px 18px', color: 'var(--text-secondary, #475569)', fontSize: '0.82rem' }}>
-                            {formatDate(ord.placed_at)}
-                          </td>
-                          <td style={{ padding: '14px 18px' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #475569)' }}>
-                              Shipment #{ord.shipment_id || 'N/A'}
-                            </div>
-                            {ord.tracking_number && (
-                              <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--primary, #2563eb)' }}>
-                                {ord.tracking_number}
+                      filteredPlatformOrders.map((ord) => {
+                        const isRowUpdating = updatingStatusOrderId === ord.order_id;
+                        const currStatus = (ord.status || '').toUpperCase();
+                        const isCancelled = currStatus === 'CANCELLED';
+                        const isShipped = currStatus === 'SHIPPED';
+
+                        return (
+                          <tr
+                            key={ord.order_id}
+                            style={{
+                              borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                              transition: 'background 0.15s',
+                              opacity: isRowUpdating ? 0.6 : 1,
+                            }}
+                          >
+                            <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                              #{ord.order_id}
+                            </td>
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{ord.customer_name || 'Customer'}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>User ID #{ord.user_id}</div>
+                            </td>
+                            <td style={{ padding: '14px 18px', color: 'var(--text-secondary, #475569)', fontSize: '0.82rem' }}>
+                              {formatDate(ord.placed_at)}
+                            </td>
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #475569)' }}>
+                                  #{ord.shipment_id || 'N/A'}
+                                </span>
+                                {ord.shipping_status && (
+                                  <span
+                                    style={{
+                                      fontSize: '0.68rem',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      fontWeight: 700,
+                                      ...getStatusBadgeStyle(ord.shipping_status),
+                                    }}
+                                  >
+                                    {ord.shipping_status}
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '14px 18px' }}>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                padding: '3px 8px',
-                                borderRadius: '9999px',
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                letterSpacing: '0.04em',
-                                ...getStatusBadgeStyle(ord.status),
-                              }}
-                            >
-                              {ord.status || 'PENDING'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', textAlign: 'right' }}>
-                            {formatCurrency(ord.total_amount)}
-                          </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', gap: '6px' }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedOrderId(ord.order_id);
-                                  setLookupInput(String(ord.order_id));
-                                  setActiveTab('lookup');
-                                }}
+                              {ord.tracking_number && (
+                                <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--primary, #2563eb)', marginTop: '2px' }}>
+                                  {ord.tracking_number}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '14px 18px' }}>
+                              <span
                                 style={{
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  background: 'var(--primary-light, #eff6ff)',
-                                  color: 'var(--primary, #2563eb)',
-                                  border: '1px solid var(--primary-border, #bfdbfe)',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  padding: '3px 8px',
+                                  borderRadius: '9999px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.04em',
+                                  ...getStatusBadgeStyle(ord.status),
                                 }}
                               >
-                                Inspect
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setHistoryTargetUserId(ord.user_id);
-                                  setActiveTab('history');
-                                }}
-                                style={{
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  background: 'var(--bg-subtle, #f1f5f9)',
-                                  color: 'var(--text-secondary, #475569)',
-                                  border: '1px solid var(--border-color, #cbd5e1)',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                User #{ord.user_id}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                                {ord.status || 'PENDING'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', textAlign: 'right' }}>
+                              {formatCurrency(ord.total_amount)}
+                            </td>
+                            <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {/* Transition Buttons */}
+                                {!isCancelled && !isShipped && currStatus !== 'CONFIRMED' && (
+                                  <button
+                                    type="button"
+                                    disabled={isRowUpdating}
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'CONFIRMED')}
+                                    title="Confirm order"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      background: '#eff6ff',
+                                      color: '#1d4ed8',
+                                      border: '1px solid #bfdbfe',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 600,
+                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                                    }}
+                                  >
+                                    Confirm
+                                  </button>
+                                )}
+
+                                {!isCancelled && !isShipped && (
+                                  <button
+                                    type="button"
+                                    disabled={isRowUpdating}
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'SHIPPED')}
+                                    title="Dispatch & set shipment to DISPATCHED"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      background: '#f5f3ff',
+                                      color: '#6d28d9',
+                                      border: '1px solid #ddd6fe',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 600,
+                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                                    }}
+                                  >
+                                    Ship 🚚
+                                  </button>
+                                )}
+
+                                {!isCancelled && !isShipped && (
+                                  <button
+                                    type="button"
+                                    disabled={isRowUpdating}
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'CANCELLED')}
+                                    title="Cancel order and restock inventory"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      background: '#fef2f2',
+                                      color: '#b91c1c',
+                                      border: '1px solid #fecaca',
+                                      fontSize: '0.74rem',
+                                      fontWeight: 600,
+                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+
+                                {isShipped && (
+                                  <span style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, padding: '2px 6px', background: '#f5f3ff', borderRadius: '4px' }}>
+                                    Dispatched
+                                  </span>
+                                )}
+
+                                {isCancelled && (
+                                  <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600, padding: '2px 6px', background: '#fef2f2', borderRadius: '4px' }}>
+                                    Restocked
+                                  </span>
+                                )}
+
+                                {/* Inspect Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedOrderId(ord.order_id);
+                                    setLookupInput(String(ord.order_id));
+                                    setActiveTab('lookup');
+                                  }}
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '5px',
+                                    background: 'var(--bg-subtle, #f1f5f9)',
+                                    color: 'var(--text-secondary, #475569)',
+                                    border: '1px solid var(--border-color, #cbd5e1)',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Inspect
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1721,6 +1946,9 @@ export default function OrdersPage() {
               {orders.map((ord) => {
                 const items = ord.items || [];
                 const isCurrentSelected = ord.order_id === selectedOrderId;
+                const isRowUpdating = updatingStatusOrderId === ord.order_id;
+                const currStatus = (ord.status || '').toUpperCase();
+
                 return (
                   <div
                     key={ord.order_id}
@@ -1767,6 +1995,66 @@ export default function OrdersPage() {
                         <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>
                           {formatCurrency(ord.total_amount)}
                         </div>
+
+                        {/* Staff Lifecycle Controls in History Cards */}
+                        {isStaff && currStatus !== 'CANCELLED' && currStatus !== 'SHIPPED' && (
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {currStatus !== 'CONFIRMED' && (
+                              <button
+                                type="button"
+                                disabled={isRowUpdating}
+                                onClick={() => handleUpdateOrderStatus(ord.order_id, 'CONFIRMED')}
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  background: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                  fontSize: '0.76rem',
+                                  fontWeight: 600,
+                                  cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Confirm
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={isRowUpdating}
+                              onClick={() => handleUpdateOrderStatus(ord.order_id, 'SHIPPED')}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                background: '#f5f3ff',
+                                color: '#6d28d9',
+                                border: '1px solid #ddd6fe',
+                                fontSize: '0.76rem',
+                                fontWeight: 600,
+                                cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              Ship
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isRowUpdating}
+                              onClick={() => handleUpdateOrderStatus(ord.order_id, 'CANCELLED')}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                background: '#fef2f2',
+                                color: '#b91c1c',
+                                border: '1px solid #fecaca',
+                                fontSize: '0.76rem',
+                                fontWeight: 600,
+                                cursor: isRowUpdating ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1891,7 +2179,7 @@ export default function OrdersPage() {
               </h2>
               <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748b)', margin: '3px 0 0 0' }}>
                 {isStaff
-                  ? 'Staff Mode: Retrieve and inspect any order and delivery shipment across the system.'
+                  ? 'Staff Mode: Retrieve any order across the system, view shipment timestamps, and trigger lifecycle transitions.'
                   : 'Customer Mode: Inspect details and line items for orders placed by your account.'}
               </p>
             </div>
@@ -2066,21 +2354,122 @@ export default function OrdersPage() {
                     Order #{orderDetails.order_id}
                   </h2>
                 </div>
-                <span
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '6px 14px',
+                      borderRadius: '9999px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      ...getStatusBadgeStyle(orderDetails.status),
+                    }}
+                  >
+                    {orderDetails.status || 'UNKNOWN'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Staff Lifecycle Control Panel for Inspected Order */}
+              {isStaff && (
+                <div
                   style={{
-                    display: 'inline-flex',
+                    padding: '16px 24px',
+                    background: '#f8fafc',
+                    borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                    display: 'flex',
                     alignItems: 'center',
-                    padding: '6px 14px',
-                    borderRadius: '9999px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.04em',
-                    ...getStatusBadgeStyle(orderDetails.status),
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
                   }}
                 >
-                  {orderDetails.status || 'UNKNOWN'}
-                </span>
-              </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>
+                      Manager Order Transitions:
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
+                      (Synchronizes shipments & restocks inventory on cancel)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {orderDetails.status !== 'CONFIRMED' && orderDetails.status !== 'SHIPPED' && orderDetails.status !== 'CANCELLED' && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusOrderId === orderDetails.order_id}
+                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'CONFIRMED')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '6px',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✓ Confirm Order
+                      </button>
+                    )}
+
+                    {orderDetails.status !== 'SHIPPED' && orderDetails.status !== 'CANCELLED' && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusOrderId === orderDetails.order_id}
+                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'SHIPPED')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '6px',
+                          background: '#f5f3ff',
+                          color: '#6d28d9',
+                          border: '1px solid #ddd6fe',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🚚 Mark Shipped (Dispatches)
+                      </button>
+                    )}
+
+                    {orderDetails.status !== 'CANCELLED' && orderDetails.status !== 'SHIPPED' && (
+                      <button
+                        type="button"
+                        disabled={updatingStatusOrderId === orderDetails.order_id}
+                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'CANCELLED')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '6px',
+                          background: '#fef2f2',
+                          color: '#b91c1c',
+                          border: '1px solid #fecaca',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ✕ Cancel & Restock
+                      </button>
+                    )}
+
+                    {orderDetails.status === 'SHIPPED' && (
+                      <span style={{ fontSize: '0.82rem', color: '#6d28d9', fontWeight: 700, background: '#ede9fe', padding: '4px 10px', borderRadius: '6px' }}>
+                        Order Dispatched / In Transit
+                      </span>
+                    )}
+
+                    {orderDetails.status === 'CANCELLED' && (
+                      <span style={{ fontSize: '0.82rem', color: '#b91c1c', fontWeight: 700, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px' }}>
+                        Order Cancelled & Restocked
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Field Matrix */}
               <div
@@ -2098,7 +2487,14 @@ export default function OrdersPage() {
 
                 <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
                   <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Shipment ID</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>{orderDetails.shipment_id ? `#${orderDetails.shipment_id}` : 'Unassigned'}</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                    {orderDetails.shipment_id ? `#${orderDetails.shipment_id}` : 'Unassigned'}
+                  </div>
+                  {orderDetails.shipping_status && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, ...getStatusBadgeStyle(orderDetails.shipping_status), padding: '1px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
+                      Status: {orderDetails.shipping_status}
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
@@ -2111,6 +2507,39 @@ export default function OrdersPage() {
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>{formatCurrency(orderDetails.total_amount)}</div>
                 </div>
               </div>
+
+              {/* Shipment Tracking Details Row (if shipment exists) */}
+              {orderDetails.tracking_number && (
+                <div
+                  style={{
+                    margin: '0 24px 20px 24px',
+                    padding: '14px 18px',
+                    background: '#f8fafc',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color, #e2e8f0)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase' }}>Tracking Number:</span>
+                    <strong style={{ fontFamily: 'monospace', color: 'var(--primary, #2563eb)', fontSize: '0.92rem' }}>
+                      {orderDetails.tracking_number}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.82rem', color: 'var(--text-secondary, #475569)' }}>
+                    {orderDetails.estimated_arrival && (
+                      <div>Est. Arrival: <strong>{new Date(orderDetails.estimated_arrival).toLocaleDateString()}</strong></div>
+                    )}
+                    {orderDetails.dispatched_at && (
+                      <div>Dispatched: <strong>{formatDate(orderDetails.dispatched_at)}</strong></div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Line Items Section */}
               <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '24px' }}>
