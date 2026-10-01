@@ -7,6 +7,8 @@ from db import get_db_connection
 
 orders_bp = Blueprint('orders', __name__)
 
+ALLOWED_ORDER_STATUSES = {'PENDING', 'CONFIRMED', 'SHIPPED', 'CANCELLED'}
+
 def serialize_row(row):
     """Convert MySQL Decimal and datetime objects into JSON-compatible formats."""
     if not row:
@@ -20,27 +22,6 @@ def serialize_row(row):
         else:
             clean_row[key] = val
     return clean_row
-
-def get_enum_default_or_first(cursor, table_name, column_name, default_fallback):
-    """Extract default or first declared enum option from information_schema."""
-    try:
-        cursor.execute("""
-            SELECT COLUMN_TYPE, COLUMN_DEFAULT 
-            FROM information_schema.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-              AND TABLE_NAME = %s 
-              AND COLUMN_NAME = %s
-        """, (table_name, column_name))
-        row = cursor.fetchone()
-        if row:
-            if row.get('COLUMN_DEFAULT'):
-                return row['COLUMN_DEFAULT']
-            col_type = row.get('COLUMN_TYPE', '')
-            if col_type.startswith('enum('):
-                return col_type[5:].split(',')[0].strip("'\" )")
-    except Exception:
-        pass
-    return default_fallback
 
 @orders_bp.route('/ping', methods=['GET'])
 def ping():
@@ -75,6 +56,7 @@ def get_all_orders():
                 u.full_name AS customer_name,
                 o.shipment_id,
                 s.tracking_number,
+                s.shipping_status,
                 o.total_amount,
                 o.status,
                 o.placed_at
@@ -119,14 +101,20 @@ def get_order_by_id(order_id):
 
         header_query = """
             SELECT 
-                order_id,
-                user_id,
-                shipment_id,
-                total_amount,
-                status,
-                placed_at
-            FROM orders
-            WHERE order_id = %s
+                o.order_id,
+                o.user_id,
+                o.shipment_id,
+                o.total_amount,
+                o.status,
+                o.placed_at,
+                s.tracking_number,
+                s.shipping_status,
+                s.estimated_arrival,
+                s.dispatched_at,
+                s.delivered_at
+            FROM orders o
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            WHERE o.order_id = %s
         """
         cursor.execute(header_query, (order_id,))
         order = cursor.fetchone()
@@ -191,7 +179,6 @@ def get_orders_by_user(user_id):
     claims = get_jwt()
     role_id = claims.get('role_id', 1)
 
-    # Customer can only view their own history
     if role_id == 1 and user_id != current_user_id:
         return jsonify({
             "status": "error",
@@ -206,15 +193,18 @@ def get_orders_by_user(user_id):
 
         orders_query = """
             SELECT 
-                order_id,
-                user_id,
-                shipment_id,
-                total_amount,
-                status,
-                placed_at
-            FROM orders
-            WHERE user_id = %s
-            ORDER BY placed_at DESC
+                o.order_id,
+                o.user_id,
+                o.shipment_id,
+                s.tracking_number,
+                s.shipping_status,
+                o.total_amount,
+                o.status,
+                o.placed_at
+            FROM orders o
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            WHERE o.user_id = %s
+            ORDER BY o.placed_at DESC
         """
         cursor.execute(orders_query, (user_id,))
         raw_orders = cursor.fetchall()
@@ -279,7 +269,6 @@ def get_orders_by_user(user_id):
 @orders_bp.route('/checkout', methods=['POST'])
 @jwt_required()
 def checkout():
-    # Identity is extracted directly from the cryptographic token
     authenticated_user_id = int(get_jwt_identity())
     claims = get_jwt()
     role_id = claims.get('role_id', 1)
@@ -291,7 +280,6 @@ def checkout():
             "message": "Missing or invalid JSON body in request."
         }), 400
 
-    # Role 1 (Customer) is strictly locked to their own ID
     payload_user_id = payload.get('user_id', authenticated_user_id)
     if role_id == 1 and payload_user_id != authenticated_user_id:
         return jsonify({
@@ -454,8 +442,8 @@ def checkout():
                 }
             }), 200
 
-        # --- Write Path ---
-        shipping_status = get_enum_default_or_first(cursor, 'shipments', 'shipping_status', 'Processing')
+        # 4. Create Shipment with schema-exact enum 'PENDING'
+        shipping_status = 'PENDING'
         tracking_number = f"TX-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
         lead_days = city_row.get('base_lead_time_days') or 3
         estimated_arrival = (datetime.now() + timedelta(days=int(lead_days))).date()
@@ -466,13 +454,15 @@ def checkout():
         """, (tracking_number, shipping_city_id, shipping_status, estimated_arrival))
         shipment_id = cursor.lastrowid
 
-        order_status = get_enum_default_or_first(cursor, 'orders', 'status', 'Pending')
+        # 5. Create Order Header with schema-exact enum 'PENDING'
+        order_status = 'PENDING'
         cursor.execute("""
             INSERT INTO orders (user_id, shipment_id, total_amount, status)
             VALUES (%s, %s, %s, %s)
         """, (user_id, shipment_id, total_amount, order_status))
         order_id = cursor.lastrowid
 
+        # 6. Insert Order Items & Decrement Inventory
         for it in verified_items:
             cursor.execute("""
                 INSERT INTO order_items (order_id, variant_id, unit_price, quantity)
@@ -499,6 +489,144 @@ def checkout():
                 "items_count": len(verified_items)
             }
         }), 201
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@orders_bp.route('/<int:order_id>/status', methods=['PATCH'])
+@jwt_required()
+def update_order_status(order_id):
+    """Manager/Admin endpoint: Transition order status, update shipments, or restock on cancellation."""
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+
+    # Restrict status changes to staff roles (2 or 3)
+    if role_id not in (2, 3):
+        return jsonify({
+            "status": "error",
+            "message": "Access forbidden: Only Warehouse Managers or Administrators can update order status."
+        }), 403
+
+    payload = request.get_json(silent=True) or {}
+    new_status = payload.get('status', '').strip().upper()
+
+    if new_status not in ALLOWED_ORDER_STATUSES:
+        return jsonify({
+            "status": "error",
+            "message": f"Invalid status '{new_status}'. Allowed values: {sorted(list(ALLOWED_ORDER_STATUSES))}"
+        }), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        conn.autocommit = False
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Fetch current order with row lock
+        cursor.execute("""
+            SELECT order_id, shipment_id, status 
+            FROM orders 
+            WHERE order_id = %s 
+            FOR UPDATE
+        """, (order_id,))
+        order = cursor.fetchone()
+
+        if not order:
+            conn.rollback()
+            return jsonify({
+                "status": "error",
+                "message": f"Order #{order_id} not found."
+            }), 404
+
+        current_status = order['status']
+
+        if current_status == new_status:
+            conn.rollback()
+            return jsonify({
+                "status": "success",
+                "message": f"Order #{order_id} is already in '{new_status}' status.",
+                "data": {"order_id": order_id, "status": current_status}
+            }), 200
+
+        # Business Rule: Cannot modify or cancel already cancelled orders
+        if current_status == 'CANCELLED':
+            conn.rollback()
+            return jsonify({
+                "status": "error",
+                "message": f"Order #{order_id} is already CANCELLED and cannot be modified."
+            }), 400
+
+        # Business Rule: Cannot cancel orders that are already dispatched/shipped
+        if new_status == 'CANCELLED' and current_status == 'SHIPPED':
+            conn.rollback()
+            return jsonify({
+                "status": "error",
+                "message": f"Order #{order_id} has already shipped and cannot be cancelled directly."
+            }), 400
+
+        # 2. Handle Stock Restock on Cancellation
+        if new_status == 'CANCELLED':
+            cursor.execute("""
+                SELECT variant_id, quantity 
+                FROM order_items 
+                WHERE order_id = %s
+            """, (order_id,))
+            items = cursor.fetchall()
+
+            for item in items:
+                cursor.execute("""
+                    UPDATE inventory 
+                    SET stock_quantity = stock_quantity + %s 
+                    WHERE variant_id = %s
+                """, (item['quantity'], item['variant_id']))
+
+        # 3. Synchronize Shipment Records
+        shipment_id = order.get('shipment_id')
+        if shipment_id:
+            if new_status == 'SHIPPED':
+                cursor.execute("""
+                    UPDATE shipments 
+                    SET shipping_status = 'DISPATCHED', dispatched_at = NOW() 
+                    WHERE shipment_id = %s
+                """, (shipment_id,))
+            elif new_status == 'CANCELLED':
+                cursor.execute("""
+                    UPDATE shipments 
+                    SET shipping_status = 'PENDING' 
+                    WHERE shipment_id = %s
+                """, (shipment_id,))
+
+        # 4. Update Order Status
+        cursor.execute("""
+            UPDATE orders 
+            SET status = %s 
+            WHERE order_id = %s
+        """, (new_status, order_id))
+
+        conn.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Order #{order_id} status updated from '{current_status}' to '{new_status}'.",
+            "data": {
+                "order_id": order_id,
+                "previous_status": current_status,
+                "status": new_status,
+                "shipment_id": shipment_id
+            }
+        }), 200
 
     except Exception as e:
         if conn:
