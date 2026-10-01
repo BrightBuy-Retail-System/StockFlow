@@ -184,6 +184,74 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.get_json().get('status'), 'success')
 
+    def test_17_customer_cannot_update_order_status(self):
+        """Verifies Customer (role 1) is forbidden from altering order status (HTTP 403)."""
+        res = self.client.patch('/api/orders/1/status', json={"status": "SHIPPED"}, headers=self.customer_headers)
+        self.assertEqual(res.status_code, 403)
+
+    def test_18_invalid_status_rejected(self):
+        """Verifies manager submitting an unrecognized status receives HTTP 400."""
+        res = self.client.patch('/api/orders/1/status', json={"status": "FLYING"}, headers=self.manager_headers)
+        self.assertEqual(res.status_code, 400)
+
+    def test_19_manager_transition_to_shipped_syncs_shipment(self):
+        """Verifies Manager updating an order to SHIPPED updates shipment to DISPATCHED."""
+        # 1. Place a test order
+        checkout_res = self.client.post('/api/orders/checkout', json={
+            "user_id": 4, "shipping_city_id": 1, "items": [{"variant_id": 1, "quantity": 1}]
+        }, headers=self.customer_headers)
+        self.assertEqual(checkout_res.status_code, 201)
+        created_order = checkout_res.get_json()['data']
+        order_id = created_order['order_id']
+        shipment_id = created_order['shipment_id']
+
+        # 2. Manager patches status to SHIPPED
+        patch_res = self.client.patch(f'/api/orders/{order_id}/status', json={"status": "SHIPPED"}, headers=self.manager_headers)
+        self.assertEqual(patch_res.status_code, 200)
+        self.assertEqual(patch_res.get_json()['data']['status'], 'SHIPPED')
+
+        # 3. Assert shipment in DB was synced to DISPATCHED
+        conn = get_db_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT shipping_status, dispatched_at FROM shipments WHERE shipment_id = %s", (shipment_id,))
+        shipment = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        self.assertEqual(shipment['shipping_status'], 'DISPATCHED')
+        self.assertIsNotNone(shipment['dispatched_at'])
+
+    def test_20_manager_cancel_order_restocks_inventory(self):
+        """Verifies cancelling an order restores the decremented inventory stock."""
+        # 1. Check stock before placement
+        conn = get_db_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT stock_quantity FROM inventory WHERE variant_id = 1")
+        stock_before = cur.fetchone()['stock_quantity']
+        cur.close()
+        conn.close()
+
+        # 2. Place an order for 2 units
+        checkout_res = self.client.post('/api/orders/checkout', json={
+            "user_id": 4, "shipping_city_id": 1, "items": [{"variant_id": 1, "quantity": 2}]
+        }, headers=self.customer_headers)
+        self.assertEqual(checkout_res.status_code, 201)
+        order_id = checkout_res.get_json()['data']['order_id']
+
+        # 3. Manager cancels order
+        cancel_res = self.client.patch(f'/api/orders/{order_id}/status', json={"status": "CANCELLED"}, headers=self.manager_headers)
+        self.assertEqual(cancel_res.status_code, 200)
+
+        # 4. Check stock after cancellation -> must equal original baseline stock
+        conn = get_db_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT stock_quantity FROM inventory WHERE variant_id = 1")
+        stock_restored = cur.fetchone()['stock_quantity']
+        cur.close()
+        conn.close()
+
+        self.assertEqual(stock_restored, stock_before)
+
 
 if __name__ == '__main__':
     unittest.main()
