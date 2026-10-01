@@ -101,7 +101,16 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink
+              to="/auth-cart"
+              onClick={(e) => {
+                if (!user) {
+                  e.preventDefault();
+                  navigate('/login');
+                }
+              }}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
               Cart
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>

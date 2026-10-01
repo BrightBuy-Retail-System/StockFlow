@@ -133,3 +133,186 @@ def register():
     finally:
         cursor.close()
         conn.close()
+
+
+# ----------------------------------------------------
+# CART ENDPOINTS (Member 2: Auth, Sessions & Cart)
+# ----------------------------------------------------
+
+def _get_or_create_cart(cursor, conn, user_id):
+    """Helper to retrieve existing user cart or create a new one."""
+    cursor.execute("SELECT cart_id FROM carts WHERE user_id = %s", (user_id,))
+    cart = cursor.fetchone()
+    if cart:
+        return cart['cart_id']
+    
+    cursor.execute("INSERT INTO carts (user_id) VALUES (%s)", (user_id,))
+    conn.commit()
+    return cursor.lastrowid
+
+
+@auth_cart_bp.route('/cart', methods=['GET'])
+@jwt_required()
+def get_user_cart():
+    user_id = get_jwt_identity()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cart_id = _get_or_create_cart(cursor, conn, user_id)
+
+        query = """
+            SELECT 
+                ci.cart_item_id,
+                ci.variant_id,
+                ci.quantity,
+                pv.sku,
+                pv.attribute_name,
+                pv.attribute_value,
+                p.product_id,
+                p.title AS product_name,
+                p.description,
+                COALESCE(pv.price_override, p.base_price) AS unit_price,
+                (COALESCE(pv.price_override, p.base_price) * ci.quantity) AS total_price
+            FROM cart_items ci
+            JOIN product_variants pv ON ci.variant_id = pv.variant_id
+            JOIN products p ON pv.product_id = p.product_id
+            WHERE ci.cart_id = %s
+            ORDER BY ci.cart_item_id DESC
+        """
+        cursor.execute(query, (cart_id,))
+        items = cursor.fetchall()
+
+        item_count = sum(item['quantity'] for item in items) if items else 0
+        subtotal = sum(float(item['total_price']) for item in items) if items else 0.0
+
+        return jsonify({
+            "cart_id": cart_id,
+            "items": items,
+            "item_count": item_count,
+            "subtotal": round(subtotal, 2)
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/cart/add', methods=['POST'])
+@jwt_required()
+def add_to_cart():
+    user_id = get_jwt_identity()
+    data = request.get_json() or {}
+    variant_id = data.get('variant_id')
+    quantity = int(data.get('quantity', 1))
+
+    if not variant_id or quantity <= 0:
+        return jsonify({"message": "Valid variant_id and positive quantity are required"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cart_id = _get_or_create_cart(cursor, conn, user_id)
+
+        # Check if this variant is already in the cart
+        cursor.execute(
+            "SELECT cart_item_id, quantity FROM cart_items WHERE cart_id = %s AND variant_id = %s",
+            (cart_id, variant_id)
+        )
+        existing_item = cursor.fetchone()
+
+        if existing_item:
+            new_qty = existing_item['quantity'] + quantity
+            cursor.execute(
+                "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s",
+                (new_qty, existing_item['cart_item_id'])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO cart_items (cart_id, variant_id, quantity) VALUES (%s, %s, %s)",
+                (cart_id, variant_id, quantity)
+            )
+
+        conn.commit()
+        return jsonify({"message": "Item added to cart successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/cart/items/<int:cart_item_id>', methods=['PUT'])
+@jwt_required()
+def update_cart_item(cart_item_id):
+    user_id = get_jwt_identity()
+    data = request.get_json() or {}
+    quantity = int(data.get('quantity', 1))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cart_id = _get_or_create_cart(cursor, conn, user_id)
+
+        if quantity <= 0:
+            cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
+        else:
+            cursor.execute(
+                "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s AND cart_id = %s",
+                (quantity, cart_item_id, cart_id)
+            )
+
+        conn.commit()
+        return jsonify({"message": "Cart item updated successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/cart/items/<int:cart_item_id>', methods=['DELETE'])
+@jwt_required()
+def delete_cart_item(cart_item_id):
+    user_id = get_jwt_identity()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cart_id = _get_or_create_cart(cursor, conn, user_id)
+        cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
+        conn.commit()
+        return jsonify({"message": "Item removed from cart"}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/cart/clear', methods=['DELETE'])
+@jwt_required()
+def clear_cart():
+    user_id = get_jwt_identity()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cart_id = _get_or_create_cart(cursor, conn, user_id)
+        cursor.execute("DELETE FROM cart_items WHERE cart_id = %s", (cart_id,))
+        conn.commit()
+        return jsonify({"message": "Cart cleared successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
