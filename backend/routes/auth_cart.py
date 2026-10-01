@@ -47,9 +47,9 @@ def login():
                 "message": "Login successful",
                 "access_token": access_token,
                 "user": {
-                    "id": user["user_id"],
+                    "id": user["user_id"], 
                     "username": user["full_name"],
-                    "role_id": role_id
+                    "role_id": role_id #role_id
                 }
             }), 200
         else:

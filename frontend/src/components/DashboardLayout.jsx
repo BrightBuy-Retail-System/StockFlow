@@ -68,7 +68,7 @@ export default function DashboardLayout() {
 
   const getRoleLabel = () => {
     if (!user) return '';
-    if (user.role_id === 2) return 'Manager / Warehouse Admin';
+    if (user.role_id === 2) return 'Store Executive & Manager';
     if (user.role_id === 3) return 'System Administrator';
     return 'Customer Account';
   };
