@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 from datetime import datetime, date, timedelta
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from db import get_db_connection
 
 orders_bp = Blueprint('orders', __name__)
@@ -21,7 +22,7 @@ def serialize_row(row):
     return clean_row
 
 def get_enum_default_or_first(cursor, table_name, column_name, default_fallback):
-    """Query information_schema to extract the first declared enum value or default."""
+    """Extract default or first declared enum option from information_schema."""
     try:
         cursor.execute("""
             SELECT COLUMN_TYPE, COLUMN_DEFAULT 
@@ -48,8 +49,68 @@ def ping():
         "module": "orders"
     }), 200
 
+@orders_bp.route('/', methods=['GET'])
+@jwt_required()
+def get_all_orders():
+    """Manager & Admin endpoint: Retrieve all platform orders."""
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+
+    if role_id not in (2, 3):
+        return jsonify({
+            "status": "error",
+            "message": "Access forbidden: Manager or Admin permissions required."
+        }), 403
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                o.order_id,
+                o.user_id,
+                u.full_name AS customer_name,
+                o.shipment_id,
+                s.tracking_number,
+                o.total_amount,
+                o.status,
+                o.placed_at
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            ORDER BY o.placed_at DESC
+        """
+        cursor.execute(query)
+        orders = cursor.fetchall()
+
+        return jsonify({
+            "status": "success",
+            "count": len(orders),
+            "data": [serialize_row(o) for o in orders]
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @orders_bp.route('/<int:order_id>', methods=['GET'])
+@jwt_required()
 def get_order_by_id(order_id):
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+
     conn = None
     cursor = None
     try:
@@ -75,6 +136,13 @@ def get_order_by_id(order_id):
                 "status": "error",
                 "message": f"Order #{order_id} not found."
             }), 404
+
+        # Enforce Customer Data Isolation (Role 1)
+        if role_id == 1 and order['user_id'] != current_user_id:
+            return jsonify({
+                "status": "error",
+                "message": "Access forbidden: You cannot view orders belonging to another customer."
+            }), 403
 
         items_query = """
             SELECT 
@@ -117,7 +185,19 @@ def get_order_by_id(order_id):
             conn.close()
 
 @orders_bp.route('/user/<int:user_id>', methods=['GET'])
+@jwt_required()
 def get_orders_by_user(user_id):
+    current_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+
+    # Customer can only view their own history
+    if role_id == 1 and user_id != current_user_id:
+        return jsonify({
+            "status": "error",
+            "message": "Access forbidden: You cannot view order histories of other users."
+        }), 403
+
     conn = None
     cursor = None
     try:
@@ -197,7 +277,13 @@ def get_orders_by_user(user_id):
             conn.close()
 
 @orders_bp.route('/checkout', methods=['POST'])
+@jwt_required()
 def checkout():
+    # Identity is extracted directly from the cryptographic token
+    authenticated_user_id = int(get_jwt_identity())
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+
     payload = request.get_json(silent=True)
     if not payload:
         return jsonify({
@@ -205,12 +291,15 @@ def checkout():
             "message": "Missing or invalid JSON body in request."
         }), 400
 
-    user_id = payload.get('user_id')
-    if not isinstance(user_id, int) or user_id <= 0:
+    # Role 1 (Customer) is strictly locked to their own ID
+    payload_user_id = payload.get('user_id', authenticated_user_id)
+    if role_id == 1 and payload_user_id != authenticated_user_id:
         return jsonify({
             "status": "error",
-            "message": "Field 'user_id' must be a positive integer."
-        }), 400
+            "message": "Access forbidden: Customers cannot submit orders on behalf of other accounts."
+        }), 403
+
+    user_id = payload_user_id
 
     shipping_city_id = payload.get('shipping_city_id')
     if not isinstance(shipping_city_id, int) or shipping_city_id <= 0:
@@ -280,7 +369,7 @@ def checkout():
                 "message": f"Texas shipping city #{shipping_city_id} does not exist."
             }), 404
 
-        # 3. Pessimistic Row Lock on Variants and Stock
+        # 3. Lock Variants and Inventory for Update
         requested_variant_ids = [item['variant_id'] for item in items]
         format_strings = ','.join(['%s'] * len(requested_variant_ids))
         
@@ -340,7 +429,6 @@ def checkout():
         shipping_fee = Decimal(str(city_row['shipping_fee']))
         total_amount = subtotal + shipping_fee
 
-        # If client requested pre-flight calculation only, safely roll back and return preview
         if validate_only:
             conn.rollback()
             return jsonify({
@@ -366,9 +454,7 @@ def checkout():
                 }
             }), 200
 
-        # --- WRITE PATH: Finalize Order within Transaction ---
-
-        # 4. Create Shipment
+        # --- Write Path ---
         shipping_status = get_enum_default_or_first(cursor, 'shipments', 'shipping_status', 'Processing')
         tracking_number = f"TX-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
         lead_days = city_row.get('base_lead_time_days') or 3
@@ -380,7 +466,6 @@ def checkout():
         """, (tracking_number, shipping_city_id, shipping_status, estimated_arrival))
         shipment_id = cursor.lastrowid
 
-        # 5. Create Order Header
         order_status = get_enum_default_or_first(cursor, 'orders', 'status', 'Pending')
         cursor.execute("""
             INSERT INTO orders (user_id, shipment_id, total_amount, status)
@@ -388,7 +473,6 @@ def checkout():
         """, (user_id, shipment_id, total_amount, order_status))
         order_id = cursor.lastrowid
 
-        # 6. Insert Order Items & Decrement Inventory
         for it in verified_items:
             cursor.execute("""
                 INSERT INTO order_items (order_id, variant_id, unit_price, quantity)
@@ -401,7 +485,6 @@ def checkout():
                 WHERE variant_id = %s
             """, (it['quantity'], it['variant_id']))
 
-        # 7. Commit ACID Transaction
         conn.commit()
 
         return jsonify({
