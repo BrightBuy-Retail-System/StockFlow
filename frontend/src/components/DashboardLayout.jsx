@@ -53,6 +53,7 @@ export default function DashboardLayout() {
   }, [location.pathname]);
 
   function handleLogout() {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     navigate('/login');
@@ -67,7 +68,7 @@ export default function DashboardLayout() {
 
   const getRoleLabel = () => {
     if (!user) return '';
-    if (user.role_id === 2) return 'Manager / Warehouse Admin';
+    if (user.role_id === 2) return 'Store Executive & Manager';
     if (user.role_id === 3) return 'System Administrator';
     return 'Customer Account';
   };
@@ -100,7 +101,16 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink
+              to="/auth-cart"
+              onClick={(e) => {
+                if (!user) {
+                  e.preventDefault();
+                  navigate('/login');
+                }
+              }}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
               Cart
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
