@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage';
 import CustomerDashboard from './pages/CustomerDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import SystemAdministrator from './pages/SystemAdministrator';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
@@ -19,15 +20,27 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<OverviewPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
-          <Route path="/auth-cart" element={<AuthCartPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/logistics" element={<LogisticsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/customer-dashboard" element={<CustomerDashboard />} />
-          <Route path="/manager-dashboard" element={<ManagerDashboard />} />
-          <Route path="/system-administrator" element={<SystemAdministrator />} />
+
+          {/* Protected Routes guarded by JWT & Role */}
+          <Route element={<ProtectedRoute allowedRoles={[1]} />}>
+            <Route path="/customer-dashboard" element={<CustomerDashboard />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={[2]} />}>
+            <Route path="/manager-dashboard" element={<ManagerDashboard />} />
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={[3]} />}>
+            <Route path="/system-administrator" element={<SystemAdministrator />} />
+          </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[1, 2, 3]} />}>
+            <Route path="/auth-cart" element={<AuthCartPage />} />
+          </Route>
+
         </Route>
       </Routes>
     </BrowserRouter>
