@@ -20,14 +20,23 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=8)
 
 jwt = JWTManager(app)
 
+import re
+
 # Enable cross-origin requests and cookie forwarding from React
 cors_origins_env = os.getenv('CORS_ORIGIN', 'http://localhost:5173')
-allowed_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
+env_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip() and o.strip() != '*']
+
+# Allow localhost and all Cloudflare Pages domains (*.pages.dev)
+allowed_origins = [
+    re.compile(r"^https://.*\.pages\.dev$"),
+    "http://localhost:5173",
+    "http://localhost:3000"
+] + env_origins
 
 CORS(
     app,
     supports_credentials=True,
-    origins=allowed_origins if allowed_origins != ['*'] else '*'
+    origins=allowed_origins
 )
 
 # Mount blueprints to their agreed API prefixes
