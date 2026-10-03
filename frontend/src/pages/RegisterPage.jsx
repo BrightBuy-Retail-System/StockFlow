@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/client';
 
 export default function RegisterPage() {
     const navigate = useNavigate();
@@ -9,31 +10,20 @@ export default function RegisterPage() {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    /*function handleChange(event) {
-        setName(event.target.value);
-    }
-
-    function handlePasswordChange(event) {
-        setPassword(event.target.value);
-    }*/
-
     async function handleSubmit(event) {
         event.preventDefault();
         setLoading(true);
         setMessage("");
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth_cart/register', {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ username: name, password: password, email: email }),
+            const response = await api.post('/auth_cart/register', { 
+                username: name, 
+                password: password, 
+                email: email 
             });
+            const data = response.data;
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (response.status === 201 || response.status === 200) {
                 if (data.access_token) {
                     localStorage.setItem('token', data.access_token);
                 }
@@ -45,7 +35,7 @@ export default function RegisterPage() {
 
         } catch (error) {
             console.error("Registration error:", error);
-            setMessage("An error occurred during registration. Please try again.");
+            setMessage(error.response?.data?.message || "An error occurred during registration. Please try again.");
 
         } finally {
             setLoading(false);

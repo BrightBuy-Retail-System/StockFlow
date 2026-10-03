@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/client';
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -8,31 +9,16 @@ export default function LoginPage() {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
 
-    /*function handleChange(event) {
-        setName(event.target.value);
-    }
-
-    function handlePasswordChange(event) {
-        setPassword(event.target.value);
-    }*/
-
     async function handleSubmit(event) {
         event.preventDefault();
         setLoading(true);
         setMessage("");
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth_cart/login', {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ email: email, password: password, }),
-            });
+            const response = await api.post('/auth_cart/login', { email, password });
+            const data = response.data;
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (response.status === 200) {
                 if (data.access_token) {
                     localStorage.setItem('token', data.access_token);
                 }
@@ -54,7 +40,7 @@ export default function LoginPage() {
 
         } catch (error) {
             console.error("Login error:", error);
-            setMessage("An error occurred during login. Please try again.");
+            setMessage(error.response?.data?.message || "An error occurred during login. Please try again.");
 
         } finally {
             setLoading(false);
