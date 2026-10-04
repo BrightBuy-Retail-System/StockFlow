@@ -55,6 +55,46 @@ def ping():
         "module": "orders"
     }), 200
 
+@orders_bp.route('/shipping-cities', methods=['GET'])
+def get_shipping_cities():
+    """Public/Customer endpoint: Retrieve available Texas delivery hubs, fees, and lead times."""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                city_id,
+                city_name,
+                hub_name,
+                base_lead_time_days,
+                shipping_fee
+            FROM texas_cities
+            ORDER BY city_id ASC
+        """
+        cursor.execute(query)
+        cities = cursor.fetchall()
+
+        return jsonify({
+            "status": "success",
+            "count": len(cities),
+            "data": [serialize_row(c) for c in cities]
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @orders_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_all_orders():
@@ -530,7 +570,15 @@ def checkout():
         """, (order_id, payment_method, transaction_ref, total_amount, payment_status))
         payment_id = cursor.lastrowid
 
-        # 8. Commit ACID Transaction
+        
+        # 8. Invalidate active cart items for this customer upon purchase
+        cursor.execute("""
+            DELETE ci FROM cart_items ci
+            JOIN carts c ON ci.cart_id = c.cart_id
+            WHERE c.user_id = %s
+        """, (user_id,))
+
+        # 9. Commit ACID Transaction
         conn.commit()
 
         return jsonify({
