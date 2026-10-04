@@ -68,3 +68,9 @@ BEGIN
     IF NEW.shipping_status = 'DISPATCHED' AND OLD.shipping_status != 'DISPATCHED' THEN
         SET NEW.dispatched_at = CURRENT_TIMESTAMP;
     END IF;
+    IF NEW.shipping_status = 'DELIVERED' AND OLD.shipping_status != 'DELIVERED' THEN
+        SET NEW.delivered_at = CURRENT_TIMESTAMP;
+    END IF;
+END$$
+
+DELIMITER ;
