@@ -252,6 +252,31 @@ class TestOrdersAPI(unittest.TestCase):
 
         self.assertEqual(stock_restored, stock_before)
 
+    def test_21_checkout_creates_linked_payment_record(self):
+        """Verifies ACID checkout inserts an immutable payment record tied to the order."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "payment_method": "CREDIT_CARD",
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
+        self.assertEqual(res.status_code, 201)
+        data = res.get_json()['data']
+        order_id = data['order_id']
+        payment_id = data.get('payment_id')
+        self.assertIsNotNone(payment_id)
+        self.assertIsNotNone(data.get('transaction_ref'))
+
+        # Inspect order via GET to confirm payment details are nested
+        verify_res = self.client.get(f'/api/orders/{order_id}', headers=self.customer_headers)
+        self.assertEqual(verify_res.status_code, 200)
+        payment_data = verify_res.get_json()['data'].get('payment')
+        self.assertIsNotNone(payment_data)
+        self.assertEqual(payment_data['payment_id'], payment_id)
+        self.assertEqual(payment_data['payment_method'], 'CREDIT_CARD')
+        self.assertEqual(payment_data['amount'], data['total_amount'])
+
 
 if __name__ == '__main__':
     unittest.main()
