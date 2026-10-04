@@ -215,3 +215,5 @@ GRANT SELECT ON v_quarterly_sales_report TO analytics_viewer;
 GRANT SELECT ON v_top_selling_products TO analytics_viewer;
 GRANT SELECT ON v_category_order_totals TO analytics_viewer;
 GRANT SELECT ON v_customer_order_summary TO analytics_viewer;
+
+-- continue
