@@ -1,0 +1,21 @@
+#Logistics & Warehouses Module 
+
+
+CREATE TABLE IF NOT EXISTS texas_cities (
+    city_id              INT AUTO_INCREMENT PRIMARY KEY,
+    city_name            VARCHAR(100) NOT NULL UNIQUE,
+    hub_name             VARCHAR(100) NOT NULL,
+    base_lead_time_days  INT NOT NULL DEFAULT 2,
+    shipping_fee         DECIMAL(8,2) NOT NULL DEFAULT 0.00
+);
+
+CREATE TABLE IF NOT EXISTS shipments (
+    shipment_id          INT AUTO_INCREMENT PRIMARY KEY,
+    tracking_number      VARCHAR(64) NOT NULL UNIQUE,
+    destination_city_id  INT NOT NULL,
+    shipping_status      ENUM('PENDING','DISPATCHED','IN_TRANSIT','DELIVERED') DEFAULT 'PENDING',
+    estimated_arrival    DATE,
+    dispatched_at        TIMESTAMP NULL,
+    delivered_at         TIMESTAMP NULL,
+    FOREIGN KEY (destination_city_id) REFERENCES texas_cities(city_id)
+);
