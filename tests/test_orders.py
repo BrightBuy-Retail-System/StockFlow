@@ -277,6 +277,20 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertEqual(payment_data['payment_method'], 'CREDIT_CARD')
         self.assertEqual(payment_data['amount'], data['total_amount'])
 
+    def test_22_get_shipping_cities_catalog(self):
+        """Verifies shipping cities endpoint returns Texas hubs, fees, and lead times from DB."""
+        res = self.client.get('/api/orders/shipping-cities')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get('status'), 'success')
+        self.assertGreater(data.get('count', 0), 0)
+        
+        first_city = data.get('data', [])[0]
+        self.assertIn('city_id', first_city)
+        self.assertIn('city_name', first_city)
+        self.assertIn('shipping_fee', first_city)
+        self.assertIn('base_lead_time_days', first_city)
+
 
 if __name__ == '__main__':
     unittest.main()
