@@ -55,3 +55,16 @@ BEGIN
 
     RETURN IFNULL(v_base_days, 2) + v_penalty;
 END$$
+
+DELIMITER ;
+
+-- Trigger: trg_shipment_status_timestamp
+DELIMITER $$
+
+CREATE TRIGGER trg_shipment_status_timestamp
+BEFORE UPDATE ON shipments
+FOR EACH ROW
+BEGIN
+    IF NEW.shipping_status = 'DISPATCHED' AND OLD.shipping_status != 'DISPATCHED' THEN
+        SET NEW.dispatched_at = CURRENT_TIMESTAMP;
+    END IF;
