@@ -1,4 +1,5 @@
 -- check previous tables available or not
+--code
 DROP VIEW IF EXISTS v_customer_order_summary;
 DROP VIEW IF EXISTS v_category_order_totals;
 DROP VIEW IF EXISTS v_top_selling_products;
