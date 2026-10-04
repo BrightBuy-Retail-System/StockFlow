@@ -63,6 +63,9 @@ export default function DashboardLayout() {
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Orders
             </NavLink>
+            <NavLink to="/payment" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              Payment
+            </NavLink>
             <NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Logistics
             </NavLink>

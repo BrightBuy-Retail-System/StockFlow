@@ -6,6 +6,7 @@ import AuthCartPage from './pages/AuthCartPage';
 import OrdersPage from './pages/OrdersPage';
 import LogisticsPage from './pages/LogisticsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import PaymentPage from './pages/PaymentPage';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/auth-cart" element={<AuthCartPage />} />
           <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="/logistics" element={<LogisticsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
         </Route>
