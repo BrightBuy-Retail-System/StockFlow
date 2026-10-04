@@ -23,12 +23,77 @@ def serialize_row(row):
             clean_row[key] = val
     return clean_row
 
+def resolve_payment_status(cursor):
+    """Safely extracts a valid ENUM value for payments.payment_status from information_schema."""
+    try:
+        cursor.execute("""
+            SELECT COLUMN_TYPE, COLUMN_DEFAULT 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+              AND TABLE_NAME = 'payments' 
+              AND COLUMN_NAME = 'payment_status'
+        """)
+        row = cursor.fetchone()
+        if row:
+            if row.get('COLUMN_DEFAULT'):
+                return row['COLUMN_DEFAULT']
+            col_type = row.get('COLUMN_TYPE', '')
+            if col_type.startswith('enum('):
+                allowed_vals = [v.strip("'\" )") for v in col_type[5:].split(',')]
+                for preferred in ['COMPLETED', 'PAID', 'SUCCESS', 'PENDING']:
+                    if preferred in allowed_vals:
+                        return preferred
+                return allowed_vals[0]
+    except Exception:
+        pass
+    return 'COMPLETED'
+
 @orders_bp.route('/ping', methods=['GET'])
 def ping():
     return jsonify({
         "status": "healthy",
         "module": "orders"
     }), 200
+
+@orders_bp.route('/shipping-cities', methods=['GET'])
+def get_shipping_cities():
+    """Public/Customer endpoint: Retrieve available Texas delivery hubs, fees, and lead times."""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        query = """
+            SELECT 
+                city_id,
+                city_name,
+                hub_name,
+                base_lead_time_days,
+                shipping_fee
+            FROM texas_cities
+            ORDER BY city_id ASC
+        """
+        cursor.execute(query)
+        cities = cursor.fetchall()
+
+        return jsonify({
+            "status": "success",
+            "count": len(cities),
+            "data": [serialize_row(c) for c in cities]
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @orders_bp.route('/', methods=['GET'])
 @jwt_required()
@@ -132,6 +197,7 @@ def get_order_by_id(order_id):
                 "message": "Access forbidden: You cannot view orders belonging to another customer."
             }), 403
 
+        # 1. Fetch Line Items
         items_query = """
             SELECT 
                 oi.order_item_id,
@@ -152,7 +218,24 @@ def get_order_by_id(order_id):
         cursor.execute(items_query, (order_id,))
         items = cursor.fetchall()
 
+        # 2. Fetch Payment Record
+        cursor.execute("""
+            SELECT 
+                payment_id,
+                payment_method,
+                transaction_ref,
+                amount,
+                payment_status,
+                processed_at
+            FROM payments
+            WHERE order_id = %s
+            ORDER BY payment_id DESC
+            LIMIT 1
+        """, (order_id,))
+        payment_record = cursor.fetchone()
+
         payload = serialize_row(order)
+        payload["payment"] = serialize_row(payment_record) if payment_record else None
         payload["items"] = [serialize_row(item) for item in items]
 
         return jsonify({
@@ -442,7 +525,8 @@ def checkout():
                 }
             }), 200
 
-        # 4. Create Shipment with schema-exact enum 'PENDING'
+        # --- WRITE PATH: 5-Table ACID Transaction ---
+        # 4. Create Shipment
         shipping_status = 'PENDING'
         tracking_number = f"TX-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
         lead_days = city_row.get('base_lead_time_days') or 3
@@ -454,7 +538,7 @@ def checkout():
         """, (tracking_number, shipping_city_id, shipping_status, estimated_arrival))
         shipment_id = cursor.lastrowid
 
-        # 5. Create Order Header with schema-exact enum 'PENDING'
+        # 5. Create Order Header
         order_status = 'PENDING'
         cursor.execute("""
             INSERT INTO orders (user_id, shipment_id, total_amount, status)
@@ -475,6 +559,26 @@ def checkout():
                 WHERE variant_id = %s
             """, (it['quantity'], it['variant_id']))
 
+        # 7. Record Financial Ledger Entry (payments table)
+        payment_method = payload.get('payment_method', 'CREDIT_CARD').strip()
+        transaction_ref = f"TX-PAY-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
+        payment_status = resolve_payment_status(cursor)
+
+        cursor.execute("""
+            INSERT INTO payments (order_id, payment_method, transaction_ref, amount, payment_status, processed_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+        """, (order_id, payment_method, transaction_ref, total_amount, payment_status))
+        payment_id = cursor.lastrowid
+
+        
+        # 8. Invalidate active cart items for this customer upon purchase
+        cursor.execute("""
+            DELETE ci FROM cart_items ci
+            JOIN carts c ON ci.cart_id = c.cart_id
+            WHERE c.user_id = %s
+        """, (user_id,))
+
+        # 9. Commit ACID Transaction
         conn.commit()
 
         return jsonify({
@@ -484,6 +588,9 @@ def checkout():
                 "order_id": order_id,
                 "shipment_id": shipment_id,
                 "tracking_number": tracking_number,
+                "payment_id": payment_id,
+                "transaction_ref": transaction_ref,
+                "payment_status": payment_status,
                 "total_amount": float(total_amount),
                 "status": order_status,
                 "items_count": len(verified_items)
@@ -511,7 +618,6 @@ def update_order_status(order_id):
     claims = get_jwt()
     role_id = claims.get('role_id', 1)
 
-    # Restrict status changes to staff roles (2 or 3)
     if role_id not in (2, 3):
         return jsonify({
             "status": "error",
