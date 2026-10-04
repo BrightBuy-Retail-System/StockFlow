@@ -1,4 +1,4 @@
-#Logistics & Warehouses Module 
+-- Logistics & Warehouses Module
 
 
 CREATE TABLE IF NOT EXISTS texas_cities (
@@ -19,3 +19,39 @@ CREATE TABLE IF NOT EXISTS shipments (
     delivered_at         TIMESTAMP NULL,
     FOREIGN KEY (destination_city_id) REFERENCES texas_cities(city_id)
 );
+
+-- Stored Function: fn_calculate_delivery_days
+-- product variant shipping to a given Texas city.
+-- Rule:
+--   total_days = city.base_lead_time_days
+--              + (3 day penalty if the variant's stock_quantity = 0)
+DELIMITER $$
+
+CREATE FUNCTION fn_calculate_delivery_days(
+    p_city_id INT,
+    p_variant_id INT
+)
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_base_days INT DEFAULT 2;
+    DECLARE v_stock INT DEFAULT 0;
+    DECLARE v_penalty INT DEFAULT 0;
+
+    SELECT base_lead_time_days INTO v_base_days
+    FROM texas_cities
+    WHERE city_id = p_city_id;
+
+    SELECT IFNULL(stock_quantity, 0) INTO v_stock
+    FROM inventory
+    WHERE variant_id = p_variant_id;
+
+    IF v_stock <= 0 THEN
+        SET v_penalty = 3;
+    ELSE
+        SET v_penalty = 0;
+    END IF;
+
+    RETURN IFNULL(v_base_days, 2) + v_penalty;
+END$$
