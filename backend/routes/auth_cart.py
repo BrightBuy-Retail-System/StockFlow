@@ -17,10 +17,10 @@ def login():
     if not data:
         return jsonify({"message": "Missing request body"}), 400
 
-    email = data.get('email')
+    identifier = (data.get('email') or data.get('username') or '').strip()
     password = data.get('password')
 
-    if not email or not password:
+    if not (identifier) or not password:
         return jsonify({"message": "Email and password are required"}), 400
 
     # 2. Query database for user
@@ -28,19 +28,23 @@ def login():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        query = "SELECT user_id, full_name, password_hash, role_id FROM users WHERE email = %s"
-        cursor.execute(query, (email,))
+        query = """ SELECT user_id, full_name, email, password_hash, role_id
+                    FROM users
+                    WHERE email = %s OR full_name = %s
+                    LIMIT 1"""
+        cursor.execute(query, (identifier, identifier))
         user = cursor.fetchone()
 
         # 3. Check if user exists and verify hashed password
         if user and bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
             role_id = user.get("role_id")
+
             access_token = create_access_token(
                 identity=str(user["user_id"]),
                 additional_claims={
                     "username": user["full_name"],
                     "role_id": role_id,
-                    "email": email
+                    "email": user["email"]
                 }
             )
             return jsonify({
@@ -96,10 +100,16 @@ def register():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        checkUser = "SELECT email FROM users WHERE email = %s"
-        cursor.execute(checkUser, (email,))
+        check_email = "SELECT email FROM users WHERE email = %s"
+        cursor.execute(check_email, (email,))
         if cursor.fetchone():
-            return jsonify({"message": "Email already exists"}), 409
+            return jsonify({"message": "This email is already exists"}), 409
+
+        check_username = "SELECT fullname FROM users WHERE fullname = %s"
+        cursor.execute(check_username, (username,))
+        if cursor.fetchone():
+            return jsonify({"message": "This username is already exists"}), 409
+
 
         query = """
                 INSERT INTO users(
