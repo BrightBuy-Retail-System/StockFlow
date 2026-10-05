@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from flask import Blueprint, jsonify, request
 from db import get_db_connection
 logistics_bp = Blueprint('logistics', __name__)
+
 OUT_OF_STOCK_PENALTY_DAYS = 3
 @logistics_bp.route('/cities', methods=['GET'])
 def get_cities():
@@ -25,6 +26,35 @@ def get_cities():
         cursor.close()
         conn.close()
 
+@logistics_bp.route('/calculate-delivery', methods=['POST'])
+def calculate_delivery():
+    """
+    Calculate estimated delivery lead time and date for a set of
+    cart items shipping to a given Texas city.
+
+    Expected JSON body:
+    {
+        "city_id": 3,
+        "items": [
+            {"variant_id": 1, "quantity": 2},
+            {"variant_id": 5, "quantity": 1}
+        ]
+    }
+
+    If ANY item in the cart is out of stock, the whole shipment
+    gets the out-of-stock penalty, since it all ships together.
+    """
+    data = request.get_json(silent=True) or {}
+    city_id = data.get('city_id')
+    items = data.get('items', [])
+
+    if not city_id:
+        return jsonify({"error": "city_id is required"}), 400
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
             SELECT city_id, city_name, hub_name, base_lead_time_days, shipping_fee
             FROM texas_cities
             WHERE city_id = %s
