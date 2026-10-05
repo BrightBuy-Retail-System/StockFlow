@@ -23,3 +23,8 @@ backend/.env
 *.env
 __pycache__/
 .venv/
+
+# Private exam & viva preparation notes
+*viva*
+*VIVA*
+
