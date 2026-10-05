@@ -42,38 +42,81 @@ const CATEGORY_THUMBNAILS = {
 
 // ─── smart product image resolver ─────────────────────────────────────────────
 function getProductPhoto(product) {
-  const name = (product.name || product.title || '').toLowerCase();
+  const name = (product?.name || product?.title || '').toLowerCase();
   if (name.includes('soundcore r50i nc') || (name.includes('soundcore') && name.includes('nc'))) {
-    return 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone') || name.includes('tws')) {
-    return 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('apple') || name.includes('adapter') || name.includes('charger') || name.includes('20w')) {
-    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('aspor') || name.includes('power bank') || name.includes('battery') || name.includes('mah')) {
-    return 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('speaker') || name.includes('jbl') || name.includes('audio') || name.includes('sound')) {
-    return 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('projector') || name.includes('cinema') || name.includes('display')) {
-    return 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('car') || name.includes('mount') || name.includes('holder')) {
-    return 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('phone') || name.includes('iphone') || name.includes('samsung') || name.includes('galaxy') || name.includes('pixel')) {
-    return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('watch') || name.includes('smartwatch')) {
-    return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=700&auto=format&fit=crop&q=80';
   }
   if (name.includes('cable') || name.includes('type-c') || name.includes('lightning')) {
-    return 'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=500&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=700&auto=format&fit=crop&q=80';
   }
-  return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80';
+  return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&auto=format&fit=crop&q=80';
+}
+
+function getProductGallery(product) {
+  const name = (product?.name || product?.title || '').toLowerCase();
+  if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone')) {
+    return [
+      'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=900&auto=format&fit=crop&q=80',
+    ];
+  }
+  if (name.includes('power bank') || name.includes('battery') || name.includes('aspor')) {
+    return [
+      'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
+    ];
+  }
+  if (name.includes('speaker') || name.includes('jbl') || name.includes('audio')) {
+    return [
+      'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1543512214-318c7553f230?w=900&auto=format&fit=crop&q=80',
+    ];
+  }
+  if (name.includes('phone') || name.includes('iphone') || name.includes('samsung')) {
+    return [
+      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=900&auto=format&fit=crop&q=80',
+    ];
+  }
+  return [
+    getProductPhoto(product),
+    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
+  ];
 }
 
 function getRating(productId) {
@@ -82,8 +125,36 @@ function getRating(productId) {
 }
 
 function getColorsCount(product) {
-  const hash = ((Number(product.product_id) || 1) * 17) % 5;
+  const hash = ((Number(product?.product_id) || 1) * 17) % 5;
   return [2, 3, 4, 5, 2][hash];
+}
+
+function getDeliveryDateRange() {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(now.getDate() + 2);
+  const end = new Date(now);
+  end.setDate(now.getDate() + 8);
+  const opt = { month: 'short', day: 'numeric' };
+  return `${start.toLocaleDateString('en-US', opt)} to ${end.toLocaleDateString('en-US', opt)}`;
+}
+
+function safeStars(rating) {
+  const r = Math.max(0, Math.min(5, Math.round(Number(rating) || 5)));
+  return '★'.repeat(r) + '☆'.repeat(5 - r);
+}
+
+function safeAverageRating(reviews) {
+  if (!Array.isArray(reviews) || reviews.length === 0) return '5.0';
+  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 5), 0);
+  return (sum / reviews.length).toFixed(1);
+}
+
+function safeStarCount(reviews) {
+  if (!Array.isArray(reviews) || reviews.length === 0) return '★★★★★';
+  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 5), 0);
+  const avg = Math.max(1, Math.min(5, Math.round(sum / reviews.length)));
+  return '★'.repeat(avg) + '☆'.repeat(5 - avg);
 }
 
 // ─── format Sri Lankan Rupee ──────────────────────────────────────────────────
@@ -92,20 +163,25 @@ function formatRs(amount) {
   return `Rs ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// ─── reusable mini field row for forms ────────────────────────────────────────
+// ─── reusable field row for forms ─────────────────────────────────────────────
 function Field({ label, children }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#44403c' }}>{label}</label>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <label style={{ fontSize: '0.92rem', fontWeight: 700, color: '#334155' }}>{label}</label>
       {children}
     </div>
   );
 }
 
 export default function CatalogPage() {
-  // ── Auth Context ──
-  const savedUser = localStorage.getItem('user');
-  const currentUser = savedUser ? JSON.parse(savedUser) : null;
+  // ── Auth Context safely parsed ──
+  let currentUser = null;
+  try {
+    const savedUser = localStorage.getItem('user');
+    currentUser = savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    currentUser = null;
+  }
   const isManager = currentUser?.role_id === 2 || currentUser?.role_id === 3;
 
   // ── Catalog State ──
@@ -128,7 +204,7 @@ export default function CatalogPage() {
   const [selectedStorage, setSelectedStorage] = useState([]);
   const [minRating, setMinRating] = useState(0);
 
-  // ── Accordion expanded state ──
+  // ── Accordion expanded state in Sidebar ──
   const [openAccordions, setOpenAccordions] = useState({
     availability: true,
     price: true,
@@ -143,11 +219,23 @@ export default function CatalogPage() {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // ── Product detail modal ──
+  // ── Product Detail View State ──
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [productDetail, setProductDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
+
+  // ── Interactive Detail Page Controls ──
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [shortDescOpen, setShortDescOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState('description');
+  const [toastMessage, setToastMessage] = useState(null);
+  const [faqOpen, setFaqOpen] = useState({ 0: false, 1: false, 2: false });
+  const [showWriteReview, setShowWriteReview] = useState(false);
+  const [newReview, setNewReview] = useState({ rating: 5, name: '', title: '', comment: '' });
+  const [userReviews, setUserReviews] = useState([]);
 
   // ── Low stock drawer ──
   const [threshold, setThreshold] = useState(10);
@@ -189,7 +277,7 @@ export default function CatalogPage() {
 
   const fetchCategories = useCallback(() => {
     api.get('/catalog/categories')
-      .then((res) => setCategories(res.data))
+      .then((res) => setCategories(Array.isArray(res.data) ? res.data : []))
       .catch((err) => setError(err.message));
   }, []);
 
@@ -199,7 +287,7 @@ export default function CatalogPage() {
     if (debouncedSearch) params.set('q', debouncedSearch);
     const qs = params.toString();
     api.get(`/catalog/products${qs ? '?' + qs : ''}`)
-      .then((res) => setProducts(res.data))
+      .then((res) => setProducts(Array.isArray(res.data) ? res.data : []))
       .catch((err) => setError(err.message));
   }, [selectedCategory, debouncedSearch]);
 
@@ -207,10 +295,23 @@ export default function CatalogPage() {
     if (!selectedProductId) return;
     setDetailLoading(true);
     setDetailError(null);
+    try {
+      const stored = localStorage.getItem(`reviews_${selectedProductId}`);
+      setUserReviews(stored ? JSON.parse(stored) : []);
+    } catch {
+      setUserReviews([]);
+    }
     api.get(`/catalog/products/${selectedProductId}`)
       .then((res) => {
         setProductDetail(res.data);
         setStockInputs({});
+        if (res.data?.variants && Array.isArray(res.data.variants) && res.data.variants.length > 0) {
+          setSelectedVariantId(res.data.variants[0].variant_id);
+        } else {
+          setSelectedVariantId(null);
+        }
+        setActivePhotoIndex(0);
+        setQuantity(1);
       })
       .catch((err) => setDetailError(err.message))
       .finally(() => setDetailLoading(false));
@@ -220,7 +321,7 @@ export default function CatalogPage() {
     setLowStockLoading(true);
     setLowStockError(null);
     api.get(`/catalog/inventory/low-stock?threshold=${t}`)
-      .then((res) => setLowStock(res.data))
+      .then((res) => setLowStock(Array.isArray(res.data) ? res.data : []))
       .catch((err) => setLowStockError(err.message))
       .finally(() => setLowStockLoading(false));
   };
@@ -241,7 +342,7 @@ export default function CatalogPage() {
     if (debouncedSearch) params.set('q', debouncedSearch);
     const qs = params.toString();
     api.get(`/catalog/products${qs ? '?' + qs : ''}`)
-      .then((res) => setProducts(res.data))
+      .then((res) => setProducts(Array.isArray(res.data) ? res.data : []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [selectedCategory, debouncedSearch]);
@@ -251,6 +352,7 @@ export default function CatalogPage() {
       setProductDetail(null);
       return;
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     refreshDetail();
   }, [selectedProductId, refreshDetail]);
 
@@ -260,7 +362,13 @@ export default function CatalogPage() {
 
   const openCreateProduct = () => {
     setEditProduct(null);
-    setProductForm(EMPTY_PRODUCT);
+    setProductForm({
+      title: '',
+      description: '',
+      base_price: '',
+      category_id: selectedCategory || (categories[0]?.category_id ?? ''),
+      is_active: 1,
+    });
     setProductFormError(null);
     setShowProductForm(true);
   };
@@ -269,10 +377,10 @@ export default function CatalogPage() {
     if (e) e.stopPropagation();
     setEditProduct(p);
     setProductForm({
-      title: p.name,
+      title: p.name || p.title || '',
       description: p.description || '',
-      base_price: p.base_price,
-      category_id: p.category_id || '',
+      base_price: p.base_price || '',
+      category_id: p.category_id || categories.find((c) => c.name === p.category_name)?.category_id || '',
       is_active: p.is_active ?? 1,
     });
     setProductFormError(null);
@@ -280,19 +388,31 @@ export default function CatalogPage() {
   };
 
   const saveProduct = () => {
-    if (!productForm.title || !productForm.base_price || !productForm.category_id) {
-      setProductFormError('Title, price and category are required.');
+    if (!productForm.title.trim()) {
+      setProductFormError('Title is required');
       return;
     }
+    if (!productForm.base_price || Number(productForm.base_price) <= 0) {
+      setProductFormError('Base price must be positive');
+      return;
+    }
+    if (!productForm.category_id) {
+      setProductFormError('Please select a category');
+      return;
+    }
+
     setProductFormSaving(true);
     setProductFormError(null);
-    const req = editProduct
+
+    const call = editProduct
       ? api.patch(`/catalog/products/${editProduct.product_id}`, productForm)
       : api.post('/catalog/products', productForm);
-    req
+
+    call
       .then(() => {
         setShowProductForm(false);
         refreshProducts();
+        if (selectedProductId) refreshDetail();
       })
       .catch((err) => setProductFormError(err.response?.data?.error || err.message))
       .finally(() => setProductFormSaving(false));
@@ -301,7 +421,10 @@ export default function CatalogPage() {
   const softDeleteProduct = (p, e) => {
     if (e) e.stopPropagation();
     if (!window.confirm(`Soft-delete "${p.name}"? It will be hidden from the customer catalog.`)) return;
-    api.delete(`/catalog/products/${p.product_id}`).then(refreshProducts);
+    api.delete(`/catalog/products/${p.product_id}`).then(() => {
+      refreshProducts();
+      if (selectedProductId === p.product_id) setSelectedProductId(null);
+    });
   };
 
   const openCreateVariant = () => {
@@ -314,10 +437,10 @@ export default function CatalogPage() {
   const openEditVariant = (v) => {
     setEditVariant(v);
     setVariantForm({
-      sku: v.sku,
+      sku: v.sku || '',
       attribute_name: v.attribute_name || '',
       attribute_value: v.attribute_value || '',
-      price_override: v.price_override != null ? v.price_override : '',
+      price_override: v.price !== undefined && v.price !== null ? v.price : '',
     });
     setVariantFormError(null);
     setShowVariantForm(true);
@@ -325,7 +448,7 @@ export default function CatalogPage() {
 
   const saveVariant = () => {
     if (!variantForm.sku.trim()) {
-      setVariantFormError('SKU is required.');
+      setVariantFormError('SKU is required');
       return;
     }
     setVariantFormSaving(true);
@@ -338,11 +461,11 @@ export default function CatalogPage() {
       price_override: variantForm.price_override !== '' ? Number(variantForm.price_override) : null,
     };
 
-    const req = editVariant
+    const call = editVariant
       ? api.patch(`/catalog/variants/${editVariant.variant_id}`, payload)
       : api.post(`/catalog/products/${selectedProductId}/variants`, payload);
 
-    req
+    call
       .then(() => {
         setShowVariantForm(false);
         refreshDetail();
@@ -352,25 +475,28 @@ export default function CatalogPage() {
   };
 
   const deleteVariant = (v) => {
-    if (!window.confirm(`Delete variant "${v.sku}"?`)) return;
+    if (!window.confirm(`Delete variant SKU "${v.sku}"?`)) return;
     api.delete(`/catalog/variants/${v.variant_id}`).then(refreshDetail);
   };
 
   const adjustStock = (variantId) => {
-    const delta = parseInt(stockInputs[variantId] || '0', 10);
+    const raw = stockInputs[variantId];
+    const delta = parseInt(raw, 10);
     if (isNaN(delta) || delta === 0) return;
+
     setStockSaving((s) => ({ ...s, [variantId]: true }));
     api.patch(`/catalog/inventory/${variantId}`, { adjust: delta })
       .then(() => {
         setStockInputs((s) => ({ ...s, [variantId]: '' }));
         refreshDetail();
       })
+      .catch((err) => alert(`Failed to adjust stock: ${err.message}`))
       .finally(() => setStockSaving((s) => ({ ...s, [variantId]: false })));
   };
 
   const saveCategory = () => {
-    if (!catForm.name.trim() || !catForm.slug.trim()) {
-      setCatFormError('Name and slug are required.');
+    if (!catForm.name.trim()) {
+      setCatFormError('Category name is required');
       return;
     }
     setCatFormSaving(true);
@@ -378,95 +504,192 @@ export default function CatalogPage() {
     api.post('/catalog/categories', catForm)
       .then(() => {
         setShowCatForm(false);
-        setCatForm(EMPTY_CAT);
         fetchCategories();
       })
       .catch((err) => setCatFormError(err.response?.data?.error || err.message))
       .finally(() => setCatFormSaving(false));
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORIES FOR THE TOP PILL CAROUSEL
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Combine database categories with default catalog badges from screenshot
-  const displayCategories = useMemo(() => {
-    const existingSlugs = new Set(categories.map((c) => c.slug || c.name?.toLowerCase().replace(/\s+/g, '-')));
-    const staticPills = Object.entries(CATEGORY_THUMBNAILS).map(([slug, meta]) => ({
-      slug,
-      name: meta.name,
-      img: meta.img,
-      icon: meta.icon,
-      isStatic: true,
-    }));
+  // ── Cart & Add-to-cart Toast ──
+  const handleAddToCart = () => {
+    if (!productDetail) return;
+    const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
+    const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
+    const itemPrice = selectedVariant && selectedVariant.price !== undefined && selectedVariant.price !== null
+      ? Number(selectedVariant.price)
+      : Number(productDetail.base_price) || 0;
 
-    const dbPills = categories.map((c) => {
-      const slug = c.slug || c.name?.toLowerCase().replace(/\s+/g, '-');
-      const meta = CATEGORY_THUMBNAILS[slug] || {};
-      return {
-        category_id: c.category_id,
-        slug,
-        name: c.name,
-        img: meta.img || 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=90&auto=format&fit=crop&q=80',
-        icon: meta.icon || '📦',
-        isStatic: false,
-      };
+    const cartItem = {
+      product_id: productDetail.product_id,
+      name: productDetail.name || productDetail.title,
+      variant_id: selectedVariant?.variant_id || null,
+      sku: selectedVariant?.sku || 'STD',
+      attribute_name: selectedVariant?.attribute_name || null,
+      attribute_value: selectedVariant?.attribute_value || 'Default',
+      price: itemPrice,
+      quantity: quantity,
+      image: getProductPhoto(productDetail),
+    };
+
+    try {
+      const raw = localStorage.getItem('cart');
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const matchIndex = list.findIndex(
+        (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
+      );
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + quantity;
+      } else {
+        list.push(cartItem);
+      }
+      localStorage.setItem('cart', JSON.stringify(list));
+    } catch (e) {
+      console.error(e);
+    }
+
+    setToastMessage(`✓ Added ${quantity}x ${productDetail.name} to cart!`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleAddReview = (e) => {
+    e.preventDefault();
+    if (!newReview.name.trim() || !newReview.comment.trim()) {
+      alert('Please provide your name and review details.');
+      return;
+    }
+    const rev = {
+      id: Date.now(),
+      rating: Math.max(1, Math.min(5, Number(newReview.rating) || 5)),
+      name: newReview.name.trim(),
+      title: newReview.title.trim() || 'Great purchase!',
+      comment: newReview.comment.trim(),
+      date: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+      verified: true,
+    };
+    try {
+      const raw = localStorage.getItem(`reviews_${selectedProductId}`);
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const updated = [rev, ...list];
+      localStorage.setItem(`reviews_${selectedProductId}`, JSON.stringify(updated));
+      setUserReviews(updated);
+    } catch (err) {
+      console.error(err);
+      setUserReviews((prev) => [rev, ...prev]);
+    }
+    setNewReview({ rating: 5, name: '', title: '', comment: '' });
+    setShowWriteReview(false);
+    setToastMessage('✓ Thank you for your review!');
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CATEGORIES LIST PREPARATION
+  // ═══════════════════════════════════════════════════════════════════════════
+  const displayCategories = useMemo(() => {
+    const catList = Array.isArray(categories) ? categories : [];
+    const dbMap = new Map();
+    catList.forEach((c) => {
+      if (c.slug) dbMap.set(c.slug.toLowerCase().trim(), c);
+      if (c.name) {
+        dbMap.set(c.name.toLowerCase().trim(), c);
+        dbMap.set(c.name.toLowerCase().replace(/\s+/g, '-'), c);
+      }
     });
 
-    // If categories in DB match the screenshot, use them; otherwise ensure screenshot categories are visible
-    if (dbPills.length > 0) {
-      return dbPills;
-    }
-    return staticPills;
-  }, [categories]);
+    const result = [];
+    const seen = new Set();
 
-  // Selected category title
-  const currentCategoryName = useMemo(() => {
-    if (!selectedCategory) return 'All';
-    const found = categories.find((c) => String(c.category_id) === String(selectedCategory));
-    return found ? found.name : 'All';
-  }, [selectedCategory, categories]);
+    Object.entries(CATEGORY_THUMBNAILS).forEach(([slug, info]) => {
+      const dbCat = dbMap.get(slug) || dbMap.get(info.name.toLowerCase().trim());
+      result.push({
+        slug,
+        name: info.name,
+        img: info.img,
+        icon: info.icon,
+        category_id: dbCat ? dbCat.category_id : null,
+      });
+      seen.add(slug);
+      if (dbCat && dbCat.category_id) seen.add(String(dbCat.category_id));
+    });
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // FILTERING & SORTING LOGIC
-  // ═══════════════════════════════════════════════════════════════════════════
-  const filteredProducts = useMemo(() => {
-    let result = [...products];
-
-    // Price range
-    if (minPrice !== '') {
-      result = result.filter((p) => Number(p.base_price) >= Number(minPrice));
-    }
-    if (maxPrice !== '') {
-      result = result.filter((p) => Number(p.base_price) <= Number(maxPrice));
-    }
-
-    // Availability filter
-    if (!availabilityFilter.inStock && availabilityFilter.outOfStock) {
-      result = result.filter((p) => p.is_active === 0);
-    } else if (availabilityFilter.inStock && !availabilityFilter.outOfStock) {
-      result = result.filter((p) => p.is_active !== 0);
-    } else if (!availabilityFilter.inStock && !availabilityFilter.outOfStock) {
-      return [];
-    }
-
-    // Sorting
-    if (sortBy === 'price-low') {
-      result.sort((a, b) => Number(a.base_price) - Number(b.base_price));
-    } else if (sortBy === 'price-high') {
-      result.sort((a, b) => Number(b.base_price) - Number(a.base_price));
-    } else if (sortBy === 'alpha-asc') {
-      result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    } else if (sortBy === 'alpha-desc') {
-      result.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
-    }
+    catList.forEach((c) => {
+      if (!c) return;
+      const slug = c.slug || (c.name ? c.name.toLowerCase().replace(/\s+/g, '-') : String(c.category_id));
+      if (!seen.has(slug) && !seen.has(String(c.category_id))) {
+        result.push({
+          slug,
+          name: c.name || 'Category',
+          img: null,
+          icon: '📦',
+          category_id: c.category_id,
+        });
+      }
+    });
 
     return result;
-  }, [products, minPrice, maxPrice, availabilityFilter, sortBy]);
+  }, [categories]);
 
-  // Total products count to show (matching "1310 products" aesthetic or dynamic)
-  const productCountDisplay = filteredProducts.length > 0 ? `${filteredProducts.length} products` : '0 products';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILTERING & SORTING
+  // ═══════════════════════════════════════════════════════════════════════════
+  const filteredProducts = useMemo(() => {
+    let list = Array.isArray(products) ? [...products] : [];
 
-  // ── Reusable Filter Accordions Component ──
+    if (!availabilityFilter.inStock && availabilityFilter.outOfStock) {
+      list = list.filter((p) => p.is_active === 0);
+    } else if (availabilityFilter.inStock && !availabilityFilter.outOfStock) {
+      list = list.filter((p) => p.is_active !== 0);
+    } else if (!availabilityFilter.inStock && !availabilityFilter.outOfStock) {
+      list = [];
+    }
+
+    if (minPrice !== '') {
+      const min = Number(minPrice);
+      if (!isNaN(min)) list = list.filter((p) => Number(p.base_price) >= min);
+    }
+    if (maxPrice !== '') {
+      const max = Number(maxPrice);
+      if (!isNaN(max)) list = list.filter((p) => Number(p.base_price) <= max);
+    }
+
+    if (selectedColors.length > 0) {
+      list = list.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        return selectedColors.some((c) => name.includes(c.toLowerCase()));
+      });
+    }
+
+    if (minRating > 0) {
+      list = list.filter((p) => Number(getRating(p.product_id)) >= minRating);
+    }
+
+    if (sortBy === 'price-low') {
+      list.sort((a, b) => Number(a.base_price) - Number(b.base_price));
+    } else if (sortBy === 'price-high') {
+      list.sort((a, b) => Number(b.base_price) - Number(a.base_price));
+    } else if (sortBy === 'alpha-asc') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'alpha-desc') {
+      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+    }
+
+    return list;
+  }, [products, availabilityFilter, minPrice, maxPrice, selectedColors, minRating, sortBy]);
+
+  const currentCategoryName = useMemo(() => {
+    if (!selectedCategory) return 'All Products';
+    const catList = Array.isArray(categories) ? categories : [];
+    const found = catList.find((c) => String(c?.category_id) === String(selectedCategory));
+    return found ? found.name : 'Products';
+  }, [selectedCategory, categories]);
+
+  const productCountDisplay = `${filteredProducts.length} ${filteredProducts.length === 1 ? 'product' : 'products'}`;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILTER ACCORDIONS COMPONENT
+  // ═══════════════════════════════════════════════════════════════════════════
   const renderFilterAccordions = () => (
     <>
       {/* Availability Accordion */}
@@ -623,29 +846,46 @@ export default function CatalogPage() {
         </button>
         {openAccordions.color && (
           <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {['Black', 'White', 'Blue', 'Green', 'Red', 'Silver'].map((c) => {
-              const isSel = selectedColors.includes(c);
+            {[
+              { label: 'Black', hex: '#1c1917' },
+              { label: 'White', hex: '#f5f5f4' },
+              { label: 'Blue', hex: '#3b82f6' },
+              { label: 'Pink', hex: '#ec4899' },
+              { label: 'Green', hex: '#10b981' },
+            ].map(({ label, hex }) => {
+              const isSel = selectedColors.includes(label);
               return (
                 <button
-                  key={c}
-                  onClick={() =>
+                  key={label}
+                  onClick={() => {
                     setSelectedColors((prev) =>
-                      isSel ? prev.filter((x) => x !== c) : [...prev, c]
-                    )
-                  }
+                      isSel ? prev.filter((c) => c !== label) : [...prev, label]
+                    );
+                  }}
                   style={{
-                    padding: '4px 12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 10px',
                     borderRadius: '9999px',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
+                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
                     backgroundColor: isSel ? '#1a1917' : '#ffffff',
                     color: isSel ? '#ffffff' : '#1c1917',
-                    border: '1px solid rgba(0,0,0,0.1)',
+                    fontSize: '0.8rem',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    fontWeight: isSel ? 600 : 400,
                   }}
                 >
-                  {c}
+                  <span
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      backgroundColor: hex,
+                      border: hex === '#f5f5f4' ? '1px solid #d6d3d1' : 'none',
+                    }}
+                  />
+                  <span>{label}</span>
                 </button>
               );
             })}
@@ -653,7 +893,7 @@ export default function CatalogPage() {
         )}
       </div>
 
-      {/* Storage Capacity Accordion */}
+      {/* Storage Accordion */}
       <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('storage')}
@@ -672,35 +912,35 @@ export default function CatalogPage() {
             textAlign: 'left',
           }}
         >
-          <span>Storage Capacity</span>
+          <span>Storage</span>
           <span style={{ fontSize: '0.75rem', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▼
           </span>
         </button>
         {openAccordions.storage && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {['64GB', '128GB', '256GB', '512GB', '1TB'].map((s) => {
-              const isSel = selectedStorage.includes(s);
+          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {['64GB', '128GB', '256GB', '512GB', '1TB'].map((cap) => {
+              const isSel = selectedStorage.includes(cap);
               return (
                 <button
-                  key={s}
-                  onClick={() =>
+                  key={cap}
+                  onClick={() => {
                     setSelectedStorage((prev) =>
-                      isSel ? prev.filter((x) => x !== s) : [...prev, s]
-                    )
-                  }
+                      isSel ? prev.filter((s) => s !== cap) : [...prev, cap]
+                    );
+                  }}
                   style={{
-                    padding: '5px 12px',
+                    padding: '5px 10px',
                     borderRadius: '8px',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
+                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
                     backgroundColor: isSel ? '#1a1917' : '#ffffff',
                     color: isSel ? '#ffffff' : '#1c1917',
-                    border: '1px solid rgba(0,0,0,0.1)',
+                    fontSize: '0.78rem',
                     cursor: 'pointer',
+                    fontWeight: isSel ? 600 : 400,
                   }}
                 >
-                  {s}
+                  {cap}
                 </button>
               );
             })}
@@ -709,7 +949,7 @@ export default function CatalogPage() {
       </div>
 
       {/* More filters Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('more')}
           style={{
@@ -749,6 +989,1026 @@ export default function CatalogPage() {
     </>
   );
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FULL PRODUCT DETAIL PAGE VIEW (Matching Reference Screenshots 1-5)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const renderProductDetailPage = () => {
+    if (detailLoading) {
+      return (
+        <div style={{ padding: '80px 20px', textAlign: 'center', color: '#78716c' }}>
+          <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⏳</div>
+          <p style={{ fontSize: '1rem', fontWeight: 600 }}>Loading product details from database…</p>
+        </div>
+      );
+    }
+
+    if (detailError || !productDetail) {
+      return (
+        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+          <p style={{ color: '#dc2626', fontSize: '1rem', marginBottom: '16px' }}>Error: {detailError || 'Product not found'}</p>
+          <button
+            onClick={() => setSelectedProductId(null)}
+            style={{ padding: '8px 18px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.14)', background: '#fff', cursor: 'pointer', fontWeight: 600 }}
+          >
+            ← Back to Products
+          </button>
+        </div>
+      );
+    }
+
+    const gallery = getProductGallery(productDetail);
+    const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
+    const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0] || null;
+    const currentPrice = selectedVariant && selectedVariant.price !== undefined && selectedVariant.price !== null
+      ? Number(selectedVariant.price)
+      : Number(productDetail.base_price) || 0;
+
+    const installment = (currentPrice / 3).toFixed(2);
+    const serviceFee = (currentPrice * 0.03).toFixed(2);
+    const priceWithFee = (currentPrice * 1.03).toFixed(2);
+    const deliveryRange = getDeliveryDateRange();
+    const inStock = (selectedVariant?.stock ?? 1) > 0 && productDetail.is_active !== 0;
+
+    // Related products (from same category or catalog)
+    const relatedProducts = (Array.isArray(products) ? products : [])
+      .filter((p) => p && p.product_id !== productDetail.product_id)
+      .slice(0, 4);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', maxWidth: '1680px', margin: '0 auto', boxSizing: 'border-box' }}>
+        {/* Floating Add to Cart Toast */}
+        {toastMessage && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: '28px',
+              right: '28px',
+              zIndex: 9999,
+              background: '#10b981',
+              color: '#ffffff',
+              padding: '14px 22px',
+              borderRadius: '12px',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              animation: 'fadeInUp 0.3s ease-out',
+            }}
+          >
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        {/* ── Breadcrumb & Navigation Bar ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <button
+            onClick={() => setSelectedProductId(null)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.12)',
+              borderRadius: '9999px',
+              padding: '8px 18px',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              color: '#1a1917',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+            }}
+          >
+            <span>← Back to Products</span>
+          </button>
+
+
+        </div>
+
+        {/* ── TOP SECTION: 2-COLUMN MAIN PRODUCT VIEW (Screenshots 1 & 2) ── */}
+        <div className="product-top-grid">
+          {/* LEFT: GALLERY & PROMO BADGES */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              {/* Vertical Thumbnail Strip */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  maxHeight: '520px',
+                  overflowY: 'auto',
+                  paddingRight: '4px',
+                  scrollbarWidth: 'none',
+                }}
+              >
+                {gallery.map((imgUrl, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActivePhotoIndex(idx)}
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '10px',
+                      border: activePhotoIndex === idx ? '2px solid #2563eb' : '1px solid rgba(0,0,0,0.12)',
+                      background: '#ffffff',
+                      padding: '3px',
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease',
+                      boxShadow: activePhotoIndex === idx ? '0 0 0 2px rgba(37,99,235,0.2)' : 'none',
+                    }}
+                  >
+                    <img src={imgUrl} alt={`Thumbnail ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </button>
+                ))}
+              </div>
+
+              {/* Large Main Photo */}
+              <div
+                style={{
+                  flex: 1,
+                  background: '#ffffff',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  padding: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  minHeight: '420px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
+                }}
+              >
+                <img
+                  src={gallery[activePhotoIndex] || getProductPhoto(productDetail)}
+                  alt={productDetail.name}
+                  style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', transition: 'transform 0.3s ease' }}
+                />
+                <button
+                  title="Expand"
+                  onClick={() => window.open(gallery[activePhotoIndex] || getProductPhoto(productDetail), '_blank')}
+                  style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    background: '#ffffff',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    borderRadius: '8px',
+                    width: '34px',
+                    height: '34px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    color: '#57534e',
+                  }}
+                >
+                  ⛶
+                </button>
+              </div>
+            </div>
+
+            {/* 3 Promo / Trust Pills */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div
+                style={{
+                  background: '#e0e7ff',
+                  color: '#3730a3',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <span>☑</span>
+                <span>100% Authentic Guaranteed Products</span>
+              </div>
+              <div
+                style={{
+                  background: '#f3e8ff',
+                  color: '#6b21a8',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <span>🚚</span>
+                <span>Island wide Delivery Across Sri Lanka</span>
+              </div>
+              <div
+                style={{
+                  background: '#f1f5f9',
+                  color: '#334155',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <span>⚡</span>
+                <span>Express Delivery: Colombo 1–12 (Same Day / Next Day)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: DETAILS, PRICING, VARIANTS, ACTIONS */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Title */}
+            <h1
+              style={{
+                fontSize: '2rem',
+                fontWeight: 800,
+                color: '#1a1917',
+                lineHeight: 1.2,
+                margin: 0,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {productDetail.name}
+            </h1>
+
+            {/* Price Display */}
+            <div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#1a1917' }}>
+                {formatRs(currentPrice)}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#78716c', marginTop: '4px' }}>
+                Product Price: <strong>Rs {priceWithFee}</strong> with Service Fee (Rs {serviceFee})
+              </div>
+
+              <div style={{ fontSize: '0.8rem', color: '#a8a29e', marginTop: '3px' }}>
+                Shipping calculated at checkout.
+              </div>
+            </div>
+
+            {/* Ratings Row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#f59e0b', fontSize: '0.95rem', letterSpacing: '2px' }}>
+                {safeStarCount(userReviews)}
+              </span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1917' }}>
+                {safeAverageRating(userReviews)}
+              </span>
+              <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
+                ({userReviews.length} {userReviews.length === 1 ? 'review' : 'reviews'})
+              </span>
+            </div>
+
+            {/* Short Description Accordion */}
+            <div
+              style={{
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                background: '#ffffff',
+              }}
+            >
+              <button
+                onClick={() => setShortDescOpen((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
+                  color: '#1a1917',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <span>Short Description</span>
+                <span style={{ fontSize: '0.75rem', transform: shortDescOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                  ▼
+                </span>
+              </button>
+              {shortDescOpen && (
+                <div style={{ paddingTop: '12px', fontSize: '0.86rem', color: '#44403c', lineHeight: 1.6 }}>
+                  {productDetail.description ? (
+                    <p style={{ margin: '0 0 8px 0' }}>{productDetail.description}</p>
+                  ) : null}
+                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <li>Smart AI-powered voice enhancement &amp; crystal clear audio</li>
+                    <li>Powerful multi-layered dynamic sound drivers</li>
+                    <li>IP54 Sweat &amp; Water splash guard protection</li>
+                    <li>Adaptive Active Noise Reduction &amp; Ambient Transparency</li>
+                    <li>Extended battery life with high-speed USB-C recharge</li>
+                  </ul>
+                  <p style={{ fontStyle: 'italic', fontSize: '0.78rem', color: '#78716c', marginTop: '10px', marginBottom: 0 }}>
+                    Actual product colors may vary slightly from the images shown on our website/app.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Warranty Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600, color: '#1e3a8a' }}>
+              <span>🛡️</span>
+              <span>1 Year Warranty (Battery: 6 Months)</span>
+            </div>
+
+            {/* Variant Selector (Database-driven) */}
+            {variants.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#1a1917' }}>
+                  {variants[0]?.attribute_name || 'Option'}:{' '}
+                  <span style={{ fontWeight: 400, color: '#57534e' }}>
+                    {selectedVariant?.attribute_value || 'Default'} {selectedVariant?.sku ? `(SKU: ${selectedVariant.sku})` : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {variants.map((v, i) => {
+                    const isSelected = v.variant_id === selectedVariantId;
+                    return (
+                      <button
+                        key={v.variant_id}
+                        onClick={() => {
+                          setSelectedVariantId(v.variant_id);
+                          setActivePhotoIndex(i % gallery.length);
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 14px',
+                          borderRadius: '9999px',
+                          border: isSelected ? '2px solid #2563eb' : '1px solid rgba(0,0,0,0.14)',
+                          background: isSelected ? 'rgba(37,99,235,0.05)' : '#ffffff',
+                          color: '#1a1917',
+                          fontSize: '0.84rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? '0 0 0 2px rgba(37,99,235,0.2)' : 'none',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            backgroundColor:
+                              (v.attribute_value || '').toLowerCase().includes('black') ? '#1c1917'
+                                : (v.attribute_value || '').toLowerCase().includes('blue') ? '#3b82f6'
+                                  : (v.attribute_value || '').toLowerCase().includes('pink') ? '#ec4899'
+                                    : (v.attribute_value || '').toLowerCase().includes('green') ? '#10b981'
+                                      : '#94a3b8',
+                          }}
+                        />
+                        <span>{v.attribute_value || v.sku}</span>
+                        <span style={{ fontSize: '0.74rem', color: (v.stock || 0) > 0 ? '#059669' : '#dc2626' }}>
+                          ({(v.stock || 0) > 0 ? `${v.stock} in stock` : 'Out of stock'})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quantity Selector & Add to Cart Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '4px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  border: '1px solid rgba(0,0,0,0.15)',
+                  borderRadius: '10px',
+                  background: '#ffffff',
+                  height: '46px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  style={{
+                    width: '38px',
+                    height: '100%',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.1rem',
+                    cursor: 'pointer',
+                    color: '#44403c',
+                    fontWeight: 600,
+                  }}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: '#1c1917' }}>
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  style={{
+                    width: '38px',
+                    height: '100%',
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '1.1rem',
+                    cursor: 'pointer',
+                    color: '#44403c',
+                    fontWeight: 600,
+                  }}
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={!inStock}
+                style={{
+                  flex: 1,
+                  height: '46px',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  background: inStock ? '#3b5bcf' : '#a8a29e',
+                  color: '#ffffff',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  cursor: inStock ? 'pointer' : 'not-allowed',
+                  boxShadow: inStock ? '0 4px 14px rgba(59,91,207,0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {inStock ? 'Add to cart' : 'Out of Stock'}
+              </button>
+            </div>
+
+
+            {/* Estimated Standard Delivery Banner */}
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.86rem',
+                fontWeight: 600,
+                color: '#334155',
+              }}
+            >
+              <span>🚚</span>
+              <span>Estimated Standard Delivery By <strong>{deliveryRange}</strong></span>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── MANAGER OPERATIONS CONSOLE (When user has role 2 or 3) - Full Width Section ── */}
+        {isManager && (
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1.5px dashed rgba(37,99,235,0.4)',
+              borderRadius: '20px',
+              padding: '24px 28px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+              width: '100%',
+              boxSizing: 'border-box',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.3rem' }}>⚙️</span>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e40af', margin: 0 }}>
+                    Manager Inventory Controls
+                  </h3>
+                  <span style={{ fontSize: '0.86rem', color: '#64748b' }}>
+                    Live variant stock management &amp; instant adjustments
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => openEditProduct(productDetail)}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0,0,0,0.15)',
+                    background: '#ffffff',
+                    color: '#1a1917',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <span>✎</span> Edit Product
+                </button>
+                <button
+                  onClick={openCreateVariant}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#1e40af',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(30,64,175,0.25)',
+                  }}
+                >
+                  <span>+</span> Add Variant
+                </button>
+              </div>
+            </div>
+
+            {/* Stock table */}
+            <div style={{ overflowX: 'auto', background: '#ffffff', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.08)', padding: '8px 16px' }}>
+              <table style={{ width: '100%', fontSize: '0.95rem', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1.5px solid rgba(0,0,0,0.08)', color: '#475569' }}>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>SKU</th>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Attribute</th>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Live Stock</th>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Adjust ±5</th>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {variants.map((v) => (
+                    <tr key={v.variant_id} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                      <td style={{ padding: '12px 10px' }}>
+                        <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>
+                          {v.sku}
+                        </code>
+                      </td>
+                      <td style={{ padding: '12px 10px', fontWeight: 600, color: '#334155' }}>
+                        {v.attribute_value || 'Standard'}
+                      </td>
+                      <td style={{ padding: '12px 10px', fontWeight: 800, fontSize: '1rem', color: (v.stock || 0) > 0 ? '#059669' : '#dc2626' }}>
+                        {v.stock || 0} units
+                      </td>
+                      <td style={{ padding: '12px 10px' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: -5 }).then(refreshDetail)}
+                            title="Decrease stock by 5"
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239,68,68,0.3)',
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.92rem',
+                            }}
+                          >
+                            −5
+                          </button>
+                          <button
+                            onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: 5 }).then(refreshDetail)}
+                            title="Increase stock by 5"
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(16,185,129,0.3)',
+                              background: '#ecfdf5',
+                              color: '#059669',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.92rem',
+                            }}
+                          >
+                            +5
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 10px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => openEditVariant(v)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(0,0,0,0.12)',
+                              background: '#ffffff',
+                              color: '#1a1917',
+                              cursor: 'pointer',
+                              fontSize: '0.86rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            ✎ Edit
+                          </button>
+                          <button
+                            onClick={() => deleteVariant(v)}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(239,68,68,0.25)',
+                              background: '#ffffff',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              fontSize: '0.86rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            🗑 Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── SECTION 3: PRODUCT DETAILS / TABS (Screenshot 3) ── */}
+        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)', padding: '28px', marginTop: '12px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1a1917', margin: '0 0 16px 0' }}>
+            Product details
+          </h2>
+
+          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', display: 'flex', gap: '24px', marginBottom: '20px' }}>
+            <button
+              onClick={() => setActiveTab('description')}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === 'description' ? '2px solid #1a1917' : '2px solid transparent',
+                padding: '0 0 10px 0',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                color: activeTab === 'description' ? '#1a1917' : '#78716c',
+                cursor: 'pointer',
+              }}
+            >
+              Description
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem', color: '#44403c', lineHeight: 1.7 }}>
+            <p style={{ margin: 0 }}>
+              {productDetail.description || `${productDetail.name} delivers exceptional performance, modern aesthetics, and durable high-grade craftsmanship for everyday consumer tech demands.`}
+            </p>
+
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', margin: '12px 0 4px 0' }}>
+              Performance &amp; Craftsmanship
+            </h3>
+            <p style={{ margin: 0 }}>
+              Engineered with advanced hardware components to ensure reliable operation, high durability, and top-tier user satisfaction across daily use.
+            </p>
+
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', margin: '12px 0 4px 0' }}>
+              What You Get
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>1x {productDetail.name}</li>
+              <li>1x Standard Accessories / Charging Cable</li>
+              <li>1x Quick Start Guide &amp; Warranty Documentation</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* ── SECTION 4: CUSTOMER REVIEWS ── */}
+        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)', padding: '28px' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1a1917', margin: '0 0 20px 0', textAlign: 'center' }}>
+            Customer Reviews
+          </h2>
+
+          {/* Rating Summary Header & Write Review Button */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: '24px',
+              paddingBottom: '24px',
+              borderBottom: '1px solid rgba(0,0,0,0.08)',
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#f59e0b', fontSize: '1.2rem', letterSpacing: '3px' }}>
+                {safeStarCount(userReviews)}
+              </div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', marginTop: '4px' }}>
+                {userReviews.length > 0 ? `${safeAverageRating(userReviews)} out of 5` : 'No reviews yet'}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#78716c' }}>
+                {userReviews.length > 0 ? `Based on ${userReviews.length} ${userReviews.length === 1 ? 'review' : 'reviews'}` : 'Be the first to review this product'}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowWriteReview((v) => !v)}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '9999px',
+                border: 'none',
+                background: '#3b5bcf',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(59,91,207,0.3)',
+              }}
+            >
+              {showWriteReview ? 'Close Form' : 'Write a review'}
+            </button>
+          </div>
+
+          {/* Write a review interactive form */}
+          {showWriteReview && (
+            <form
+              onSubmit={handleAddReview}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '16px',
+                padding: '20px',
+                margin: '20px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>Write a Customer Review</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <Field label="Your Name *">
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Dineth T."
+                    value={newReview.name}
+                    onChange={(e) => setNewReview((r) => ({ ...r, name: e.target.value }))}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem' }}
+                  />
+                </Field>
+                <Field label="Rating">
+                  <select
+                    value={newReview.rating}
+                    onChange={(e) => setNewReview((r) => ({ ...r, rating: Number(e.target.value) }))}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', background: '#fff' }}
+                  >
+                    <option value={5}>★★★★★ 5 Stars</option>
+                    <option value={4}>★★★★☆ 4 Stars</option>
+                    <option value={3}>★★★☆☆ 3 Stars</option>
+                    <option value={2}>★★☆☆☆ 2 Stars</option>
+                    <option value={1}>★☆☆☆☆ 1 Star</option>
+                  </select>
+                </Field>
+              </div>
+
+              <Field label="Review Title">
+                <input
+                  type="text"
+                  placeholder="e.g. Excellent sound quality & fast shipping!"
+                  value={newReview.title}
+                  onChange={(e) => setNewReview((r) => ({ ...r, title: e.target.value }))}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem' }}
+                />
+              </Field>
+
+              <Field label="Review Comments *">
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Share details of your experience with this item..."
+                  value={newReview.comment}
+                  onChange={(e) => setNewReview((r) => ({ ...r, comment: e.target.value }))}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', fontFamily: 'inherit' }}
+                />
+              </Field>
+
+              <button
+                type="submit"
+                style={{
+                  alignSelf: 'flex-end',
+                  padding: '8px 20px',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  background: '#1a1917',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: '0.84rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Submit Review
+              </button>
+            </form>
+          )}
+
+          {/* Customer Reviews List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }}>
+            {userReviews.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#78716c' }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: '0.92rem' }}>No reviews yet for this product.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowWriteReview(true)}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    background: '#fff',
+                    color: '#1c1917',
+                    fontWeight: 600,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Write the first review
+                </button>
+              </div>
+            ) : (
+              userReviews.map((rev) => (
+                <div key={rev.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '16px' }}>
+                  <div style={{ color: '#f59e0b', fontSize: '0.9rem', marginBottom: '4px' }}>
+                    {safeStars(rev.rating)}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 700, color: '#1a1917' }}>
+                    <span>{rev.name}</span>
+                    <span style={{ fontSize: '0.74rem', background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px' }}>Verified</span>
+                    <span style={{ fontSize: '0.78rem', color: '#a8a29e', fontWeight: 400, marginLeft: 'auto' }}>{rev.date}</span>
+                  </div>
+                  {rev.title && (
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1c1917', marginTop: '6px' }}>{rev.title}</div>
+                  )}
+                  <p style={{ fontSize: '0.86rem', color: '#44403c', margin: '4px 0 0 0', lineHeight: 1.5 }}>{rev.comment}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── SECTION 5: FREQUENTLY ASKED QUESTIONS (Screenshot 5) ── */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+            borderRadius: '20px',
+            padding: '32px',
+            color: '#ffffff',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '28px',
+            alignItems: 'flex-start',
+            boxShadow: '0 8px 24px rgba(37, 99, 235, 0.25)',
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+              Frequently Asked Questions
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.5 }}>
+              Find quick answers regarding delivery timelines, warranty support, and order processing.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[
+              {
+                q: 'How long does it take for the delivery and what are the charges?',
+                a: 'Standard islandwide delivery takes 2 to 4 business days. Colombo 1–12 express delivery is delivered within 24 hours. Delivery fee is calculated at checkout based on location.',
+              },
+              {
+                q: 'What is the return and refund policy?',
+                a: 'We provide a 7-day hassle-free exchange or return guarantee on all unopened original packaged items. In the rare case of manufacturer defects, full warranty replacement applies.',
+              },
+              {
+                q: 'What is the warranty period for electronics?',
+                a: 'All our products come with a minimum 1-Year Official Hardware Warranty and 6-Month Battery/Accessory warranty backed directly by authorized service centers.',
+              },
+            ].map((item, idx) => {
+              const isOpen = faqOpen[idx];
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    background: 'rgba(255,255,255,0.12)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                  }}
+                >
+                  <button
+                    onClick={() => setFaqOpen((prev) => ({ ...prev, [idx]: !prev[idx] }))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      background: 'none',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: 0,
+                    }}
+                  >
+                    <span>{item.q}</span>
+                    <span style={{ fontSize: '0.75rem', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', marginLeft: '8px' }}>
+                      ▼
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div style={{ paddingTop: '10px', fontSize: '0.84rem', color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── SECTION 6: YOU MAY ALSO LIKE ── */}
+        {relatedProducts.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1a1917', margin: '0 0 4px 0' }}>
+              You may also like
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: '#78716c', margin: '0 0 20px 0' }}>
+              Combine your style with these products
+            </p>
+
+            <div className="catalog-product-grid">
+              {relatedProducts.map((p) => {
+                const photo = getProductPhoto(p);
+                const price = Number(p.base_price) || 0;
+                return (
+                  <div
+                    key={p.product_id}
+                    onClick={() => {
+                      setSelectedProductId(p.product_id);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '18px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ width: '100%', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '12px', marginBottom: '12px' }}>
+                      <img src={photo} alt={p.name} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+                    </div>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a1917', margin: '0 0 6px 0', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {p.name}
+                    </h3>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto' }}>
+                      {formatRs(price)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAIN RETURN RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="catalog-fluid-container">
       <style>{`
@@ -769,6 +2029,18 @@ export default function CatalogPage() {
           display: flex;
           flex-direction: column;
         }
+        .product-top-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 36px;
+          align-items: flex-start;
+        }
+        .catalog-product-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+          gap: 20px;
+          width: 100%;
+        }
         @media (max-width: 960px) {
           .catalog-layout-grid {
             display: flex;
@@ -777,6 +2049,10 @@ export default function CatalogPage() {
           }
           .catalog-sidebar-desktop {
             display: none;
+          }
+          .product-top-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
           }
           .mobile-filters-drawer {
             display: flex;
@@ -797,12 +2073,6 @@ export default function CatalogPage() {
         .mobile-filters-btn {
           display: none;
         }
-        .catalog-product-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-          gap: 20px;
-          width: 100%;
-        }
         @media (max-width: 640px) {
           .catalog-product-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -818,829 +2088,644 @@ export default function CatalogPage() {
             grid-template-columns: 1fr;
           }
         }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
-      {/* ── TOP HEADING: "All" ──────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '20px', width: '100%' }}>
-        <h1
-          className="catalog-page-title"
-          style={{
-            fontSize: '2.6rem',
-            fontWeight: 700,
-            letterSpacing: '-0.025em',
-            margin: '0 0 16px 0',
-            color: '#1a1917',
-            lineHeight: 1.1,
-          }}
-        >
-          {currentCategoryName}
-        </h1>
-
-        {/* ── CATEGORY PILLS BAR ───────────────────────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            overflowX: 'auto',
-            paddingBottom: '8px',
-            scrollbarWidth: 'none',
-            WebkitOverflowScrolling: 'touch',
-            maxWidth: '100%',
-          }}
-        >
-          {/* "All" category pill */}
-          <button
-            onClick={() => setSelectedCategory('')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              backgroundColor: selectedCategory === '' ? '#1a1917' : '#ffffff',
-              color: selectedCategory === '' ? '#ffffff' : '#1c1917',
-              border: '1px solid rgba(0,0,0,0.08)',
-              borderRadius: '9999px',
-              padding: '7px 16px 7px 12px',
-              fontSize: '0.86rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              boxShadow: selectedCategory === '' ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
-              transition: 'all 0.2s ease',
-              flexShrink: 0,
-            }}
-          >
-            <span
+      {/* ── CONDITIONAL RENDER: PRODUCT DETAILS PAGE vs CATALOG BROWSE GRID ── */}
+      {selectedProductId ? (
+        renderProductDetailPage()
+      ) : (
+        <>
+          {/* ── TOP HEADING: "All Products" ── */}
+          <div style={{ marginBottom: '20px', width: '100%' }}>
+            <h1
+              className="catalog-page-title"
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '8px',
-                background: selectedCategory === '' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.85rem',
+                fontSize: '2.6rem',
+                fontWeight: 700,
+                letterSpacing: '-0.025em',
+                margin: '0 0 16px 0',
+                color: '#1a1917',
+                lineHeight: 1.1,
               }}
             >
-              🏷️
-            </span>
-            <span>All Categories</span>
-          </button>
+              {currentCategoryName}
+            </h1>
 
-          {/* Dynamic / Metadata Category Pills */}
-          {displayCategories.map((cat) => {
-            const isSelected = String(selectedCategory) === String(cat.category_id);
-            return (
+            {/* ── CATEGORY PILLS BAR ── */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                overflowX: 'auto',
+                paddingBottom: '8px',
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
+                maxWidth: '100%',
+              }}
+            >
+              {/* "All" category pill */}
               <button
-                key={cat.slug || cat.category_id}
                 onClick={() => {
-                  if (cat.category_id) {
-                    setSelectedCategory(isSelected ? '' : cat.category_id);
-                  } else {
-                    setSearchQuery(cat.name);
-                  }
+                  setSelectedCategory('');
+                  setSearchQuery('');
                 }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  backgroundColor: isSelected ? '#1a1917' : '#ffffff',
-                  color: isSelected ? '#ffffff' : '#1c1917',
+                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#1a1917' : '#ffffff',
+                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#1c1917',
                   border: '1px solid rgba(0,0,0,0.08)',
                   borderRadius: '9999px',
-                  padding: '7px 16px 7px 10px',
+                  padding: '7px 16px 7px 12px',
                   fontSize: '0.86rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
                 }}
               >
-                <div
+                <span
                   style={{
-                    width: '26px',
-                    height: '26px',
+                    width: '24px',
+                    height: '24px',
                     borderRadius: '8px',
-                    overflow: 'hidden',
-                    background: 'rgba(0,0,0,0.04)',
+                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
+                    fontSize: '0.85rem',
                   }}
                 >
-                  {cat.img ? (
-                    <img
-                      src={cat.img}
-                      alt={cat.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                    />
-                  ) : null}
-                  <span style={{ display: cat.img ? 'none' : 'block', fontSize: '0.9rem' }}>{cat.icon || '📦'}</span>
-                </div>
-                <span>{cat.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── TWO-COLUMN MAIN LAYOUT ─────────────────────────────────────────── */}
-      <div className="catalog-layout-grid">
-        {/* ── LEFT COLUMN: DESKTOP FILTER ACCORDIONS ──────────────────────── */}
-        <div className="catalog-sidebar-desktop">
-          {renderFilterAccordions()}
-        </div>
-
-        {/* ── RIGHT COLUMN: PRODUCTS TOOLBAR & GRID ───────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%' }}>
-          {/* Top toolbar */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              width: '100%',
-            }}
-          >
-            {/* Search Input & Manager Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', maxWidth: '560px' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <input
-                  type="text"
-                  placeholder="Search products…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 34px 8px 14px',
-                    borderRadius: '9999px',
-                    background: '#ffffff',
-                    border: '1px solid rgba(0,0,0,0.12)',
-                    fontSize: '0.86rem',
-                    color: '#1c1917',
-                    outline: 'none',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#a8a29e',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-
-              {/* Mobile Filters Toggle Button */}
-              <button
-                className="mobile-filters-btn"
-                type="button"
-                onClick={() => setMobileFiltersOpen((v) => !v)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '9999px',
-                  border: '1px solid rgba(0,0,0,0.14)',
-                  background: mobileFiltersOpen ? '#1a1917' : '#ffffff',
-                  color: mobileFiltersOpen ? '#ffffff' : '#1a1917',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  alignItems: 'center',
-                  gap: '6px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>⚙️ Filters</span>
-                <span style={{ fontSize: '0.7rem' }}>{mobileFiltersOpen ? '▲' : '▼'}</span>
-              </button>
-
-              {/* Manager Buttons if authorized */}
-              {isManager && (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => { setCatForm(EMPTY_CAT); setCatFormError(null); setShowCatForm(true); }}
-                    title="Add Category"
-                    style={{
-                      padding: '7px 12px',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      background: '#ffffff',
-                      color: '#1c1917',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '0.78rem',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    + Cat
-                  </button>
-                  <button
-                    onClick={openCreateProduct}
-                    title="Add Product"
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: '9999px',
-                      border: 'none',
-                      background: '#1a1917',
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '0.78rem',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    + Product
-                  </button>
-                  <button
-                    onClick={() => { setShowLowStock((v) => !v); if (!showLowStock) fetchLowStock(threshold); }}
-                    title="Low Stock Alerts"
-                    style={{
-                      padding: '7px 12px',
-                      borderRadius: '9999px',
-                      border: '1px solid #f59e0b',
-                      background: showLowStock ? '#f59e0b' : 'rgba(245,158,11,0.08)',
-                      color: showLowStock ? '#ffffff' : '#b45309',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '0.78rem',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    ⚠ Stock
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Right: Sort Dropdown & Products Count */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  style={{
-                    appearance: 'none',
-                    WebkitAppearance: 'none',
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '0.88rem',
-                    fontWeight: 500,
-                    color: '#1c1917',
-                    cursor: 'pointer',
-                    paddingRight: '18px',
-                    outline: 'none',
-                  }}
-                >
-                  <option value="best-selling">Best selling</option>
-                  <option value="price-low">Price: low to high</option>
-                  <option value="price-high">Price: high to low</option>
-                  <option value="alpha-asc">Alphabetically: A-Z</option>
-                  <option value="alpha-desc">Alphabetically: Z-A</option>
-                </select>
-                <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', fontSize: '0.68rem', color: '#1c1917' }}>
-                  ▼
+                  🏷️
                 </span>
-              </div>
+                <span>All Categories</span>
+              </button>
 
-              <span style={{ fontSize: '0.88rem', color: '#57534e', fontWeight: 400, whiteSpace: 'nowrap' }}>
-                {productCountDisplay}
-              </span>
+              {/* Dynamic / Metadata Category Pills */}
+              {displayCategories.map((cat) => {
+                const isSelected = cat.category_id
+                  ? String(selectedCategory) === String(cat.category_id)
+                  : searchQuery.toLowerCase() === cat.name.toLowerCase();
+
+                return (
+                  <button
+                    key={cat.slug || cat.category_id}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedCategory('');
+                        setSearchQuery('');
+                      } else if (cat.category_id) {
+                        setSelectedCategory(cat.category_id);
+                        setSearchQuery('');
+                      } else {
+                        setSelectedCategory('');
+                        setSearchQuery(cat.name);
+                      }
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      backgroundColor: isSelected ? '#1a1917' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#1c1917',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      borderRadius: '9999px',
+                      padding: '7px 16px 7px 10px',
+                      fontSize: '0.86rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        background: 'rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {cat.img ? (
+                        <img
+                          src={cat.img}
+                          alt={cat.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'block';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <span style={{ display: cat.img ? 'none' : 'block', fontSize: '0.9rem' }}>{cat.icon || '📦'}</span>
+                    </div>
+                    <span>{cat.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* ── Mobile Filters Expandable Drawer ── */}
-          {mobileFiltersOpen && (
-            <div className="mobile-filters-drawer">
+          {/* ── TWO-COLUMN MAIN LAYOUT ── */}
+          <div className="catalog-layout-grid">
+            {/* ── LEFT COLUMN: DESKTOP FILTER ACCORDIONS ── */}
+            <div className="catalog-sidebar-desktop">
               {renderFilterAccordions()}
             </div>
-          )}
 
-          {/* Low Stock Drawer if open */}
-          {showLowStock && (
-            <div
-              style={{
-                background: '#fffbeb',
-                border: '1px solid rgba(245,158,11,0.3)',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>Low Stock Variants Alert</h4>
-                  <span style={{ fontSize: '0.78rem', color: '#78716c' }}>Variants below threshold</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="number"
-                    min="1"
-                    value={threshold}
-                    onChange={(e) => setThreshold(Number(e.target.value))}
-                    style={{ width: '56px', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.4)', textAlign: 'center', fontSize: '0.85rem' }}
-                  />
-                  <button
-                    onClick={() => fetchLowStock(threshold)}
-                    style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-              {lowStockLoading && <p style={{ fontSize: '0.82rem', color: '#78716c' }}>Loading…</p>}
-              {lowStockError && <p style={{ fontSize: '0.82rem', color: 'red' }}>Error: {lowStockError}</p>}
-              {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
-                <p style={{ fontSize: '0.82rem', color: '#059669', margin: 0 }}>✓ All variants have healthy stock levels.</p>
-              )}
-              {!lowStockLoading && lowStock.length > 0 && (
-                <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                  <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.06)', color: '#78716c' }}>
-                        <th style={{ padding: '6px' }}>Product</th>
-                        <th style={{ padding: '6px' }}>SKU</th>
-                        <th style={{ padding: '6px' }}>Attribute</th>
-                        <th style={{ padding: '6px' }}>Stock</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lowStock.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                          <td style={{ padding: '6px', fontWeight: 600 }}>{row.product_name}</td>
-                          <td style={{ padding: '6px' }}><code>{row.sku}</code></td>
-                          <td style={{ padding: '6px' }}>{row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}</td>
-                          <td style={{ padding: '6px', fontWeight: 700, color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
-                            {row.stock === 0 ? 'Out of stock' : row.stock}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Loading / Error States */}
-          {loading && (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#78716c' }}>
-              <p>Loading products…</p>
-            </div>
-          )}
-          {error && (
-            <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '12px', color: '#b91c1c' }}>
-              <p>Error: {error}</p>
-            </div>
-          )}
-
-          {/* ── 4-COLUMN PRODUCTS GRID ───────────────────────────────────── */}
-          {!loading && !error && (
-            filteredProducts.length === 0 ? (
+            {/* ── RIGHT COLUMN: PRODUCTS TOOLBAR & GRID ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%' }}>
+              {/* Top toolbar */}
               <div
                 style={{
-                  background: '#ffffff',
-                  borderRadius: '16px',
-                  padding: '48px 24px',
-                  textAlign: 'center',
-                  border: '1px dashed rgba(0,0,0,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  width: '100%',
                 }}
               >
-                <p style={{ color: '#78716c', margin: '0 0 12px 0', fontSize: '0.95rem' }}>No products found matching your selection.</p>
-                <button
-                  onClick={() => { setSelectedCategory(''); setSearchQuery(''); setMinPrice(''); setMaxPrice(''); }}
-                  style={{
-                    padding: '8px 18px',
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(0,0,0,0.12)',
-                    background: '#ffffff',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  Clear all filters
-                </button>
-              </div>
-            ) : (
-              <div className="catalog-product-grid">
-                {filteredProducts.map((p) => {
-                  const photoUrl = getProductPhoto(p);
-                  const basePrice = Number(p.base_price) || 0;
-                  const installment = (basePrice / 3).toFixed(2);
-                  const rating = getRating(p.product_id);
-                  const colorsCount = getColorsCount(p);
-                  const isInStock = p.is_active !== 0;
-
-                  return (
-                    <div
-                      key={p.product_id}
-                      onClick={() => setSelectedProductId(p.product_id)}
+                {/* Search Input & Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flex: '1 1 auto', minWidth: '260px' }}>
+                  <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+                    <input
+                      type="text"
+                      placeholder="Search products…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       style={{
-                        backgroundColor: '#ffffff',
-                        borderRadius: '18px',
-                        padding: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        position: 'relative',
-                        border: '1px solid rgba(0,0,0,0.08)',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-4px)';
-                        e.currentTarget.style.borderColor = 'rgba(0,0,0,0.16)';
-                        e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)';
-                        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
-                      }}
-                    >
-                      {/* Top Badges (e.g. Save, Hi-Res, Inactive) */}
-                      <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {p.is_active === 0 ? (
-                          <span
-                            style={{
-                              background: 'rgba(239,68,68,0.14)',
-                              color: '#b91c1c',
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              padding: '2px 7px',
-                              borderRadius: '9999px',
-                            }}
-                          >
-                            INACTIVE
-                          </span>
-                        ) : basePrice > 7000 ? (
-                          <span
-                            style={{
-                              background: '#c59b27',
-                              color: '#ffffff',
-                              fontSize: '0.62rem',
-                              fontWeight: 800,
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            Hi-Res
-                          </span>
-                        ) : basePrice < 4000 ? (
-                          <span
-                            style={{
-                              background: '#dc2626',
-                              color: '#ffffff',
-                              fontSize: '0.65rem',
-                              fontWeight: 700,
-                              padding: '2px 7px',
-                              borderRadius: '9999px',
-                            }}
-                          >
-                            Save 14%
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {/* Product Studio Image Container */}
-                      <div
-                        style={{
-                          width: '100%',
-                          aspectRatio: '1 / 1',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginBottom: '14px',
-                          overflow: 'hidden',
-                          borderRadius: '12px',
-                        }}
-                      >
-                        <img
-                          src={photoUrl}
-                          alt={p.name}
-                          style={{
-                            maxWidth: '90%',
-                            maxHeight: '90%',
-                            objectFit: 'contain',
-                            transition: 'transform 0.3s ease',
-                          }}
-                        />
-                      </div>
-
-                      {/* Title: 2 lines clamp */}
-                      <h3
-                        style={{
-                          fontSize: '0.94rem',
-                          fontWeight: 700,
-                          color: '#1a1917',
-                          lineHeight: 1.35,
-                          margin: '0 0 6px 0',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          minHeight: '2.6em',
-                        }}
-                      >
-                        {p.name}
-                      </h3>
-
-                      {/* Price display: e.g. "From Rs 7,249.00" or "Rs 4,999.00" */}
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                        {basePrice > 6000 && (
-                          <span style={{ fontSize: '0.84rem', fontWeight: 500, color: '#1c1917' }}>From</span>
-                        )}
-                        <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
-                          {formatRs(basePrice)}
-                        </span>
-                      </div>
-
-                      {/* Variants Summary */}
-                      <div style={{ fontSize: '0.76rem', color: '#78716c', marginBottom: '4px' }}>
-                        Available in {colorsCount} colors
-                      </div>
-
-                      {/* Rating Row */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-                        <span style={{ color: '#f59e0b', fontSize: '0.8rem', letterSpacing: '1px' }}>★★★★★</span>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1c1917' }}>{rating}</span>
-                      </div>
-
-                      {/* Stock Status Indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
-                        <span
-                          style={{
-                            width: '7px',
-                            height: '7px',
-                            borderRadius: '50%',
-                            backgroundColor: isInStock ? '#10b981' : '#ef4444',
-                            display: 'inline-block',
-                          }}
-                        />
-                        <span style={{ color: isInStock ? '#059669' : '#dc2626' }}>
-                          {isInStock ? 'In stock' : 'Out of stock'}
-                        </span>
-                      </div>
-
-                      {/* Manager Hover Controls */}
-                      {isManager && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: '6px',
-                            marginTop: '10px',
-                            paddingTop: '8px',
-                            borderTop: '1px dashed rgba(0,0,0,0.08)',
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={(e) => openEditProduct(p, e)}
-                            style={{
-                              flex: 1,
-                              padding: '5px',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(0,0,0,0.12)',
-                              background: '#ffffff',
-                              color: '#1a1917',
-                              cursor: 'pointer',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => softDeleteProduct(p, e)}
-                            style={{
-                              flex: 1,
-                              padding: '5px',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(239,68,68,0.2)',
-                              background: '#ffffff',
-                              color: '#dc2626',
-                              cursor: 'pointer',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            Del
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          PRODUCT DETAIL MODAL (Variants & Live Stock Adjustment)
-      ══════════════════════════════════════════════════════════════════════ */}
-      {selectedProductId && (
-        <div
-          onClick={() => setSelectedProductId(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: '720px',
-              width: '100%',
-              maxHeight: '88vh',
-              overflowY: 'auto',
-              background: '#ffffff',
-              borderRadius: '20px',
-              padding: '28px',
-              position: 'relative',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            }}
-          >
-            {/* Modal header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>
-                  {productDetail ? productDetail.name : 'Loading…'}
-                </h3>
-                {productDetail && (
-                  <p style={{ color: '#78716c', fontSize: '0.86rem', marginTop: '4px' }}>
-                    Category: <strong>{productDetail.category_name}</strong> | Base Price: <strong>{formatRs(productDetail.base_price)}</strong>
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => setSelectedProductId(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.6rem', cursor: 'pointer', color: '#78716c', lineHeight: 1 }}
-              >
-                &times;
-              </button>
-            </div>
-
-            {detailLoading && <p style={{ color: '#78716c', fontSize: '0.88rem' }}>Loading variants &amp; inventory…</p>}
-            {detailError && <p style={{ color: '#dc2626', fontSize: '0.88rem' }}>Error: {detailError}</p>}
-
-            {productDetail && !detailLoading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {productDetail.description && (
-                  <p style={{ color: '#57534e', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
-                    {productDetail.description}
-                  </p>
-                )}
-
-                {/* Variants section header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>
-                    Variants &amp; Inventory ({productDetail.variants?.length ?? 0} total)
-                  </h4>
-                  {isManager && (
-                    <button
-                      onClick={openCreateVariant}
-                      style={{
-                        padding: '6px 14px',
+                        width: '100%',
+                        padding: '8px 34px 8px 14px',
                         borderRadius: '9999px',
-                        border: 'none',
-                        background: '#1a1917',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontSize: '0.8rem',
+                        background: '#ffffff',
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        fontSize: '0.86rem',
+                        color: '#1c1917',
+                        outline: 'none',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        boxSizing: 'border-box',
                       }}
-                    >
-                      + Add Variant
-                    </button>
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#a8a29e',
+                          fontSize: '1rem',
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Mobile Filters Toggle Button */}
+                  <button
+                    className="mobile-filters-btn"
+                    type="button"
+                    onClick={() => setMobileFiltersOpen((v) => !v)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(0,0,0,0.14)',
+                      background: mobileFiltersOpen ? '#1a1917' : '#ffffff',
+                      color: mobileFiltersOpen ? '#ffffff' : '#1a1917',
+                      fontSize: '0.84rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <span>⚙️ Filters</span>
+                    <span style={{ fontSize: '0.7rem' }}>{mobileFiltersOpen ? '▲' : '▼'}</span>
+                  </button>
+
+                  {/* Manager Buttons if authorized */}
+                  {isManager && (
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <button
+                        onClick={() => { setCatForm(EMPTY_CAT); setCatFormError(null); setShowCatForm(true); }}
+                        title="Add Category"
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '9999px',
+                          border: '1px solid rgba(0,0,0,0.14)',
+                          background: '#ffffff',
+                          color: '#1c1917',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.84rem',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        + Category
+                      </button>
+                      <button
+                        onClick={openCreateProduct}
+                        title="Add Product"
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: '9999px',
+                          border: 'none',
+                          background: '#1a1917',
+                          color: '#ffffff',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.84rem',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                        }}
+                      >
+                        + Product
+                      </button>
+                      <button
+                        onClick={() => { setShowLowStock((v) => !v); if (!showLowStock) fetchLowStock(threshold); }}
+                        title="Low Stock Alerts"
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '9999px',
+                          border: '1px solid #f59e0b',
+                          background: showLowStock ? '#f59e0b' : 'rgba(245,158,11,0.08)',
+                          color: showLowStock ? '#ffffff' : '#b45309',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.84rem',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ⚠ Low Stock
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {/* Variants table */}
-                {productDetail.variants && productDetail.variants.length > 0 ? (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                      <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '1.5px solid rgba(0,0,0,0.08)', color: '#78716c' }}>
-                          <th style={{ padding: '8px' }}>SKU</th>
-                          <th style={{ padding: '8px' }}>Attribute</th>
-                          <th style={{ padding: '8px' }}>Price</th>
-                          <th style={{ padding: '8px' }}>Stock</th>
-                          {isManager && <th style={{ padding: '8px', minWidth: '150px' }}>Adjust Stock</th>}
-                          {isManager && <th style={{ padding: '8px' }}>Actions</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {productDetail.variants.map((v) => (
-                          <tr key={v.variant_id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                            <td style={{ padding: '8px' }}><code>{v.sku}</code></td>
-                            <td style={{ padding: '8px' }}>
-                              {v.attribute_name ? `${v.attribute_name}: ${v.attribute_value}` : <span style={{ color: '#a8a29e' }}>Standard</span>}
-                            </td>
-                            <td style={{ padding: '8px', fontWeight: 600 }}>{formatRs(v.price)}</td>
-                            <td style={{ padding: '8px', fontWeight: 600, color: v.stock === 0 ? '#ef4444' : '#059669' }}>
-                              {v.stock === 0 ? 'Out of stock' : `${v.stock} in stock`}
-                            </td>
+                {/* Right: Sort Dropdown & Products Count */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      style={{
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                        background: 'transparent',
+                        border: 'none',
+                        fontSize: '0.88rem',
+                        fontWeight: 500,
+                        color: '#1c1917',
+                        cursor: 'pointer',
+                        paddingRight: '18px',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="best-selling">Best selling</option>
+                      <option value="price-low">Price: low to high</option>
+                      <option value="price-high">Price: high to low</option>
+                      <option value="alpha-asc">Alphabetically: A-Z</option>
+                      <option value="alpha-desc">Alphabetically: Z-A</option>
+                    </select>
+                    <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', fontSize: '0.68rem', color: '#1c1917' }}>
+                      ▼
+                    </span>
+                  </div>
 
-                            {isManager && (
-                              <td style={{ padding: '8px' }}>
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                  <button
-                                    onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: -5 }).then(refreshDetail)}
-                                    style={{ padding: '3px 7px', borderRadius: '5px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}
-                                  >
-                                    −5
-                                  </button>
-                                  <input
-                                    type="number"
-                                    placeholder="±"
-                                    value={stockInputs[v.variant_id] ?? ''}
-                                    onChange={(e) => setStockInputs((s) => ({ ...s, [v.variant_id]: e.target.value }))}
-                                    style={{ width: '48px', padding: '3px 5px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.15)', textAlign: 'center', fontSize: '0.8rem' }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') adjustStock(v.variant_id); }}
-                                  />
-                                  <button
-                                    onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: 5 }).then(refreshDetail)}
-                                    style={{ padding: '3px 7px', borderRadius: '5px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.06)', color: '#059669', cursor: 'pointer', fontWeight: 700 }}
-                                  >
-                                    +5
-                                  </button>
-                                  <button
-                                    onClick={() => adjustStock(v.variant_id)}
-                                    disabled={stockSaving[v.variant_id]}
-                                    style={{ padding: '3px 8px', borderRadius: '5px', border: 'none', background: '#1a1917', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem' }}
-                                  >
-                                    ✓
-                                  </button>
-                                </div>
-                              </td>
-                            )}
+                  <span style={{ fontSize: '0.88rem', color: '#57534e', fontWeight: 400, whiteSpace: 'nowrap' }}>
+                    {productCountDisplay}
+                  </span>
+                </div>
+              </div>
 
-                            {isManager && (
-                              <td style={{ padding: '8px' }}>
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                  <button
-                                    onClick={() => openEditVariant(v)}
-                                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.12)', background: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => deleteVariant(v)}
-                                    style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(239,68,68,0.25)', background: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
-                                  >
-                                    Del
-                                  </button>
-                                </div>
-                              </td>
-                            )}
+              {/* ── Mobile Filters Expandable Drawer ── */}
+              {mobileFiltersOpen && (
+                <div className="mobile-filters-drawer">
+                  {renderFilterAccordions()}
+                </div>
+              )}
+
+              {/* Low Stock Drawer if open */}
+              {showLowStock && (
+                <div
+                  style={{
+                    background: '#fffbeb',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>Low Stock Variants Alert</h4>
+                      <span style={{ fontSize: '0.78rem', color: '#78716c' }}>Variants below threshold</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={threshold}
+                        onChange={(e) => setThreshold(Number(e.target.value))}
+                        style={{ width: '56px', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.4)', textAlign: 'center', fontSize: '0.85rem' }}
+                      />
+                      <button
+                        onClick={() => fetchLowStock(threshold)}
+                        style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                  {lowStockLoading && <p style={{ fontSize: '0.82rem', color: '#78716c' }}>Loading…</p>}
+                  {lowStockError && <p style={{ fontSize: '0.82rem', color: 'red' }}>Error: {lowStockError}</p>}
+                  {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
+                    <p style={{ fontSize: '0.82rem', color: '#059669', margin: 0 }}>✓ All variants have healthy stock levels.</p>
+                  )}
+                  {!lowStockLoading && lowStock.length > 0 && (
+                    <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.06)', color: '#78716c' }}>
+                            <th style={{ padding: '6px' }}>Product</th>
+                            <th style={{ padding: '6px' }}>SKU</th>
+                            <th style={{ padding: '6px' }}>Attribute</th>
+                            <th style={{ padding: '6px' }}>Stock</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {lowStock.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                              <td style={{ padding: '6px', fontWeight: 600 }}>{row.product_name}</td>
+                              <td style={{ padding: '6px' }}><code>{row.sku}</code></td>
+                              <td style={{ padding: '6px' }}>{row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}</td>
+                              <td style={{ padding: '6px', fontWeight: 700, color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                                {row.stock === 0 ? 'Out of stock' : row.stock}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Loading / Error States */}
+              {loading && (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#78716c' }}>
+                  <p>Loading products…</p>
+                </div>
+              )}
+              {error && (
+                <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '12px', color: '#b91c1c' }}>
+                  <p>Error: {error}</p>
+                </div>
+              )}
+
+              {/* ── 4-COLUMN PRODUCTS GRID ── */}
+              {!loading && !error && (
+                filteredProducts.length === 0 ? (
+                  <div
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: '16px',
+                      padding: '48px 24px',
+                      textAlign: 'center',
+                      border: '1px dashed rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    <p style={{ color: '#78716c', margin: '0 0 12px 0', fontSize: '0.95rem' }}>No products found matching your selection.</p>
+                    <button
+                      onClick={() => { setSelectedCategory(''); setSearchQuery(''); setMinPrice(''); setMaxPrice(''); }}
+                      style={{
+                        padding: '8px 18px',
+                        borderRadius: '9999px',
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.82rem',
+                      }}
+                    >
+                      Clear all filters
+                    </button>
                   </div>
                 ) : (
-                  <div style={{ padding: '24px', borderRadius: '12px', border: '1px dashed rgba(0,0,0,0.12)', textAlign: 'center' }}>
-                    <p style={{ color: '#78716c', margin: 0, fontSize: '0.85rem' }}>
-                      No variants registered yet.
-                    </p>
+                  <div className="catalog-product-grid">
+                    {filteredProducts.map((p) => {
+                      const photoUrl = getProductPhoto(p);
+                      const basePrice = Number(p.base_price) || 0;
+                      const rating = getRating(p.product_id);
+                      const colorsCount = getColorsCount(p);
+                      const isInStock = p.is_active !== 0;
+
+                      return (
+                        <div
+                          key={p.product_id}
+                          onClick={() => setSelectedProductId(p.product_id)}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '18px',
+                            padding: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'relative',
+                            border: '1px solid rgba(0,0,0,0.08)',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.16)';
+                            e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)';
+                            e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
+                          }}
+                        >
+                          {/* Top Badges */}
+                          <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {p.is_active === 0 ? (
+                              <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
+                                INACTIVE
+                              </span>
+                            ) : basePrice > 7000 ? (
+                              <span style={{ background: '#c59b27', color: '#ffffff', fontSize: '0.62rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                                Hi-Res
+                              </span>
+                            ) : basePrice < 4000 ? (
+                              <span style={{ background: '#dc2626', color: '#ffffff', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
+                                Save 14%
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {/* Product Studio Image Container */}
+                          <div
+                            style={{
+                              width: '100%',
+                              aspectRatio: '1 / 1',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginBottom: '14px',
+                              overflow: 'hidden',
+                              borderRadius: '12px',
+                            }}
+                          >
+                            <img
+                              src={photoUrl}
+                              alt={p.name}
+                              style={{
+                                maxWidth: '90%',
+                                maxHeight: '90%',
+                                objectFit: 'contain',
+                                transition: 'transform 0.3s ease',
+                              }}
+                            />
+                          </div>
+
+                          {/* Title */}
+                          <h3
+                            style={{
+                              fontSize: '0.94rem',
+                              fontWeight: 700,
+                              color: '#1a1917',
+                              lineHeight: 1.35,
+                              margin: '0 0 6px 0',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              minHeight: '2.6em',
+                            }}
+                          >
+                            {p.name}
+                          </h3>
+
+                          {/* Price */}
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+                            {basePrice > 6000 && (
+                              <span style={{ fontSize: '0.84rem', fontWeight: 500, color: '#1c1917' }}>From</span>
+                            )}
+                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
+                              {formatRs(basePrice)}
+                            </span>
+                          </div>
+
+                          {/* Variants Summary */}
+                          <div style={{ fontSize: '0.76rem', color: '#78716c', marginBottom: '4px' }}>
+                            Available in {colorsCount} colors
+                          </div>
+
+                          {/* Rating Row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                            <span style={{ color: '#f59e0b', fontSize: '0.8rem', letterSpacing: '1px' }}>★★★★★</span>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1c1917' }}>{rating}</span>
+                          </div>
+
+                          {/* Stock Status Indicator */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
+                            <span
+                              style={{
+                                width: '7px',
+                                height: '7px',
+                                borderRadius: '50%',
+                                backgroundColor: isInStock ? '#10b981' : '#ef4444',
+                                display: 'inline-block',
+                              }}
+                            />
+                            <span style={{ color: isInStock ? '#059669' : '#dc2626' }}>
+                              {isInStock ? 'In stock' : 'Out of stock'}
+                            </span>
+                          </div>
+
+                          {/* Manager Hover Controls */}
+                          {isManager && (
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '6px',
+                                marginTop: '10px',
+                                paddingTop: '8px',
+                                borderTop: '1px dashed rgba(0,0,0,0.08)',
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={(e) => openEditProduct(p, e)}
+                                style={{
+                                  flex: 1,
+                                  padding: '5px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(0,0,0,0.12)',
+                                  background: '#ffffff',
+                                  color: '#1a1917',
+                                  cursor: 'pointer',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => softDeleteProduct(p, e)}
+                                style={{
+                                  flex: 1,
+                                  padding: '5px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(239,68,68,0.2)',
+                                  background: '#ffffff',
+                                  color: '#dc2626',
+                                  cursor: 'pointer',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Del
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -1652,35 +2737,38 @@ export default function CatalogPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '16px',
+            padding: '20px',
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: '460px',
+              maxWidth: '620px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '20px',
-              padding: '26px',
+              borderRadius: '24px',
+              padding: '32px 36px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '14px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              gap: '18px',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
                 {editProduct ? 'Edit Product' : 'Add New Product'}
               </h3>
               <button
                 onClick={() => setShowProductForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#78716c', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -1692,7 +2780,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Anker Soundcore R50i NC Earbuds"
                 value={productForm.title}
                 onChange={(e) => setProductForm((f) => ({ ...f, title: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -1700,9 +2788,9 @@ export default function CatalogPage() {
               <textarea
                 placeholder="Product specifications & details"
                 value={productForm.description}
-                rows={3}
+                rows={4}
                 onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none', fontFamily: 'inherit' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -1712,7 +2800,7 @@ export default function CatalogPage() {
                 placeholder="4999.00"
                 value={productForm.base_price}
                 onChange={(e) => setProductForm((f) => ({ ...f, base_price: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -1720,7 +2808,7 @@ export default function CatalogPage() {
               <select
                 value={productForm.category_id}
                 onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none', background: '#fff' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
               >
                 <option value="">Select Category…</option>
                 {categories.map((c) => (
@@ -1731,21 +2819,21 @@ export default function CatalogPage() {
 
             {editProduct && (
               <Field label="Status">
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
                   {[{ label: 'Active', val: 1 }, { label: 'Inactive', val: 0 }].map(({ label, val }) => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setProductForm((f) => ({ ...f, is_active: val }))}
                       style={{
-                        padding: '6px 16px',
-                        borderRadius: '9999px',
-                        border: `1.5px solid ${val === 1 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)'}`,
-                        background: productForm.is_active === val ? (val === 1 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)') : 'none',
-                        color: val === 1 ? '#059669' : '#dc2626',
+                        padding: '8px 18px',
+                        borderRadius: '8px',
+                        border: productForm.is_active === val ? '2px solid #0f172a' : '1px solid rgba(0,0,0,0.16)',
+                        background: productForm.is_active === val ? '#0f172a' : '#fff',
+                        color: productForm.is_active === val ? '#fff' : '#0f172a',
                         cursor: 'pointer',
+                        fontSize: '0.92rem',
                         fontWeight: 700,
-                        fontSize: '0.8rem',
                       }}
                     >
                       {label}
@@ -1755,13 +2843,13 @@ export default function CatalogPage() {
               </Field>
             )}
 
-            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: 0 }}>{productFormError}</p>}
+            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>{productFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px' }}>
               <button
                 type="button"
                 onClick={() => setShowProductForm(false)}
-                style={{ padding: '8px 16px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.12)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
               >
                 Cancel
               </button>
@@ -1769,7 +2857,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveProduct}
                 disabled={productFormSaving}
-                style={{ padding: '8px 20px', borderRadius: '9999px', border: 'none', background: '#1a1917', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
               >
                 {productFormSaving ? 'Saving…' : (editProduct ? 'Save Changes' : 'Create Product')}
               </button>
@@ -1779,7 +2867,7 @@ export default function CatalogPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          ADD / EDIT VARIANT MODAL
+          CREATE / EDIT VARIANT MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       {showVariantForm && (
         <div
@@ -1787,35 +2875,36 @@ export default function CatalogPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '16px',
+            padding: '20px',
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: '420px',
+              maxWidth: '560px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
+              borderRadius: '24px',
+              padding: '30px 34px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              gap: '16px',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
                 {editVariant ? 'Edit Variant' : 'Add Variant'}
               </h3>
               <button
                 onClick={() => setShowVariantForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#78716c', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -1827,18 +2916,18 @@ export default function CatalogPage() {
                 placeholder="e.g. ANKER-R50I-BLK"
                 value={variantForm.sku}
                 onChange={(e) => setVariantForm((f) => ({ ...f, sku: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <Field label="Attribute Name">
                 <input
                   type="text"
                   placeholder="e.g. Color"
                   value={variantForm.attribute_name}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_name: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
               <Field label="Attribute Value">
@@ -1847,7 +2936,7 @@ export default function CatalogPage() {
                   placeholder="e.g. Black"
                   value={variantForm.attribute_value}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_value: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
             </div>
@@ -1858,17 +2947,17 @@ export default function CatalogPage() {
                 placeholder="Leave blank for base price"
                 value={variantForm.price_override}
                 onChange={(e) => setVariantForm((f) => ({ ...f, price_override: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
-            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: 0 }}>{variantFormError}</p>}
+            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{variantFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
               <button
                 type="button"
                 onClick={() => setShowVariantForm(false)}
-                style={{ padding: '8px 16px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.12)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
               >
                 Cancel
               </button>
@@ -1876,7 +2965,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveVariant}
                 disabled={variantFormSaving}
-                style={{ padding: '8px 18px', borderRadius: '9999px', border: 'none', background: '#1a1917', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
               >
                 {variantFormSaving ? 'Saving…' : (editVariant ? 'Save Changes' : 'Add Variant')}
               </button>
@@ -1894,33 +2983,34 @@ export default function CatalogPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '16px',
+            padding: '20px',
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: '380px',
+              maxWidth: '520px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '20px',
-              padding: '24px',
+              borderRadius: '24px',
+              padding: '30px 34px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              gap: '16px',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>New Category</h3>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>New Category</h3>
               <button
                 onClick={() => setShowCatForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#78716c', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -1932,7 +3022,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Wireless Audio"
                 value={catForm.name}
                 onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -1942,17 +3032,17 @@ export default function CatalogPage() {
                 placeholder="e.g. wireless-audio"
                 value={catForm.slug}
                 onChange={(e) => setCatForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.14)', fontSize: '0.86rem', outline: 'none' }}
+                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
-            {catFormError && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: 0 }}>{catFormError}</p>}
+            {catFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{catFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
               <button
                 type="button"
                 onClick={() => setShowCatForm(false)}
-                style={{ padding: '8px 16px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.12)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
               >
                 Cancel
               </button>
@@ -1960,7 +3050,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveCategory}
                 disabled={catFormSaving}
-                style={{ padding: '8px 18px', borderRadius: '9999px', border: 'none', background: '#1a1917', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}
+                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
               >
                 {catFormSaving ? 'Saving…' : 'Create'}
               </button>
