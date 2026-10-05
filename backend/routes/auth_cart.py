@@ -105,11 +105,10 @@ def register():
         if cursor.fetchone():
             return jsonify({"message": "This email is already exists"}), 409
 
-        check_username = "SELECT fullname FROM users WHERE fullname = %s"
+        check_username = "SELECT full_name FROM users WHERE full_name = %s"
         cursor.execute(check_username, (username,))
         if cursor.fetchone():
-            return jsonify({"message": "This username is already exists"}), 409
-
+            return jsonify({"message": "This username already exists"}), 409
 
         query = """
                 INSERT INTO users(
@@ -138,6 +137,101 @@ def register():
             "user": {"id": new_user_id, "username": username, "role_id": role_id}
         }), 201
         
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/staff', methods=['GET'])
+@jwt_required()
+def get_staff_members():
+    """Retrieve all internal staff accounts (Managers and System Administrators)."""
+    claims = get_jwt()
+    caller_role = claims.get('role_id')
+    if caller_role not in (2, 3):
+        return jsonify({"message": "Access denied. Managers and Administrators only."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        query = """
+            SELECT user_id, full_name, email, role_id
+            FROM users
+            WHERE role_id IN (2, 3)
+            ORDER BY role_id DESC, user_id ASC
+        """
+        cursor.execute(query)
+        staff_members = cursor.fetchall()
+        return jsonify({"staff": staff_members}), 200
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/staff/register', methods=['POST'])
+@jwt_required()
+def register_staff_member():
+    """Allow Managers (role 2) and System Administrators (role 3) to onboard new staff."""
+    claims = get_jwt()
+    caller_role = claims.get('role_id')
+    if caller_role not in (2, 3):
+        return jsonify({"message": "Access denied. Only Managers and Administrators can register staff."}), 403
+
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip()
+    password = (data.get('password') or '').strip()
+    role_id = data.get('role_id')
+
+    if not username or not email or not password or not role_id:
+        return jsonify({"message": "All fields (Full Name / Username, Email, Password, Role) are required"}), 400
+
+    try:
+        role_id = int(role_id)
+    except (ValueError, TypeError):
+        return jsonify({"message": "Invalid role ID"}), 400
+
+    if role_id not in (2, 3):
+        return jsonify({"message": "Staff role must be either Store Manager (2) or System Administrator (3)"}), 400
+
+    salt = bcrypt.gensalt()
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check if email is already taken
+        cursor.execute("SELECT email FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            return jsonify({"message": "This corporate email is already registered."}), 409
+
+        # Check if username / full_name is already taken
+        cursor.execute("SELECT full_name FROM users WHERE full_name = %s", (username,))
+        if cursor.fetchone():
+            return jsonify({"message": "This staff name / username already exists."}), 409
+
+        query = """
+            INSERT INTO users (role_id, full_name, email, password_hash)
+            VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(query, (role_id, username, email, password_hash))
+        conn.commit()
+        new_user_id = cursor.lastrowid
+
+        return jsonify({
+            "message": f"Successfully registered new staff member as {'System Administrator' if role_id == 3 else 'Store Executive & Manager'}.",
+            "user": {
+                "id": new_user_id,
+                "username": username,
+                "email": email,
+                "role_id": role_id
+            }
+        }), 201
+
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:

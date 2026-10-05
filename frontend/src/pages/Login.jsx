@@ -107,13 +107,13 @@ export default function LoginPage() {
                 </svg>
               </span>
               <input
-                type="email"
+                type="text"
                 className="st-auth-input"
-                placeholder="name@example.com"
-                value={email}
+                placeholder="name@example.com or username"
+                value={usernameOrEmail}
                 onChange={(e) => setUsernameOrEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
           </div>
