@@ -151,6 +151,119 @@ def get_low_stock():
 
     return jsonify(rows)
 
+# check / limit orderable stock for a specific variant
+@catalog_bp.route('/variants/<int:variant_id>/stock', methods=['GET'])
+def get_variant_stock(variant_id):
+    """
+    Return the live available stock and order limit for a specific variant.
+    """
+    rows = query(
+        """
+        SELECT pv.variant_id, pv.sku, p.title AS product_name,
+               COALESCE(i.stock_quantity, 0) AS available_stock,
+               p.is_active
+        FROM   product_variants pv
+        JOIN   products p ON p.product_id = pv.product_id
+        LEFT JOIN inventory i ON i.variant_id = pv.variant_id
+        WHERE  pv.variant_id = %s
+        """,
+        (variant_id,)
+    )
+    if not rows:
+        return jsonify({"error": "Variant not found"}), 404
+    
+    info = rows[0]
+    available = int(info['available_stock']) if info['is_active'] else 0
+    return jsonify({
+        "variant_id": variant_id,
+        "sku": info['sku'],
+        "product_name": info['product_name'],
+        "available_stock": available,
+        "max_orderable": available,
+        "in_stock": available > 0
+    })
+
+# validate order quantities against available inventory stock
+@catalog_bp.route('/validate-stock', methods=['POST'])
+def validate_order_stock():
+    """
+    Validate that requested order quantities do not exceed available stock in the database.
+    Accepts:
+      { "variant_id": <int>, "quantity": <int> }
+      OR
+      { "items": [ { "variant_id": <int>, "quantity": <int> }, ... ] }
+    """
+    data = request.get_json() or {}
+    items = data.get('items')
+    if items is None:
+        if 'variant_id' in data:
+            items = [{'variant_id': data.get('variant_id'), 'quantity': data.get('quantity', 1)}]
+        else:
+            items = []
+
+    if not items:
+        return jsonify({"error": "No items provided for stock validation"}), 400
+
+    results = []
+    has_insufficient = False
+
+    for item in items:
+        vid = item.get('variant_id')
+        try:
+            req_qty = int(item.get('quantity', 1))
+        except (ValueError, TypeError):
+            req_qty = 1
+
+        rows = query(
+            """
+            SELECT pv.variant_id, pv.sku, p.title AS product_name,
+                   COALESCE(i.stock_quantity, 0) AS available_stock,
+                   p.is_active
+            FROM   product_variants pv
+            JOIN   products p ON p.product_id = pv.product_id
+            LEFT JOIN inventory i ON i.variant_id = pv.variant_id
+            WHERE  pv.variant_id = %s
+            """,
+            (vid,)
+        )
+
+        if not rows:
+            results.append({
+                "variant_id": vid,
+                "valid": False,
+                "requested_quantity": req_qty,
+                "available_stock": 0,
+                "max_orderable": 0,
+                "error": f"Product variant #{vid} not found."
+            })
+            has_insufficient = True
+            continue
+
+        var_info = rows[0]
+        avail = int(var_info['available_stock']) if var_info['is_active'] else 0
+        is_valid = (req_qty > 0) and (req_qty <= avail)
+
+        if not is_valid:
+            has_insufficient = True
+
+        results.append({
+            "variant_id": vid,
+            "sku": var_info['sku'],
+            "product_name": var_info['product_name'],
+            "requested_quantity": req_qty,
+            "available_stock": avail,
+            "max_orderable": avail,
+            "valid": is_valid,
+            "message": "Stock available" if is_valid else (
+                f"Cannot order {req_qty} units. Only {avail} unit(s) available in stock." if avail > 0 else "Item is currently out of stock."
+            )
+        })
+
+    return jsonify({
+        "success": not has_insufficient,
+        "items": results
+    }), (200 if not has_insufficient else 400)
+
 # create product — managers & admins only
 @catalog_bp.route('/products', methods=['POST'])
 @jwt_required()

@@ -519,6 +519,14 @@ export default function CatalogPage() {
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
+    const availableStock = selectedVariant && selectedVariant.stock !== undefined ? Number(selectedVariant.stock) : 0;
+
+    if (availableStock <= 0 || productDetail.is_active === 0) {
+      setToastMessage('❌ Item is currently out of stock.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const itemPrice = selectedVariant && selectedVariant.price !== undefined && selectedVariant.price !== null
       ? Number(selectedVariant.price)
       : Number(productDetail.base_price) || 0;
@@ -531,7 +539,8 @@ export default function CatalogPage() {
       attribute_name: selectedVariant?.attribute_name || null,
       attribute_value: selectedVariant?.attribute_value || 'Default',
       price: itemPrice,
-      quantity: quantity,
+      quantity: Math.min(quantity, availableStock),
+      available_stock: availableStock,
       image: getProductPhoto(productDetail),
     };
 
@@ -542,8 +551,19 @@ export default function CatalogPage() {
       const matchIndex = list.findIndex(
         (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
       );
+
       if (matchIndex > -1) {
-        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + quantity;
+        const currentInCart = Number(list[matchIndex].quantity) || 0;
+        const newTotal = currentInCart + quantity;
+        if (newTotal > availableStock) {
+          list[matchIndex].quantity = availableStock;
+          localStorage.setItem('cart', JSON.stringify(list));
+          setToastMessage(`⚠️ Cart updated to maximum available stock (${availableStock} units).`);
+          setTimeout(() => setToastMessage(null), 3500);
+          return;
+        } else {
+          list[matchIndex].quantity = newTotal;
+        }
       } else {
         list.push(cartItem);
       }
@@ -1341,14 +1361,15 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
                   style={{
                     width: '38px',
                     height: '100%',
                     background: 'none',
                     border: 'none',
                     fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    color: '#44403c',
+                    cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                    color: quantity <= 1 ? '#cbd5e1' : '#44403c',
                     fontWeight: 600,
                   }}
                 >
@@ -1359,15 +1380,19 @@ export default function CatalogPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => q + 1)}
+                  onClick={() => {
+                    const maxStock = selectedVariant && selectedVariant.stock !== undefined ? Number(selectedVariant.stock) : 0;
+                    setQuantity((q) => (maxStock > 0 ? Math.min(maxStock, q + 1) : q + 1));
+                  }}
+                  disabled={selectedVariant && selectedVariant.stock !== undefined && quantity >= Number(selectedVariant.stock)}
                   style={{
                     width: '38px',
                     height: '100%',
                     background: 'none',
                     border: 'none',
                     fontSize: '1.1rem',
-                    cursor: 'pointer',
-                    color: '#44403c',
+                    cursor: (selectedVariant && selectedVariant.stock !== undefined && quantity >= Number(selectedVariant.stock)) ? 'not-allowed' : 'pointer',
+                    color: (selectedVariant && selectedVariant.stock !== undefined && quantity >= Number(selectedVariant.stock)) ? '#cbd5e1' : '#44403c',
                     fontWeight: 600,
                   }}
                 >
