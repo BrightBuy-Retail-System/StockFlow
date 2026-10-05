@@ -466,19 +466,297 @@ export default function CatalogPage() {
   // Total products count to show (matching "1310 products" aesthetic or dynamic)
   const productCountDisplay = filteredProducts.length > 0 ? `${filteredProducts.length} products` : '0 products';
 
+  // ── Reusable Filter Accordions Component ──
+  const renderFilterAccordions = () => (
+    <>
+      {/* Availability Accordion */}
+      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+        <button
+          onClick={() => toggleAccordion('availability')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            color: '#1a1917',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>Availability</span>
+          <span style={{ fontSize: '0.75rem', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </button>
+        {openAccordions.availability && (
+          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={availabilityFilter.inStock}
+                onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
+                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span>In stock</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={availabilityFilter.outOfStock}
+                onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
+                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span>Out of stock</span>
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Price Accordion */}
+      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+        <button
+          onClick={() => toggleAccordion('price')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            color: '#1a1917',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>Price</span>
+          <span style={{ fontSize: '0.75rem', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </button>
+        {openAccordions.price && (
+          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="number"
+                placeholder="Rs Min"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                }}
+              />
+              <span style={{ color: '#a8a29e' }}>–</span>
+              <input
+                type="number"
+                placeholder="Rs Max"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+            {(minPrice || maxPrice) && (
+              <button
+                onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1a1917',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  padding: 0,
+                  fontWeight: 600,
+                }}
+              >
+                Reset price
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Color Accordion */}
+      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+        <button
+          onClick={() => toggleAccordion('color')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            color: '#1a1917',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>Color</span>
+          <span style={{ fontSize: '0.75rem', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </button>
+        {openAccordions.color && (
+          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {['Black', 'White', 'Blue', 'Green', 'Red', 'Silver'].map((c) => {
+              const isSel = selectedColors.includes(c);
+              return (
+                <button
+                  key={c}
+                  onClick={() =>
+                    setSelectedColors((prev) =>
+                      isSel ? prev.filter((x) => x !== c) : [...prev, c]
+                    )
+                  }
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '9999px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Storage Capacity Accordion */}
+      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+        <button
+          onClick={() => toggleAccordion('storage')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            color: '#1a1917',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>Storage Capacity</span>
+          <span style={{ fontSize: '0.75rem', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </button>
+        {openAccordions.storage && (
+          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {['64GB', '128GB', '256GB', '512GB', '1TB'].map((s) => {
+              const isSel = selectedStorage.includes(s);
+              return (
+                <button
+                  key={s}
+                  onClick={() =>
+                    setSelectedStorage((prev) =>
+                      isSel ? prev.filter((x) => x !== s) : [...prev, s]
+                    )
+                  }
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* More filters Accordion */}
+      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+        <button
+          onClick={() => toggleAccordion('more')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            fontSize: '0.98rem',
+            fontWeight: 600,
+            color: '#1a1917',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>More filters</span>
+          <span style={{ fontSize: '0.75rem', transform: openAccordions.more ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▼
+          </span>
+        </button>
+        {openAccordions.more && (
+          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={minRating >= 4.5}
+                onChange={(e) => setMinRating(e.target.checked ? 4.5 : 0)}
+                style={{ accentColor: '#1a1917' }}
+              />
+              <span>Rating 4.5★ &amp; above</span>
+            </label>
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   return (
-    <div className="catalog-main-wrapper">
+    <div className="catalog-fluid-container">
       <style>{`
-        .catalog-main-wrapper {
-          background-color: #ffffff;
-          min-height: 100vh;
-          margin: 0;
-          padding: 8px 0 60px 0;
-          color: #1c1917;
-          box-sizing: border-box;
+        .catalog-fluid-container {
           width: 100%;
+          box-sizing: border-box;
+          color: #1c1917;
           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-          overflow-x: hidden;
         }
         .catalog-layout-grid {
           display: grid;
@@ -487,26 +765,30 @@ export default function CatalogPage() {
           align-items: flex-start;
           width: 100%;
         }
-        .catalog-sidebar-accordion {
+        .catalog-sidebar-desktop {
           display: flex;
           flex-direction: column;
         }
         @media (max-width: 960px) {
           .catalog-layout-grid {
-            grid-template-columns: 100%;
+            display: flex;
+            flex-direction: column;
             gap: 16px;
           }
-          .catalog-sidebar-accordion {
+          .catalog-sidebar-desktop {
             display: none;
           }
-          .catalog-sidebar-accordion.mobile-open {
+          .mobile-filters-drawer {
             display: flex;
-            padding: 18px;
+            flex-direction: column;
+            padding: 16px 18px;
             background: #ffffff;
             border-radius: 16px;
             border: 1px solid rgba(0,0,0,0.1);
             box-shadow: 0 4px 18px rgba(0,0,0,0.06);
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+            width: 100%;
+            box-sizing: border-box;
           }
           .mobile-filters-btn {
             display: inline-flex !important;
@@ -671,289 +953,13 @@ export default function CatalogPage() {
 
       {/* ── TWO-COLUMN MAIN LAYOUT ─────────────────────────────────────────── */}
       <div className="catalog-layout-grid">
-        {/* ── LEFT COLUMN: FILTER ACCORDIONS ──────────────────────────────── */}
-        <div className={`catalog-sidebar-accordion ${mobileFiltersOpen ? 'mobile-open' : ''}`}>
-          {/* Availability Accordion */}
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
-            <button
-              onClick={() => toggleAccordion('availability')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                fontSize: '0.98rem',
-                fontWeight: 600,
-                color: '#1a1917',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>Availability</span>
-              <span style={{ fontSize: '0.75rem', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {openAccordions.availability && (
-              <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={availabilityFilter.inStock}
-                    onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
-                    style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  <span>In stock</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={availabilityFilter.outOfStock}
-                    onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
-                    style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  <span>Out of stock</span>
-                </label>
-              </div>
-            )}
-          </div>
-
-          {/* Price Accordion */}
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
-            <button
-              onClick={() => toggleAccordion('price')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                fontSize: '0.98rem',
-                fontWeight: 600,
-                color: '#1a1917',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>Price</span>
-              <span style={{ fontSize: '0.75rem', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {openAccordions.price && (
-              <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="number"
-                    placeholder="Rs Min"
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px',
-                      background: '#ffffff',
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                    }}
-                  />
-                  <span style={{ color: '#a8a29e' }}>–</span>
-                  <input
-                    type="number"
-                    placeholder="Rs Max"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px',
-                      background: '#ffffff',
-                      border: '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-                {(minPrice || maxPrice) && (
-                  <button
-                    onClick={() => { setMinPrice(''); setMaxPrice(''); }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#1a1917',
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      padding: 0,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Reset price
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Color Accordion */}
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
-            <button
-              onClick={() => toggleAccordion('color')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                fontSize: '0.98rem',
-                fontWeight: 600,
-                color: '#1a1917',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>Color</span>
-              <span style={{ fontSize: '0.75rem', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {openAccordions.color && (
-              <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {['Black', 'White', 'Blue', 'Green', 'Red', 'Silver'].map((c) => {
-                  const isSel = selectedColors.includes(c);
-                  return (
-                    <button
-                      key={c}
-                      onClick={() =>
-                        setSelectedColors((prev) =>
-                          isSel ? prev.filter((x) => x !== c) : [...prev, c]
-                        )
-                      }
-                      style={{
-                        padding: '4px 12px',
-                        borderRadius: '9999px',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                        color: isSel ? '#ffffff' : '#1c1917',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      {c}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Storage Capacity Accordion */}
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
-            <button
-              onClick={() => toggleAccordion('storage')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                fontSize: '0.98rem',
-                fontWeight: 600,
-                color: '#1a1917',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>Storage Capacity</span>
-              <span style={{ fontSize: '0.75rem', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {openAccordions.storage && (
-              <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {['64GB', '128GB', '256GB', '512GB', '1TB'].map((s) => {
-                  const isSel = selectedStorage.includes(s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() =>
-                        setSelectedStorage((prev) =>
-                          isSel ? prev.filter((x) => x !== s) : [...prev, s]
-                        )
-                      }
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: '8px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                        color: isSel ? '#ffffff' : '#1c1917',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* More filters Accordion */}
-          <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
-            <button
-              onClick={() => toggleAccordion('more')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                fontSize: '0.98rem',
-                fontWeight: 600,
-                color: '#1a1917',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <span>More filters</span>
-              <span style={{ fontSize: '0.75rem', transform: openAccordions.more ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                ▼
-              </span>
-            </button>
-            {openAccordions.more && (
-              <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={minRating >= 4.5}
-                    onChange={(e) => setMinRating(e.target.checked ? 4.5 : 0)}
-                    style={{ accentColor: '#1a1917' }}
-                  />
-                  <span>Rating 4.5★ &amp; above</span>
-                </label>
-              </div>
-            )}
-          </div>
+        {/* ── LEFT COLUMN: DESKTOP FILTER ACCORDIONS ──────────────────────── */}
+        <div className="catalog-sidebar-desktop">
+          {renderFilterAccordions()}
         </div>
 
         {/* ── RIGHT COLUMN: PRODUCTS TOOLBAR & GRID ───────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%' }}>
           {/* Top toolbar */}
           <div
             style={{
@@ -961,11 +967,12 @@ export default function CatalogPage() {
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '14px',
+              gap: '12px',
+              width: '100%',
             }}
           >
             {/* Search Input & Manager Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', maxWidth: '520px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', maxWidth: '560px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <input
                   type="text"
@@ -982,6 +989,7 @@ export default function CatalogPage() {
                     color: '#1c1917',
                     outline: 'none',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                    boxSizing: 'border-box',
                   }}
                 />
                 {searchQuery && (
@@ -1086,7 +1094,7 @@ export default function CatalogPage() {
             </div>
 
             {/* Right: Sort Dropdown & Products Count */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginLeft: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
                 <select
                   value={sortBy}
@@ -1120,6 +1128,13 @@ export default function CatalogPage() {
               </span>
             </div>
           </div>
+
+          {/* ── Mobile Filters Expandable Drawer ── */}
+          {mobileFiltersOpen && (
+            <div className="mobile-filters-drawer">
+              {renderFilterAccordions()}
+            </div>
+          )}
 
           {/* Low Stock Drawer if open */}
           {showLowStock && (
