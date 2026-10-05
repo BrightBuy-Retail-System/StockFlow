@@ -52,6 +52,7 @@ export default function OrdersPage() {
   const [shippingCityId, setShippingCityId] = useState(1);
   const [variantId, setVariantId] = useState(1);
   const [quantity, setQuantity] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState('CREDIT_CARD');
 
   const [validating, setValidating] = useState(false);
   const [validationSuccess, setValidationSuccess] = useState(null);
@@ -293,6 +294,7 @@ export default function OrdersPage() {
       user_id: parseInt(checkoutUserId, 10),
       shipping_city_id: parseInt(shippingCityId, 10),
       validate_only: true,
+      payment_method: paymentMethod,
       items: [
         {
           variant_id: parseInt(variantId, 10),
@@ -350,6 +352,7 @@ export default function OrdersPage() {
       user_id: parseInt(checkoutUserId, 10),
       shipping_city_id: parseInt(shippingCityId, 10),
       validate_only: false,
+      payment_method: paymentMethod,
       items: [
         {
           variant_id: parseInt(variantId, 10),
@@ -949,6 +952,36 @@ export default function OrdersPage() {
                     Must be at least 1 unit
                   </span>
                 </div>
+
+                {/* Payment Method Selector */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      background: '#ffffff',
+                      color: 'var(--text-main, #0f172a)',
+                    }}
+                  >
+                    <option value="CREDIT_CARD">Credit Card (Visa / Mastercard)</option>
+                    <option value="DEBIT_CARD">Debit Card</option>
+                    <option value="PAYPAL">PayPal Express</option>
+                    <option value="BANK_TRANSFER">Bank Wire / Transfer</option>
+                    <option value="CASH_ON_DELIVERY">Cash on Delivery (COD)</option>
+                  </select>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
+                    Settled to transactional ledger
+                  </span>
+                </div>
               </div>
 
               {/* Action Buttons Row */}
@@ -1177,6 +1210,64 @@ export default function OrdersPage() {
                     <strong style={{ fontSize: '1.05rem', color: 'var(--success-text, #047857)' }}>{formatCurrency(placementSuccess.total_amount)}</strong>
                   </div>
                 </div>
+
+                {/* Payment Transaction Ledger */}
+                {(placementSuccess.payment_id || placementSuccess.transaction_ref) && (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      borderRadius: '8px',
+                      border: '1px solid var(--success-border, #a7f3d0)',
+                      color: 'var(--text-main, #0f172a)',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--success-text, #047857)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>💳</span>
+                        <span>Payment Transaction Ledger</span>
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: 'var(--success-bg, #ecfdf5)',
+                          color: 'var(--success-text, #047857)',
+                          border: '1px solid var(--success-border, #a7f3d0)',
+                        }}
+                      >
+                        {placementSuccess.payment_status || 'COMPLETED'}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                        gap: '10px',
+                        fontSize: '0.84rem',
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Payment ID</span>
+                        <strong style={{ color: 'var(--primary, #2563eb)' }}>#{placementSuccess.payment_id}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Method</span>
+                        <strong>{paymentMethod.replace(/_/g, ' ')}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Transaction Ref</span>
+                        <strong style={{ fontFamily: 'monospace', color: 'var(--text-main, #0f172a)' }}>
+                          {placementSuccess.transaction_ref}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button
@@ -2540,6 +2631,106 @@ export default function OrdersPage() {
                   </div>
                 </div>
               )}
+
+              {/* Payment Transaction Ledger Section */}
+              <div
+                style={{
+                  margin: '0 24px 20px 24px',
+                  padding: '16px 20px',
+                  borderRadius: '12px',
+                  background: orderDetails.payment ? 'var(--bg-subtle, #f8fafc)' : '#ffffff',
+                  border: '1px solid var(--border-color, #e2e8f0)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg style={{ width: '18px', height: '18px', color: 'var(--primary, #2563eb)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+                      Payment Transaction Ledger
+                    </h3>
+                  </div>
+                  {orderDetails.payment ? (
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        ...getStatusBadgeStyle(orderDetails.payment.payment_status),
+                      }}
+                    >
+                      {orderDetails.payment.payment_status || 'COMPLETED'}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>
+                      No payment record linked
+                    </span>
+                  )}
+                </div>
+
+                {orderDetails.payment ? (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                      gap: '12px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                        Payment ID
+                      </span>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--primary, #2563eb)' }}>
+                        #{orderDetails.payment.payment_id}
+                      </strong>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                        Payment Method
+                      </span>
+                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-main, #0f172a)' }}>
+                        {(orderDetails.payment.payment_method || 'CREDIT_CARD').replace(/_/g, ' ')}
+                      </strong>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                        Transaction Ref
+                      </span>
+                      <strong style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-main, #0f172a)' }}>
+                        {orderDetails.payment.transaction_ref || 'N/A'}
+                      </strong>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                        Settled Amount
+                      </span>
+                      <strong style={{ fontSize: '1rem', color: 'var(--success-text, #047857)' }}>
+                        {formatCurrency(orderDetails.payment.amount)}
+                      </strong>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
+                        Processed At
+                      </span>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary, #475569)', fontWeight: 600 }}>
+                        {formatDate(orderDetails.payment.processed_at)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
+                    Legacy order record without an attached payment transaction ledger entry.
+                  </div>
+                )}
+              </div>
 
               {/* Line Items Section */}
               <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '24px' }}>

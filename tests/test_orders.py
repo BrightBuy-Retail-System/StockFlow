@@ -252,6 +252,45 @@ class TestOrdersAPI(unittest.TestCase):
 
         self.assertEqual(stock_restored, stock_before)
 
+    def test_21_checkout_creates_linked_payment_record(self):
+        """Verifies ACID checkout inserts an immutable payment record tied to the order."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "payment_method": "CREDIT_CARD",
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
+        self.assertEqual(res.status_code, 201)
+        data = res.get_json()['data']
+        order_id = data['order_id']
+        payment_id = data.get('payment_id')
+        self.assertIsNotNone(payment_id)
+        self.assertIsNotNone(data.get('transaction_ref'))
+
+        # Inspect order via GET to confirm payment details are nested
+        verify_res = self.client.get(f'/api/orders/{order_id}', headers=self.customer_headers)
+        self.assertEqual(verify_res.status_code, 200)
+        payment_data = verify_res.get_json()['data'].get('payment')
+        self.assertIsNotNone(payment_data)
+        self.assertEqual(payment_data['payment_id'], payment_id)
+        self.assertEqual(payment_data['payment_method'], 'CREDIT_CARD')
+        self.assertEqual(payment_data['amount'], data['total_amount'])
+
+    def test_22_get_shipping_cities_catalog(self):
+        """Verifies shipping cities endpoint returns Texas hubs, fees, and lead times from DB."""
+        res = self.client.get('/api/orders/shipping-cities')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get('status'), 'success')
+        self.assertGreater(data.get('count', 0), 0)
+        
+        first_city = data.get('data', [])[0]
+        self.assertIn('city_id', first_city)
+        self.assertIn('city_name', first_city)
+        self.assertIn('shipping_fee', first_city)
+        self.assertIn('base_lead_time_days', first_city)
+
 
 if __name__ == '__main__':
     unittest.main()
