@@ -432,6 +432,101 @@ def update_inventory(variant_id):
     return jsonify(rows[0] if rows else {"variant_id": variant_id})
 
 
+# reserve stock when added to cart
+@catalog_bp.route('/cart/reserve', methods=['POST'])
+def reserve_cart_stock():
+    """
+    Atomically deduct stock from inventory in the database when a customer adds items to their cart.
+    Body: { "variant_id": <int>, "quantity": <int> }
+    """
+    data = request.get_json() or {}
+    variant_id = data.get('variant_id')
+    try:
+        qty = int(data.get('quantity', 1))
+    except (ValueError, TypeError):
+        qty = 1
+
+    if not variant_id or qty <= 0:
+        return jsonify({"error": "variant_id and positive quantity are required"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s FOR UPDATE", (variant_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"error": "Inventory record for variant not found"}), 404
+
+        current_stock = int(row['stock_quantity'])
+        if current_stock < qty:
+            return jsonify({
+                "error": f"Insufficient stock available. Only {current_stock} unit(s) remaining.",
+                "available_stock": current_stock
+            }), 400
+
+        cursor.execute(
+            "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE variant_id = %s",
+            (qty, variant_id)
+        )
+        conn.commit()
+
+        new_stock = current_stock - qty
+        return jsonify({
+            "success": True,
+            "variant_id": variant_id,
+            "deducted": qty,
+            "remaining_stock": new_stock
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# release stock when removed from cart
+@catalog_bp.route('/cart/release', methods=['POST'])
+def release_cart_stock():
+    """
+    Restore stock to inventory in the database if an item is removed from the cart.
+    Body: { "variant_id": <int>, "quantity": <int> }
+    """
+    data = request.get_json() or {}
+    variant_id = data.get('variant_id')
+    try:
+        qty = int(data.get('quantity', 1))
+    except (ValueError, TypeError):
+        qty = 1
+
+    if not variant_id or qty <= 0:
+        return jsonify({"error": "variant_id and positive quantity are required"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+            (qty, variant_id)
+        )
+        conn.commit()
+        cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s", (variant_id,))
+        row = cursor.fetchone()
+        new_stock = int(row['stock_quantity']) if row else 0
+        return jsonify({
+            "success": True,
+            "variant_id": variant_id,
+            "released": qty,
+            "new_stock": new_stock
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 # create category — managers & admins only
 @catalog_bp.route('/categories', methods=['POST'])
