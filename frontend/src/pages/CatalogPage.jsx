@@ -137,6 +137,8 @@ export default function CatalogPage() {
     more: false,
   });
 
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
   const toggleAccordion = (key) => {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -465,25 +467,86 @@ export default function CatalogPage() {
   const productCountDisplay = filteredProducts.length > 0 ? `${filteredProducts.length} products` : '0 products';
 
   return (
-    <div
-      style={{
-        backgroundColor: '#ffffffff',
-        minHeight: '100vh',
-        margin: '-36px -28px -64px -28px',
-        padding: '36px 44px 80px 44px',
-        color: '#1c1917',
-        fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
-        boxSizing: 'border-box',
-      }}
-    >
+    <div className="catalog-main-wrapper">
+      <style>{`
+        .catalog-main-wrapper {
+          background-color: #ffffff;
+          min-height: 100vh;
+          margin: 0;
+          padding: 8px 0 60px 0;
+          color: #1c1917;
+          box-sizing: border-box;
+          width: 100%;
+          font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          overflow-x: hidden;
+        }
+        .catalog-layout-grid {
+          display: grid;
+          grid-template-columns: 240px 1fr;
+          gap: 36px;
+          align-items: flex-start;
+          width: 100%;
+        }
+        .catalog-sidebar-accordion {
+          display: flex;
+          flex-direction: column;
+        }
+        @media (max-width: 960px) {
+          .catalog-layout-grid {
+            grid-template-columns: 100%;
+            gap: 16px;
+          }
+          .catalog-sidebar-accordion {
+            display: none;
+          }
+          .catalog-sidebar-accordion.mobile-open {
+            display: flex;
+            padding: 18px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+            margin-bottom: 16px;
+          }
+          .mobile-filters-btn {
+            display: inline-flex !important;
+          }
+        }
+        .mobile-filters-btn {
+          display: none;
+        }
+        .catalog-product-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+          gap: 20px;
+          width: 100%;
+        }
+        @media (max-width: 640px) {
+          .catalog-product-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+          .catalog-page-title {
+            font-size: 1.85rem !important;
+            margin-bottom: 12px !important;
+          }
+        }
+        @media (max-width: 360px) {
+          .catalog-product-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
       {/* ── TOP HEADING: "All" ──────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '22px' }}>
+      <div style={{ marginBottom: '20px', width: '100%' }}>
         <h1
+          className="catalog-page-title"
           style={{
-            fontSize: '2.8rem',
+            fontSize: '2.6rem',
             fontWeight: 700,
             letterSpacing: '-0.025em',
-            margin: '0 0 18px 0',
+            margin: '0 0 16px 0',
             color: '#1a1917',
             lineHeight: 1.1,
           }}
@@ -496,10 +559,12 @@ export default function CatalogPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '10px',
             overflowX: 'auto',
-            paddingBottom: '6px',
+            paddingBottom: '8px',
             scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            maxWidth: '100%',
           }}
         >
           {/* "All" category pill */}
@@ -513,25 +578,26 @@ export default function CatalogPage() {
               color: selectedCategory === '' ? '#ffffff' : '#1c1917',
               border: '1px solid rgba(0,0,0,0.08)',
               borderRadius: '9999px',
-              padding: '7px 18px 7px 12px',
-              fontSize: '0.88rem',
+              padding: '7px 16px 7px 12px',
+              fontSize: '0.86rem',
               fontWeight: 600,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               boxShadow: selectedCategory === '' ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
               transition: 'all 0.2s ease',
+              flexShrink: 0,
             }}
           >
             <span
               style={{
-                width: '26px',
-                height: '26px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '8px',
                 background: selectedCategory === '' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
               }}
             >
               🏷️
@@ -549,7 +615,6 @@ export default function CatalogPage() {
                   if (cat.category_id) {
                     setSelectedCategory(isSelected ? '' : cat.category_id);
                   } else {
-                    // Filter by title / category name if matching static pill
                     setSearchQuery(cat.name);
                   }
                 }}
@@ -561,19 +626,20 @@ export default function CatalogPage() {
                   color: isSelected ? '#ffffff' : '#1c1917',
                   border: '1px solid rgba(0,0,0,0.08)',
                   borderRadius: '9999px',
-                  padding: '7px 18px 7px 10px',
-                  fontSize: '0.88rem',
+                  padding: '7px 16px 7px 10px',
+                  fontSize: '0.86rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                   boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease',
+                  flexShrink: 0,
                 }}
               >
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
+                    width: '26px',
+                    height: '26px',
                     borderRadius: '8px',
                     overflow: 'hidden',
                     background: 'rgba(0,0,0,0.04)',
@@ -594,7 +660,7 @@ export default function CatalogPage() {
                       }}
                     />
                   ) : null}
-                  <span style={{ display: cat.img ? 'none' : 'block', fontSize: '1rem' }}>{cat.icon || '📦'}</span>
+                  <span style={{ display: cat.img ? 'none' : 'block', fontSize: '0.9rem' }}>{cat.icon || '📦'}</span>
                 </div>
                 <span>{cat.name}</span>
               </button>
@@ -604,16 +670,9 @@ export default function CatalogPage() {
       </div>
 
       {/* ── TWO-COLUMN MAIN LAYOUT ─────────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '240px 1fr',
-          gap: '40px',
-          alignItems: 'flex-start',
-        }}
-      >
+      <div className="catalog-layout-grid">
         {/* ── LEFT COLUMN: FILTER ACCORDIONS ──────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className={`catalog-sidebar-accordion ${mobileFiltersOpen ? 'mobile-open' : ''}`}>
           {/* Availability Accordion */}
           <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
             <button
@@ -906,8 +965,8 @@ export default function CatalogPage() {
             }}
           >
             {/* Search Input & Manager Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px', maxWidth: '440px' }}>
-              <div style={{ position: 'relative', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px', maxWidth: '520px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
                 <input
                   type="text"
                   placeholder="Search products…"
@@ -944,6 +1003,29 @@ export default function CatalogPage() {
                   </button>
                 )}
               </div>
+
+              {/* Mobile Filters Toggle Button */}
+              <button
+                className="mobile-filters-btn"
+                type="button"
+                onClick={() => setMobileFiltersOpen((v) => !v)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  background: mobileFiltersOpen ? '#1a1917' : '#ffffff',
+                  color: mobileFiltersOpen ? '#ffffff' : '#1a1917',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span>⚙️ Filters</span>
+                <span style={{ fontSize: '0.7rem' }}>{mobileFiltersOpen ? '▲' : '▼'}</span>
+              </button>
 
               {/* Manager Buttons if authorized */}
               {isManager && (
@@ -1148,13 +1230,7 @@ export default function CatalogPage() {
                 </button>
               </div>
             ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '20px',
-                }}
-              >
+              <div className="catalog-product-grid">
                 {filteredProducts.map((p) => {
                   const photoUrl = getProductPhoto(p);
                   const basePrice = Number(p.base_price) || 0;
@@ -1286,43 +1362,6 @@ export default function CatalogPage() {
                         <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
                           {formatRs(basePrice)}
                         </span>
-                      </div>
-
-                      {/* Installment BNPL Banner matching screenshot */}
-                      <div style={{ fontSize: '0.71rem', color: '#57534e', lineHeight: 1.4, marginBottom: '4px' }}>
-                        Pay in 3 x <strong style={{ color: '#1a1917' }}>{formatRs(installment)}</strong> &amp; get up to <strong style={{ color: '#1a1917' }}>1% Cashback</strong> with{' '}
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            background: '#0a1926',
-                            color: '#10b981',
-                            fontWeight: 800,
-                            fontSize: '0.62rem',
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            margin: '0 2px',
-                          }}
-                        >
-                          mintpay
-                        </span>{' '}
-                        or{' '}
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            background: 'linear-gradient(135deg, #7c3aed, #db2777)',
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            fontSize: '0.62rem',
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            margin: '0 2px',
-                          }}
-                        >
-                          koko
-                        </span>
-                        <span style={{ display: 'block', fontSize: '0.64rem', color: '#a8a29e' }}>*T&amp;C Apply</span>
                       </div>
 
                       {/* Variants Summary */}
