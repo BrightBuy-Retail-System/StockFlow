@@ -50,6 +50,9 @@ def calculate_delivery():
 
     if not city_id:
         return jsonify({"error": "city_id is required"}), 400
+    if not items:
+        return jsonify({"error": "items list is required and cannot be empty"}), 400
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
