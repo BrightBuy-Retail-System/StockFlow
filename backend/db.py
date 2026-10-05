@@ -22,14 +22,17 @@ if use_ssl or "tidbcloud" in db_host:
     db_config["ssl_verify_cert"] = True
     db_config["ssl_verify_identity"] = True
 
-# Shared connection pool
-connection_pool = mysql.connector.pooling.MySQLConnectionPool(
-    pool_name="brightbuy_pool",
-    pool_size=10,
-    pool_reset_session=True,
-    **db_config
-)
+# Shared connection pool (lazily initialized on first request)
+_connection_pool = None
 
 def get_db_connection():
     """Borrow a connection socket from the shared pool."""
-    return connection_pool.get_connection()
+    global _connection_pool
+    if _connection_pool is None:
+        _connection_pool = mysql.connector.pooling.MySQLConnectionPool(
+            pool_name="brightbuy_pool",
+            pool_size=10,
+            pool_reset_session=True,
+            **db_config
+        )
+    return _connection_pool.get_connection()
