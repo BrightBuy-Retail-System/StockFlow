@@ -1137,58 +1137,6 @@ export default function CatalogPage() {
                 </button>
               </div>
             </div>
-
-            {/* 3 Promo / Trust Pills */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div
-                style={{
-                  background: '#e0e7ff',
-                  color: '#3730a3',
-                  borderRadius: '10px',
-                  padding: '10px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>☑</span>
-                <span>100% Authentic Guaranteed Products</span>
-              </div>
-              <div
-                style={{
-                  background: '#f3e8ff',
-                  color: '#6b21a8',
-                  borderRadius: '10px',
-                  padding: '10px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>🚚</span>
-                <span>Island wide Delivery Across Sri Lanka</span>
-              </div>
-              <div
-                style={{
-                  background: '#f1f5f9',
-                  color: '#334155',
-                  borderRadius: '10px',
-                  padding: '10px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>⚡</span>
-                <span>Express Delivery: Colombo 1–12 (Same Day / Next Day)</span>
-              </div>
-            </div>
           </div>
 
           {/* RIGHT: DETAILS, PRICING, VARIANTS, ACTIONS */}
