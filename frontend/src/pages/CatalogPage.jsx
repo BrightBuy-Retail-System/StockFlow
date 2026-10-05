@@ -268,12 +268,30 @@ export default function CatalogPage() {
   const [stockInputs, setStockInputs] = useState({});
   const [stockSaving, setStockSaving] = useState({});
 
-  // ── Category creation modal ──
+  // ── Category creation & edit modal ──
   const EMPTY_CAT = { name: '', slug: '' };
   const [showCatForm, setShowCatForm] = useState(false);
+  const [editCategory, setEditCategory] = useState(null);
   const [catForm, setCatForm] = useState(EMPTY_CAT);
   const [catFormSaving, setCatFormSaving] = useState(false);
+  const [catFormDeleting, setCatFormDeleting] = useState(false);
   const [catFormError, setCatFormError] = useState(null);
+
+  const openCreateCategory = () => {
+    setEditCategory(null);
+    setCatForm(EMPTY_CAT);
+    setCatFormError(null);
+    setShowCatForm(true);
+  };
+
+  const openEditCategory = (cat = null) => {
+    const target = cat || categories.find((c) => String(c.category_id) === String(selectedCategory)) || categories[0] || null;
+    if (!target) return;
+    setEditCategory(target);
+    setCatForm({ name: target.name, slug: target.slug || '' });
+    setCatFormError(null);
+    setShowCatForm(true);
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DATA FETCHING
@@ -503,15 +521,44 @@ export default function CatalogPage() {
       setCatFormError('Category name is required');
       return;
     }
+    if (!catForm.slug.trim()) {
+      setCatFormError('Category slug is required');
+      return;
+    }
     setCatFormSaving(true);
     setCatFormError(null);
-    api.post('/catalog/categories', catForm)
+
+    const promise = editCategory
+      ? api.patch(`/catalog/categories/${editCategory.category_id}`, catForm)
+      : api.post('/catalog/categories', catForm);
+
+    promise
       .then(() => {
         setShowCatForm(false);
         fetchCategories();
+        refreshProducts();
       })
       .catch((err) => setCatFormError(err.response?.data?.error || err.message))
       .finally(() => setCatFormSaving(false));
+  };
+
+  const deleteCategory = () => {
+    if (!editCategory) return;
+    if (!window.confirm(`Are you sure you want to delete category "${editCategory.name}"?`)) return;
+
+    setCatFormDeleting(true);
+    setCatFormError(null);
+    api.delete(`/catalog/categories/${editCategory.category_id}`)
+      .then(() => {
+        if (String(selectedCategory) === String(editCategory.category_id)) {
+          setSelectedCategory('');
+        }
+        setShowCatForm(false);
+        fetchCategories();
+        refreshProducts();
+      })
+      .catch((err) => setCatFormError(err.response?.data?.error || err.message))
+      .finally(() => setCatFormDeleting(false));
   };
 
   // ── Cart & Add-to-cart Toast ──
@@ -2269,8 +2316,8 @@ export default function CatalogPage() {
                   {isManager && (
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <button
-                        onClick={() => { setCatForm(EMPTY_CAT); setCatFormError(null); setShowCatForm(true); }}
-                        title="Add Category"
+                        onClick={openCreateCategory}
+                        title="Add New Category"
                         style={{
                           padding: '8px 16px',
                           borderRadius: '9999px',
@@ -2286,6 +2333,26 @@ export default function CatalogPage() {
                       >
                         + Category
                       </button>
+                      {categories.length > 0 && (
+                        <button
+                          onClick={() => openEditCategory()}
+                          title="Edit or Delete Categories"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(0,0,0,0.14)',
+                            background: '#ffffff',
+                            color: '#1c1917',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.84rem',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                          }}
+                        >
+                          ✎ Edit Category
+                        </button>
+                      )}
                       <button
                         onClick={openCreateProduct}
                         title="Add Product"
@@ -2923,7 +2990,7 @@ export default function CatalogPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          CREATE CATEGORY MODAL
+          CREATE / EDIT CATEGORY MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       {showCatForm && (
         <div
@@ -2943,19 +3010,21 @@ export default function CatalogPage() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: '520px',
+              maxWidth: '540px',
               width: '100%',
               background: '#ffffff',
               borderRadius: '24px',
               padding: '30px 34px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px',
+              gap: '18px',
               boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>New Category</h3>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                {editCategory ? 'Edit Category' : 'New Category'}
+              </h3>
               <button
                 onClick={() => setShowCatForm(false)}
                 style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
@@ -2963,6 +3032,30 @@ export default function CatalogPage() {
                 &times;
               </button>
             </div>
+
+            {/* Select category dropdown when in edit mode */}
+            {editCategory && (
+              <Field label="Select Category to Edit">
+                <select
+                  value={editCategory.category_id}
+                  onChange={(e) => {
+                    const sel = categories.find((c) => String(c.category_id) === String(e.target.value));
+                    if (sel) {
+                      setEditCategory(sel);
+                      setCatForm({ name: sel.name, slug: sel.slug || '' });
+                      setCatFormError(null);
+                    }
+                  }}
+                  style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', background: '#fff' }}
+                >
+                  {categories.map((c) => (
+                    <option key={c.category_id} value={c.category_id}>
+                      {c.name} ({c.slug})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
             <Field label="Category Name *">
               <input
@@ -2984,24 +3077,50 @@ export default function CatalogPage() {
               />
             </Field>
 
-            {catFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{catFormError}</p>}
+            {catFormError && (
+              <div style={{ background: '#fef2f2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '10px 14px' }}>
+                <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{catFormError}</p>
+              </div>
+            )}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setShowCatForm(false)}
-                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveCategory}
-                disabled={catFormSaving}
-                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
-              >
-                {catFormSaving ? 'Saving…' : 'Create'}
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', flexWrap: 'wrap', gap: '10px' }}>
+              {editCategory ? (
+                <button
+                  type="button"
+                  onClick={deleteCategory}
+                  disabled={catFormDeleting || catFormSaving}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    cursor: (catFormDeleting || catFormSaving) ? 'not-allowed' : 'pointer',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  {catFormDeleting ? 'Deleting…' : '🗑 Delete Category'}
+                </button>
+              ) : <div />}
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCatForm(false)}
+                  style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveCategory}
+                  disabled={catFormSaving || catFormDeleting}
+                  style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: (catFormSaving || catFormDeleting) ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                >
+                  {catFormSaving ? 'Saving…' : editCategory ? 'Save Changes' : 'Create'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

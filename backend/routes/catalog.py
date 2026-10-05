@@ -456,3 +456,54 @@ def create_category():
         (name, slug)
     )
     return jsonify({"category_id": res['lastrowid']}), 201
+
+
+# update category — managers & admins only
+@catalog_bp.route('/categories/<int:category_id>', methods=['PATCH'])
+@jwt_required()
+def update_category(category_id):
+    err = manager_required()
+    if err: return err
+
+    """
+    Update category name and/or slug.
+    Body: { "name": "...", "slug": "..." }
+    """
+    data = request.get_json() or {}
+    fields = {k: v.strip() for k, v in data.items() if k in ('name', 'slug') and isinstance(v, str) and v.strip()}
+    if not fields:
+        return jsonify({"error": "Provide 'name' or 'slug' to update"}), 400
+
+    set_clause = ", ".join(f"{k} = %s" for k in fields)
+    execute(
+        f"UPDATE categories SET {set_clause} WHERE category_id = %s",
+        (*fields.values(), category_id)
+    )
+    
+    rows = query("SELECT category_id, name, slug FROM categories WHERE category_id = %s", (category_id,))
+    if not rows:
+        return jsonify({"error": "Category not found"}), 404
+    return jsonify({"updated": category_id, "category": rows[0]})
+
+
+# delete category — managers & admins only
+@catalog_bp.route('/categories/<int:category_id>', methods=['DELETE'])
+@jwt_required()
+def delete_category(category_id):
+    err = manager_required()
+    if err: return err
+
+    """
+    Delete a category. If products are linked to this category,
+    returns an informative conflict error to prevent orphaned products.
+    """
+    linked_prods = query("SELECT COUNT(*) AS count FROM products WHERE category_id = %s", (category_id,))
+    prod_count = linked_prods[0]['count'] if linked_prods else 0
+
+    if prod_count > 0:
+        return jsonify({
+            "error": f"Cannot delete category: {prod_count} product(s) are currently assigned to it. Please reassign or delete those products first."
+        }), 400
+
+    execute("DELETE FROM categories WHERE category_id = %s", (category_id,))
+    return jsonify({"deleted": category_id})
