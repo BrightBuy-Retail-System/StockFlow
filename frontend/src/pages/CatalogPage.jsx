@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 
 // ─── category metadata & thumbnail images ────────────────────────────────────
@@ -119,16 +120,6 @@ function getProductGallery(product) {
   ];
 }
 
-function getRating(productId) {
-  const hash = ((Number(productId) || 1) * 9301 + 49297) % 233280;
-  return (4.72 + (hash % 26) / 100).toFixed(2);
-}
-
-function getColorsCount(product) {
-  const hash = ((Number(product?.product_id) || 1) * 17) % 5;
-  return [2, 3, 4, 5, 2][hash];
-}
-
 function getDeliveryDateRange() {
   const now = new Date();
   const start = new Date(now);
@@ -140,20 +131,20 @@ function getDeliveryDateRange() {
 }
 
 function safeStars(rating) {
-  const r = Math.max(0, Math.min(5, Math.round(Number(rating) || 5)));
+  const r = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
   return '★'.repeat(r) + '☆'.repeat(5 - r);
 }
 
 function safeAverageRating(reviews) {
-  if (!Array.isArray(reviews) || reviews.length === 0) return '5.0';
-  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 5), 0);
+  if (!Array.isArray(reviews) || reviews.length === 0) return null;
+  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 0), 0);
   return (sum / reviews.length).toFixed(1);
 }
 
 function safeStarCount(reviews) {
-  if (!Array.isArray(reviews) || reviews.length === 0) return '★★★★★';
-  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 5), 0);
-  const avg = Math.max(1, Math.min(5, Math.round(sum / reviews.length)));
+  if (!Array.isArray(reviews) || reviews.length === 0) return '☆☆☆☆☆';
+  const sum = reviews.reduce((acc, r) => acc + (Number(r?.rating) || 0), 0);
+  const avg = Math.max(0, Math.min(5, Math.round(sum / reviews.length)));
   return '★'.repeat(avg) + '☆'.repeat(5 - avg);
 }
 
@@ -202,7 +193,6 @@ export default function CatalogPage() {
   const [maxPrice, setMaxPrice] = useState('');
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedStorage, setSelectedStorage] = useState([]);
-  const [minRating, setMinRating] = useState(0);
 
   // ── Accordion expanded state in Sidebar ──
   const [openAccordions, setOpenAccordions] = useState({
@@ -219,8 +209,22 @@ export default function CatalogPage() {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // ── Product Detail View State ──
-  const [selectedProductId, setSelectedProductId] = useState(null);
+  // ── Product Detail View State (Synced with URL for Browser Back/Forward navigation) ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedProductId = searchParams.get('product') || null;
+
+  const setSelectedProductId = useCallback((id) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (id) {
+        next.set('product', String(id));
+      } else {
+        next.delete('product');
+      }
+      return next;
+    });
+  }, [setSearchParams]);
+
   const [productDetail, setProductDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
@@ -585,50 +589,28 @@ export default function CatalogPage() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CATEGORIES LIST PREPARATION
+  // CATEGORIES LIST PREPARATION (Strictly from database)
   // ═══════════════════════════════════════════════════════════════════════════
   const displayCategories = useMemo(() => {
     const catList = Array.isArray(categories) ? categories : [];
-    const dbMap = new Map();
-    catList.forEach((c) => {
-      if (c.slug) dbMap.set(c.slug.toLowerCase().trim(), c);
-      if (c.name) {
-        dbMap.set(c.name.toLowerCase().trim(), c);
-        dbMap.set(c.name.toLowerCase().replace(/\s+/g, '-'), c);
-      }
-    });
-
-    const result = [];
-    const seen = new Set();
-
-    Object.entries(CATEGORY_THUMBNAILS).forEach(([slug, info]) => {
-      const dbCat = dbMap.get(slug) || dbMap.get(info.name.toLowerCase().trim());
-      result.push({
-        slug,
-        name: info.name,
-        img: info.img,
-        icon: info.icon,
-        category_id: dbCat ? dbCat.category_id : null,
-      });
-      seen.add(slug);
-      if (dbCat && dbCat.category_id) seen.add(String(dbCat.category_id));
-    });
-
-    catList.forEach((c) => {
-      if (!c) return;
-      const slug = c.slug || (c.name ? c.name.toLowerCase().replace(/\s+/g, '-') : String(c.category_id));
-      if (!seen.has(slug) && !seen.has(String(c.category_id))) {
-        result.push({
-          slug,
-          name: c.name || 'Category',
-          img: null,
-          icon: '📦',
-          category_id: c.category_id,
-        });
-      }
-    });
-
-    return result;
+    return catList.map((c) => {
+      if (!c) return null;
+      const slug = (c.slug || c.name || '').toLowerCase().trim();
+      const thumb =
+        CATEGORY_THUMBNAILS[slug] ||
+        Object.entries(CATEGORY_THUMBNAILS).find(
+          ([k, v]) =>
+            v.name.toLowerCase() === (c.name || '').toLowerCase().trim() ||
+            slug.includes(k)
+        )?.[1];
+      return {
+        category_id: c.category_id,
+        slug: c.slug || slug,
+        name: c.name || 'Category',
+        img: thumb?.img || null,
+        icon: thumb?.icon || '📦',
+      };
+    }).filter(Boolean);
   }, [categories]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -661,8 +643,11 @@ export default function CatalogPage() {
       });
     }
 
-    if (minRating > 0) {
-      list = list.filter((p) => Number(getRating(p.product_id)) >= minRating);
+    if (selectedStorage.length > 0) {
+      list = list.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        return selectedStorage.some((s) => name.includes(s.toLowerCase()));
+      });
     }
 
     if (sortBy === 'price-low') {
@@ -676,7 +661,7 @@ export default function CatalogPage() {
     }
 
     return list;
-  }, [products, availabilityFilter, minPrice, maxPrice, selectedColors, minRating, sortBy]);
+  }, [products, availabilityFilter, minPrice, maxPrice, selectedColors, selectedStorage, sortBy]);
 
   const currentCategoryName = useMemo(() => {
     if (!selectedCategory) return 'All Products';
@@ -894,7 +879,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Storage Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('storage')}
           style={{
@@ -944,45 +929,6 @@ export default function CatalogPage() {
                 </button>
               );
             })}
-          </div>
-        )}
-      </div>
-
-      {/* More filters Accordion */}
-      <div style={{ padding: '16px 0' }}>
-        <button
-          onClick={() => toggleAccordion('more')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-        >
-          <span>More filters</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.more ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
-          </span>
-        </button>
-        {openAccordions.more && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={minRating >= 4.5}
-                onChange={(e) => setMinRating(e.target.checked ? 4.5 : 0)}
-                style={{ accentColor: '#1a1917' }}
-              />
-              <span>Rating 4.5★ &amp; above</span>
-            </label>
           </div>
         )}
       </div>
@@ -1255,17 +1201,30 @@ export default function CatalogPage() {
               </div>
             </div>
 
-            {/* Ratings Row */}
+            {/* Ratings Row (Real reviews only) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#f59e0b', fontSize: '0.95rem', letterSpacing: '2px' }}>
-                {safeStarCount(userReviews)}
-              </span>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1917' }}>
-                {safeAverageRating(userReviews)}
-              </span>
-              <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
-                ({userReviews.length} {userReviews.length === 1 ? 'review' : 'reviews'})
-              </span>
+              {userReviews.length > 0 ? (
+                <>
+                  <span style={{ color: '#f59e0b', fontSize: '0.95rem', letterSpacing: '2px' }}>
+                    {safeStarCount(userReviews)}
+                  </span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1917' }}>
+                    {safeAverageRating(userReviews)}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
+                    ({userReviews.length} {userReviews.length === 1 ? 'review' : 'reviews'})
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ color: '#cbd5e1', fontSize: '0.95rem', letterSpacing: '2px' }}>
+                    ☆☆☆☆☆
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
+                    No reviews yet
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Short Description Accordion */}
@@ -1294,34 +1253,18 @@ export default function CatalogPage() {
                   textAlign: 'left',
                 }}
               >
-                <span>Short Description</span>
+                <span>Description</span>
                 <span style={{ fontSize: '0.75rem', transform: shortDescOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
                   ▼
                 </span>
               </button>
               {shortDescOpen && (
-                <div style={{ paddingTop: '12px', fontSize: '0.86rem', color: '#44403c', lineHeight: 1.6 }}>
-                  {productDetail.description ? (
-                    <p style={{ margin: '0 0 8px 0' }}>{productDetail.description}</p>
-                  ) : null}
-                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <li>Smart AI-powered voice enhancement &amp; crystal clear audio</li>
-                    <li>Powerful multi-layered dynamic sound drivers</li>
-                    <li>IP54 Sweat &amp; Water splash guard protection</li>
-                    <li>Adaptive Active Noise Reduction &amp; Ambient Transparency</li>
-                    <li>Extended battery life with high-speed USB-C recharge</li>
-                  </ul>
-                  <p style={{ fontStyle: 'italic', fontSize: '0.78rem', color: '#78716c', marginTop: '10px', marginBottom: 0 }}>
-                    Actual product colors may vary slightly from the images shown on our website/app.
+                <div style={{ paddingTop: '12px', fontSize: '0.88rem', color: '#44403c', lineHeight: 1.6 }}>
+                  <p style={{ margin: 0 }}>
+                    {productDetail.description || 'No description provided for this product.'}
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Warranty Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 600, color: '#1e3a8a' }}>
-              <span>🛡️</span>
-              <span>1 Year Warranty (Battery: 6 Months)</span>
             </div>
 
             {/* Variant Selector (Database-driven) */}
@@ -1652,7 +1595,7 @@ export default function CatalogPage() {
           </div>
         )}
 
-        {/* ── SECTION 3: PRODUCT DETAILS / TABS (Screenshot 3) ── */}
+        {/* ── SECTION 3: PRODUCT DETAILS / SPECIFICATIONS (Direct from Database) ── */}
         <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)', padding: '28px', marginTop: '12px' }}>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1a1917', margin: '0 0 16px 0' }}>
             Product details
@@ -1672,30 +1615,45 @@ export default function CatalogPage() {
                 cursor: 'pointer',
               }}
             >
-              Description
+              Overview &amp; Specifications
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem', color: '#44403c', lineHeight: 1.7 }}>
-            <p style={{ margin: 0 }}>
-              {productDetail.description || `${productDetail.name} delivers exceptional performance, modern aesthetics, and durable high-grade craftsmanship for everyday consumer tech demands.`}
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', fontSize: '0.9rem', color: '#44403c', lineHeight: 1.7 }}>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1a1917', margin: '0 0 6px 0' }}>
+                Description
+              </h3>
+              <p style={{ margin: 0 }}>
+                {productDetail.description || 'No description provided for this product in the catalog.'}
+              </p>
+            </div>
 
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', margin: '12px 0 4px 0' }}>
-              Performance &amp; Craftsmanship
-            </h3>
-            <p style={{ margin: 0 }}>
-              Engineered with advanced hardware components to ensure reliable operation, high durability, and top-tier user satisfaction across daily use.
-            </p>
-
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', margin: '12px 0 4px 0' }}>
-              What You Get
-            </h3>
-            <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <li>1x {productDetail.name}</li>
-              <li>1x Standard Accessories / Charging Cable</li>
-              <li>1x Quick Start Guide &amp; Warranty Documentation</li>
-            </ul>
+            <div>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1a1917', margin: '10px 0 10px 0' }}>
+                Specifications
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Category</span>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{productDetail.category_name || 'General'}</div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Base Price</span>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{formatRs(productDetail.base_price)}</div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Status</span>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: productDetail.is_active ? '#059669' : '#dc2626', marginTop: '2px' }}>
+                    {productDetail.is_active ? 'Active' : 'Inactive'}
+                  </div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Available Variants</span>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{variants.length} variant{variants.length === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1710,15 +1668,15 @@ export default function CatalogPage() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '24px',
               paddingBottom: '24px',
               borderBottom: '1px solid rgba(0,0,0,0.08)',
             }}
           >
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#f59e0b', fontSize: '1.2rem', letterSpacing: '3px' }}>
+            <div>
+              <div style={{ color: userReviews.length > 0 ? '#f59e0b' : '#cbd5e1', fontSize: '1.2rem', letterSpacing: '3px' }}>
                 {safeStarCount(userReviews)}
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', marginTop: '4px' }}>
@@ -2017,6 +1975,17 @@ export default function CatalogPage() {
           box-sizing: border-box;
           color: #1c1917;
           font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-rendering: optimizeLegibility;
+        }
+        .catalog-fluid-container select,
+        .catalog-fluid-container input,
+        .catalog-fluid-container button,
+        .catalog-fluid-container textarea {
+          font-family: inherit;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         .catalog-layout-grid {
           display: grid;
@@ -2024,10 +1993,6 @@ export default function CatalogPage() {
           gap: 36px;
           align-items: flex-start;
           width: 100%;
-        }
-        .catalog-sidebar-desktop {
-          display: flex;
-          flex-direction: column;
         }
         .product-top-grid {
           display: grid;
@@ -2264,8 +2229,8 @@ export default function CatalogPage() {
                 }}
               >
                 {/* Search Input & Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flex: '1 1 auto', minWidth: '260px' }}>
-                  <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flex: '1 1 auto', minWidth: '220px' }}>
+                  <div style={{ position: 'relative', width: '210px', maxWidth: '220px' }}>
                     <input
                       type="text"
                       placeholder="Search products…"
@@ -2388,22 +2353,30 @@ export default function CatalogPage() {
                 </div>
 
                 {/* Right: Sort Dropdown & Products Count */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginLeft: 'auto' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: 'auto' }}>
+                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
                       style={{
                         appearance: 'none',
                         WebkitAppearance: 'none',
-                        background: 'transparent',
-                        border: 'none',
-                        fontSize: '0.88rem',
-                        fontWeight: 500,
+                        MozAppearance: 'none',
+                        background: '#ffffff',
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        borderRadius: '9999px',
+                        fontSize: '0.86rem',
+                        fontWeight: 600,
                         color: '#1c1917',
                         cursor: 'pointer',
-                        paddingRight: '18px',
+                        padding: '0 32px 0 16px',
+                        height: '38px',
+                        lineHeight: '38px',
+                        boxSizing: 'border-box',
                         outline: 'none',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        display: 'inline-block',
+                        verticalAlign: 'middle',
                       }}
                     >
                       <option value="best-selling">Best selling</option>
@@ -2412,12 +2385,23 @@ export default function CatalogPage() {
                       <option value="alpha-asc">Alphabetically: A-Z</option>
                       <option value="alpha-desc">Alphabetically: Z-A</option>
                     </select>
-                    <span style={{ position: 'absolute', right: 0, pointerEvents: 'none', fontSize: '0.68rem', color: '#1c1917' }}>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        fontSize: '0.65rem',
+                        color: '#78716c',
+                        lineHeight: 1,
+                      }}
+                    >
                       ▼
                     </span>
                   </div>
 
-                  <span style={{ fontSize: '0.88rem', color: '#57534e', fontWeight: 400, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#78716c', fontWeight: 500, whiteSpace: 'nowrap', paddingLeft: '4px' }}>
                     {productCountDisplay}
                   </span>
                 </div>
@@ -2435,59 +2419,67 @@ export default function CatalogPage() {
                 <div
                   style={{
                     background: '#fffbeb',
-                    border: '1px solid rgba(245,158,11,0.3)',
-                    borderRadius: '16px',
-                    padding: '16px 20px',
+                    border: '1.5px solid rgba(245,158,11,0.35)',
+                    borderRadius: '18px',
+                    padding: '20px 24px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '16px',
+                    boxShadow: '0 4px 14px rgba(245,158,11,0.08)',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>Low Stock Variants Alert</h4>
-                      <span style={{ fontSize: '0.78rem', color: '#78716c' }}>Variants below threshold</span>
+                      <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#b45309' }}>Low Stock Variants Alert</h4>
+                      <span style={{ fontSize: '0.9rem', color: '#78716c' }}>Variants with inventory count below threshold</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#78716c' }}>Threshold:</span>
                       <input
                         type="number"
                         min="1"
                         value={threshold}
                         onChange={(e) => setThreshold(Number(e.target.value))}
-                        style={{ width: '56px', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.4)', textAlign: 'center', fontSize: '0.85rem' }}
+                        style={{ width: '70px', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.5)', textAlign: 'center', fontSize: '0.95rem', fontWeight: 700, background: '#fff' }}
                       />
                       <button
                         onClick={() => fetchLowStock(threshold)}
-                        style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                        style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', boxShadow: '0 2px 8px rgba(245,158,11,0.3)' }}
                       >
                         Apply
                       </button>
                     </div>
                   </div>
-                  {lowStockLoading && <p style={{ fontSize: '0.82rem', color: '#78716c' }}>Loading…</p>}
-                  {lowStockError && <p style={{ fontSize: '0.82rem', color: 'red' }}>Error: {lowStockError}</p>}
+                  {lowStockLoading && <p style={{ fontSize: '0.92rem', color: '#78716c', margin: 0 }}>Loading inventory…</p>}
+                  {lowStockError && <p style={{ fontSize: '0.92rem', color: '#dc2626', margin: 0, fontWeight: 600 }}>Error: {lowStockError}</p>}
                   {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
-                    <p style={{ fontSize: '0.82rem', color: '#059669', margin: 0 }}>✓ All variants have healthy stock levels.</p>
+                    <p style={{ fontSize: '0.92rem', color: '#059669', margin: 0, fontWeight: 600 }}>✓ All product variants have healthy stock levels above threshold.</p>
                   )}
                   {!lowStockLoading && lowStock.length > 0 && (
-                    <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                      <table style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
+                    <div style={{ maxHeight: '240px', overflowY: 'auto', background: '#ffffff', borderRadius: '12px', border: '1px solid rgba(245,158,11,0.2)', padding: '6px 14px' }}>
+                      <table style={{ width: '100%', fontSize: '0.95rem', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(0,0,0,0.06)', color: '#78716c' }}>
-                            <th style={{ padding: '6px' }}>Product</th>
-                            <th style={{ padding: '6px' }}>SKU</th>
-                            <th style={{ padding: '6px' }}>Attribute</th>
-                            <th style={{ padding: '6px' }}>Stock</th>
+                          <tr style={{ textAlign: 'left', borderBottom: '1.5px solid rgba(0,0,0,0.08)', color: '#475569' }}>
+                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Product</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>SKU</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Attribute</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Stock</th>
                           </tr>
                         </thead>
                         <tbody>
                           {lowStock.map((row, i) => (
                             <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                              <td style={{ padding: '6px', fontWeight: 600 }}>{row.product_name}</td>
-                              <td style={{ padding: '6px' }}><code>{row.sku}</code></td>
-                              <td style={{ padding: '6px' }}>{row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}</td>
-                              <td style={{ padding: '6px', fontWeight: 700, color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
-                                {row.stock === 0 ? 'Out of stock' : row.stock}
+                              <td style={{ padding: '10px 8px', fontWeight: 700, color: '#1a1917', fontSize: '0.95rem' }}>{row.product_name}</td>
+                              <td style={{ padding: '10px 8px' }}>
+                                <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>
+                                  {row.sku}
+                                </code>
+                              </td>
+                              <td style={{ padding: '10px 8px', color: '#334155', fontSize: '0.92rem' }}>
+                                {row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}
+                              </td>
+                              <td style={{ padding: '10px 8px', fontWeight: 800, fontSize: '1rem', color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                                {row.stock === 0 ? '0 (Out of stock)' : `${row.stock} units`}
                               </td>
                             </tr>
                           ))}
@@ -2543,8 +2535,6 @@ export default function CatalogPage() {
                     {filteredProducts.map((p) => {
                       const photoUrl = getProductPhoto(p);
                       const basePrice = Number(p.base_price) || 0;
-                      const rating = getRating(p.product_id);
-                      const colorsCount = getColorsCount(p);
                       const isInStock = p.is_active !== 0;
 
                       return (
@@ -2574,22 +2564,14 @@ export default function CatalogPage() {
                             e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
                           }}
                         >
-                          {/* Top Badges */}
-                          <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {p.is_active === 0 ? (
+                          {/* Top Status Badge (Real DB Status Only) */}
+                          {p.is_active === 0 && (
+                            <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2 }}>
                               <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
                                 INACTIVE
                               </span>
-                            ) : basePrice > 7000 ? (
-                              <span style={{ background: '#c59b27', color: '#ffffff', fontSize: '0.62rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.04em' }}>
-                                Hi-Res
-                              </span>
-                            ) : basePrice < 4000 ? (
-                              <span style={{ background: '#dc2626', color: '#ffffff', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
-                                Save 14%
-                              </span>
-                            ) : null}
-                          </div>
+                            </div>
+                          )}
 
                           {/* Product Studio Image Container */}
                           <div
@@ -2616,6 +2598,13 @@ export default function CatalogPage() {
                             />
                           </div>
 
+                          {/* Category Subtitle */}
+                          {p.category_name && (
+                            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                              {p.category_name}
+                            </div>
+                          )}
+
                           {/* Title */}
                           <h3
                             style={{
@@ -2623,7 +2612,7 @@ export default function CatalogPage() {
                               fontWeight: 700,
                               color: '#1a1917',
                               lineHeight: 1.35,
-                              margin: '0 0 6px 0',
+                              margin: '0 0 8px 0',
                               display: '-webkit-box',
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: 'vertical',
@@ -2635,28 +2624,14 @@ export default function CatalogPage() {
                           </h3>
 
                           {/* Price */}
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                            {basePrice > 6000 && (
-                              <span style={{ fontSize: '0.84rem', fontWeight: 500, color: '#1c1917' }}>From</span>
-                            )}
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
                             <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
                               {formatRs(basePrice)}
                             </span>
                           </div>
 
-                          {/* Variants Summary */}
-                          <div style={{ fontSize: '0.76rem', color: '#78716c', marginBottom: '4px' }}>
-                            Available in {colorsCount} colors
-                          </div>
-
-                          {/* Rating Row */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-                            <span style={{ color: '#f59e0b', fontSize: '0.8rem', letterSpacing: '1px' }}>★★★★★</span>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1c1917' }}>{rating}</span>
-                          </div>
-
                           {/* Stock Status Indicator */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600, marginTop: 'auto' }}>
                             <span
                               style={{
                                 width: '7px',
