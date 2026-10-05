@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request  # pyrefly: ignore
 from db import get_db_connection  # pyrefly: ignore
+from flask_jwt_extended import jwt_required, get_jwt, verify_jwt_in_request
 
 catalog_bp = Blueprint('catalog', __name__)
 
@@ -25,6 +26,25 @@ def execute(sql, params=None):
     return result
 
 
+# ── helper: get the role of the current requester (0 = guest) ────────────────
+def get_role():
+    """Return role_id from JWT claims, or 0 if no token present."""
+    try:
+        verify_jwt_in_request(optional=True)
+        claims = get_jwt()
+        return claims.get('role_id', 0) if claims else 0
+    except Exception:
+        return 0
+
+# ── helper: 403 response for unauthorized write attempts ─────────────────────
+def manager_required():
+    """Return a 403 error response if the caller is not a manager or admin."""
+    role = get_role()
+    if role not in (2, 3):
+        return jsonify({"error": "Manager or Admin access required"}), 403
+    return None  # all good
+
+
 # get categories
 @catalog_bp.route('/categories')
 def get_categories():
@@ -36,8 +56,11 @@ def get_categories():
 @catalog_bp.route('/products')
 def get_products():
     """
-    Return all products.
+    Return products.
+    Managers & Admins (role 2, 3) see all products including inactive ones.
+    Customers (role 1) and guests see only active products.
     """
+    role = get_role()
     category_id = request.args.get('category_id')
     q = request.args.get('q', '').strip()
     like = f"%{q}%"
@@ -49,14 +72,17 @@ def get_products():
         JOIN   categories c ON c.category_id = p.category_id
         """
 
+    # Customers and guests only see active products
+    active_filter = "" if role in (2, 3) else "AND p.is_active = 1 "
+
     if category_id and q:
-        rows = query(sql + "WHERE p.category_id = %s AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (category_id, like, like))
+        rows = query(sql + f"WHERE p.category_id = %s {active_filter}AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (category_id, like, like))
     elif category_id:
-        rows = query(sql + "WHERE p.category_id = %s ORDER BY p.title", (category_id,))
+        rows = query(sql + f"WHERE p.category_id = %s {active_filter}ORDER BY p.title", (category_id,))
     elif q:
-        rows = query(sql + "WHERE (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (like, like))
+        rows = query(sql + f"WHERE 1=1 {active_filter}AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (like, like))
     else:
-        rows = query(sql + "ORDER BY p.title")
+        rows = query(sql + f"WHERE 1=1 {active_filter}ORDER BY p.title")
 
     return jsonify(rows)
 
@@ -125,9 +151,13 @@ def get_low_stock():
 
     return jsonify(rows)
 
-# create product
+# create product — managers & admins only
 @catalog_bp.route('/products', methods=['POST'])
+@jwt_required()
 def create_product():
+    err = manager_required()
+    if err: return err
+
     data = request.get_json()
     res = execute(
         "INSERT INTO products (title, description, base_price, category_id, is_active) VALUES (%s, %s, %s, %s, 1)",
@@ -135,9 +165,13 @@ def create_product():
     )
     return jsonify({"product_id": res['lastrowid']}), 201
 
-# update product
+# update product — managers & admins only
 @catalog_bp.route('/products/<int:product_id>', methods=['PATCH'])
+@jwt_required()
 def update_product(product_id):
+    err = manager_required()
+    if err: return err
+
     data = request.get_json()
     fields = {k: v for k, v in data.items() if k in ('title', 'description', 'base_price', 'category_id', 'is_active')}
     if not fields:
@@ -146,15 +180,23 @@ def update_product(product_id):
     execute(f"UPDATE products SET {set_clause} WHERE product_id = %s", (*fields.values(), product_id))
     return jsonify({"updated": product_id})
 
-# delete product (soft)
+# delete product (soft) — managers & admins only
 @catalog_bp.route('/products/<int:product_id>', methods=['DELETE'])
+@jwt_required()
 def delete_product(product_id):
+    err = manager_required()
+    if err: return err
+
     execute("UPDATE products SET is_active = 0 WHERE product_id = %s", (product_id,))
     return jsonify({"deleted": product_id})
 
-# create variant
+# create variant — managers & admins only
 @catalog_bp.route('/products/<int:product_id>/variants', methods=['POST'])
+@jwt_required()
 def create_variant(product_id):
+    err = manager_required()
+    if err: return err
+
     """
     Add a new variant (SKU, attribute_name, attribute_value, optional price_override)
     to an existing product.
@@ -191,9 +233,13 @@ def create_variant(product_id):
     return jsonify({"variant_id": variant_id}), 201
 
 
-# update variant
+# update variant — managers & admins only
 @catalog_bp.route('/variants/<int:variant_id>', methods=['PATCH'])
+@jwt_required()
 def update_variant(variant_id):
+    err = manager_required()
+    if err: return err
+
     """
     Update mutable fields of a variant: sku, attribute_name, attribute_value,
     price_override.
@@ -212,9 +258,13 @@ def update_variant(variant_id):
     return jsonify({"updated": variant_id})
 
 
-# delete variant
+# delete variant — managers & admins only
 @catalog_bp.route('/variants/<int:variant_id>', methods=['DELETE'])
+@jwt_required()
 def delete_variant(variant_id):
+    err = manager_required()
+    if err: return err
+
     """
     Permanently remove a variant and its inventory row.
     """
@@ -224,9 +274,13 @@ def delete_variant(variant_id):
 
 
 
-# restock / adjust stock for a variant
+# restock / adjust stock for a variant — managers & admins only
 @catalog_bp.route('/inventory/<int:variant_id>', methods=['PATCH'])
+@jwt_required()
 def update_inventory(variant_id):
+    err = manager_required()
+    if err: return err
+
     """
     Set or adjust the stock_quantity and/or low_stock_threshold for a variant.
     Accepts:
@@ -266,9 +320,13 @@ def update_inventory(variant_id):
 
 
 
-# create category
+# create category — managers & admins only
 @catalog_bp.route('/categories', methods=['POST'])
+@jwt_required()
 def create_category():
+    err = manager_required()
+    if err: return err
+
     """
     Create a new product category.
     Body: { "name": "...", "slug": "..." }

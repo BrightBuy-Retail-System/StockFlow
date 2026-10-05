@@ -96,6 +96,13 @@ function ActiveBadge({ isActive }) {
 
 // ─── main component ───────────────────────────────────────────────────────────
 export default function CatalogPage() {
+
+  // ── who is logged in? ──
+  // role_id 1 = Customer, 2 = Manager, 3 = Admin, null = Guest
+  const savedUser = localStorage.getItem('user');
+  const currentUser = savedUser ? JSON.parse(savedUser) : null;
+  const isManager = currentUser?.role_id === 2 || currentUser?.role_id === 3;
+
   // ── catalog state ──
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
