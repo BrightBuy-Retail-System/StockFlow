@@ -98,6 +98,40 @@ export default function LogisticsPage() {
         </div>
       </div>
 
+      {/* Delivery Estimator */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">Delivery Estimator</div>
+            <div className="card-subtitle">Estimate lead time and cost for a destination city and item.</div>
+          </div>
+        </div>
+
+        <form onSubmit={handleEstimate} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', alignItems: 'end' }}>
+          <div>
+            <label style={labelStyle}>Destination city</label>
+            <select style={inputStyle} value={cityId} onChange={(e) => setCityId(e.target.value)}>
+              <option value="">Select a city</option>
+              {cities.map((c) => (
+                <option key={c.city_id} value={c.city_id}>
+                  {c.city_name} ({c.hub_name})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Variant ID</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min="1"
+              value={variantId}
+              onChange={(e) => setVariantId(e.target.value)}
+              placeholder="e.g. 3"
+            />
+          </div>
+
     </div>
   );
 }
