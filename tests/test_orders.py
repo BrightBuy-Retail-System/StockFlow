@@ -3,6 +3,11 @@ import sys
 import unittest
 from flask_jwt_extended import create_access_token
 
+from dotenv import load_dotenv
+
+# Ensure database environment configuration from backend/.env is loaded
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
 
 # pyrefly: ignore [missing-import]
