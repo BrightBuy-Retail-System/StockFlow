@@ -132,6 +132,125 @@ export default function LogisticsPage() {
             />
           </div>
 
+          <div>
+            <label style={labelStyle}>Quantity</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <button type="submit" className="btn-primary" disabled={loadingEstimate}>
+              {loadingEstimate ? 'Calculating…' : 'Estimate Delivery'}
+            </button>
+          </div>
+        </form>
+
+        {estimateError && (
+          <p style={{ color: 'var(--danger-text)', fontSize: '0.85rem', marginTop: '14px' }}>{estimateError}</p>
+        )}
+
+        {estimate && (
+          <div style={{
+            marginTop: '18px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            background: 'var(--primary-light)',
+            border: '1px solid var(--primary-border)',
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
+              <div>
+                <div style={labelStyle}>Shipping to</div>
+                <div style={{ fontWeight: 700 }}>{estimate.city_name} &middot; {estimate.hub_name}</div>
+              </div>
+              <div>
+                <div style={labelStyle}>Lead time</div>
+                <div style={{ fontWeight: 700 }}>
+                  {estimate.total_lead_time_days} day{estimate.total_lead_time_days !== 1 ? 's' : ''}
+                  {estimate.out_of_stock_penalty_days > 0 && (
+                    <span style={{ color: 'var(--warning-text)', fontWeight: 600 }}>
+                      {' '}(incl. +{estimate.out_of_stock_penalty_days}d out-of-stock delay)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div style={labelStyle}>Estimated arrival</div>
+                <div style={{ fontWeight: 700 }}>{estimate.estimated_delivery_date}</div>
+              </div>
+              <div>
+                <div style={labelStyle}>Shipping fee</div>
+                <div style={{ fontWeight: 700 }}>${Number(estimate.shipping_fee || 0).toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Shipment Tracker */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">Track a Shipment</div>
+            <div className="card-subtitle">Look up status by tracking number.</div>
+          </div>
+        </div>
+
+        <form onSubmit={handleTrack} style={{ display: 'flex', gap: '12px', alignItems: 'end', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1', minWidth: '220px' }}>
+            <label style={labelStyle}>Tracking number</label>
+            <input
+              style={inputStyle}
+              type="text"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="e.g. TX-TRK-9081241"
+            />
+          </div>
+          <button type="submit" className="btn-primary" disabled={loadingTrack}>
+            {loadingTrack ? 'Searching…' : 'Track'}
+          </button>
+        </form>
+
+        {trackError && (
+          <p style={{ color: 'var(--danger-text)', fontSize: '0.85rem', marginTop: '14px' }}>{trackError}</p>
+        )}
+
+        {shipment && (
+          <div className="table-container" style={{ marginTop: '18px' }}>
+            <table className="enterprise-table">
+              <thead>
+                <tr>
+                  <th>Tracking #</th>
+                  <th>Destination</th>
+                  <th>Status</th>
+                  <th>Estimated arrival</th>
+                  <th>Dispatched</th>
+                  <th>Delivered</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{shipment.tracking_number}</td>
+                  <td>{shipment.city_name} &middot; {shipment.hub_name}</td>
+                  <td>
+                    <span className={`chip ${STATUS_CHIP[shipment.shipping_status] || 'chip-slate'}`}>
+                      {shipment.shipping_status}
+                    </span>
+                  </td>
+                  <td>{shipment.estimated_arrival || '—'}</td>
+                  <td>{shipment.dispatched_at || '—'}</td>
+                  <td>{shipment.delivered_at || '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
