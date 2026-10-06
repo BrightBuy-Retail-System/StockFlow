@@ -356,12 +356,9 @@ def checkout():
     claims = get_jwt()
     role_id = claims.get('role_id', 1)
 
-    payload = request.get_json(silent=True)
+    payload = request.get_json(silent=True) or {}
     if not payload:
-        return jsonify({
-            "status": "error",
-            "message": "Missing or invalid JSON body in request."
-        }), 400
+        return jsonify({"status": "error", "message": "Missing JSON request body."}), 400
 
     payload_user_id = payload.get('user_id', authenticated_user_id)
     if role_id == 1 and payload_user_id != authenticated_user_id:
@@ -371,44 +368,23 @@ def checkout():
         }), 403
 
     user_id = payload_user_id
-
-    shipping_city_id = payload.get('shipping_city_id')
-    if not isinstance(shipping_city_id, int) or shipping_city_id <= 0:
-        return jsonify({
-            "status": "error",
-            "message": "Field 'shipping_city_id' must be a positive integer."
-        }), 400
-
-    items = payload.get('items')
+    items = payload.get('items', [])
     if not isinstance(items, list) or len(items) == 0:
-        return jsonify({
-            "status": "error",
-            "message": "Field 'items' must be a non-empty list of items."
-        }), 400
+        return jsonify({"status": "error", "message": "Field 'items' must be a non-empty list."}), 400
 
     validate_only = payload.get('validate_only', False)
 
-    for idx, item in enumerate(items):
-        if not isinstance(item, dict):
-            return jsonify({
-                "status": "error",
-                "message": f"Item at index {idx} must be a JSON object."
-            }), 400
+    # 1. Delivery & Address Ingestion
+    delivery_type = payload.get('delivery_type', 'SHIP').upper()
+    if delivery_type not in ('SHIP', 'PICKUP'):
+        delivery_type = 'SHIP'
 
-        variant_id = item.get('variant_id')
-        quantity = item.get('quantity')
-
-        if not isinstance(variant_id, int) or variant_id <= 0:
-            return jsonify({
-                "status": "error",
-                "message": f"Item at index {idx} has an invalid 'variant_id'."
-            }), 400
-
-        if not isinstance(quantity, int) or quantity <= 0:
-            return jsonify({
-                "status": "error",
-                "message": f"Item at index {idx} must specify an integer 'quantity' greater than zero."
-            }), 400
+    recipient_name = payload.get('recipient_name', '').strip()
+    phone = payload.get('phone', '').strip()
+    shipping_address = payload.get('shipping_address', '').strip()
+    billing_address = payload.get('billing_address', '').strip() or shipping_address
+    payment_method = payload.get('payment_method', 'CREDIT_CARD').strip().upper()
+    shipping_city_id = payload.get('shipping_city_id', 1)
 
     conn = None
     cursor = None
@@ -417,136 +393,142 @@ def checkout():
         conn.autocommit = False
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Customer Verification
-        cursor.execute("SELECT user_id, full_name FROM users WHERE user_id = %s", (user_id,))
+        # 2. Verify Customer
+        cursor.execute("SELECT user_id, full_name, email FROM users WHERE user_id = %s", (user_id,))
         user_row = cursor.fetchone()
         if not user_row:
             conn.rollback()
-            return jsonify({
-                "status": "error",
-                "message": f"User #{user_id} does not exist."
-            }), 404
+            return jsonify({"status": "error", "message": f"User #{user_id} does not exist."}), 404
 
-        # 2. Texas City Verification
-        cursor.execute(
-            "SELECT city_id, city_name, base_lead_time_days, shipping_fee FROM texas_cities WHERE city_id = %s",
-            (shipping_city_id,)
-        )
-        city_row = cursor.fetchone()
-        if not city_row:
-            conn.rollback()
-            return jsonify({
-                "status": "error",
-                "message": f"Texas shipping city #{shipping_city_id} does not exist."
-            }), 404
+        if not recipient_name:
+            recipient_name = user_row['full_name']
 
-        # 3. Lock Variants and Inventory for Update
-        requested_variant_ids = [item['variant_id'] for item in items]
-        format_strings = ','.join(['%s'] * len(requested_variant_ids))
-        
+        # 3. Determine Shipping Fee & Destination
+        if delivery_type == 'PICKUP':
+            shipping_fee = Decimal('0.00')
+            city_name = 'In-Store Pickup'
+            lead_days = 0
+            # City ID 1 serves as fallback hub reference for pickup shipments
+            shipping_city_id = shipping_city_id or 1
+        else:
+            cursor.execute(
+                "SELECT city_id, city_name, base_lead_time_days, shipping_fee FROM texas_cities WHERE city_id = %s",
+                (shipping_city_id,)
+            )
+            city_row = cursor.fetchone()
+            if not city_row:
+                conn.rollback()
+                return jsonify({"status": "error", "message": f"City #{shipping_city_id} not found."}), 404
+            shipping_fee = Decimal(str(city_row['shipping_fee']))
+            city_name = city_row['city_name']
+            lead_days = city_row.get('base_lead_time_days') or 3
+
+        # 4. Pessimistic Lock on Catalog & Stock
+        requested_vids = [item['variant_id'] for item in items]
+        format_strings = ','.join(['%s'] * len(requested_vids))
         lock_query = f"""
-            SELECT 
-                pv.variant_id,
-                pv.sku,
-                COALESCE(pv.price_override, p.base_price) AS effective_price,
-                COALESCE(inv.stock_quantity, 0) AS stock_quantity
+            SELECT pv.variant_id, pv.sku, p.title AS product_title,
+                   COALESCE(pv.price_override, p.base_price) AS effective_price,
+                   COALESCE(inv.stock_quantity, 0) AS stock_quantity
             FROM product_variants pv
             JOIN products p ON pv.product_id = p.product_id
             LEFT JOIN inventory inv ON pv.variant_id = inv.variant_id
             WHERE pv.variant_id IN ({format_strings})
             FOR UPDATE
         """
-        cursor.execute(lock_query, requested_variant_ids)
+        cursor.execute(lock_query, requested_vids)
         variants_db = {v['variant_id']: v for v in cursor.fetchall()}
 
         verified_items = []
         subtotal = Decimal('0.00')
 
         for item in items:
-            vid = item['variant_id']
-            qty = item['quantity']
-
+            vid = item.get('variant_id')
+            qty = item.get('quantity')
             if vid not in variants_db:
                 conn.rollback()
-                return jsonify({
-                    "status": "error",
-                    "message": f"Product variant #{vid} does not exist."
-                }), 404
+                return jsonify({"status": "error", "message": f"Variant #{vid} does not exist."}), 404
 
-            variant_record = variants_db[vid]
-            available_stock = variant_record['stock_quantity']
-
-            if available_stock < qty:
+            var_record = variants_db[vid]
+            if var_record['stock_quantity'] < qty:
                 conn.rollback()
                 return jsonify({
                     "status": "error",
                     "code": "OUT_OF_STOCK",
-                    "message": f"Insufficient stock for SKU '{variant_record['sku']}'. Requested: {qty}, Available: {available_stock}."
+                    "message": f"Insufficient stock for SKU '{var_record['sku']}'. Requested: {qty}, Available: {var_record['stock_quantity']}."
                 }), 409
 
-            unit_price = Decimal(str(variant_record['effective_price']))
+            unit_price = Decimal(str(var_record['effective_price']))
             line_total = unit_price * qty
             subtotal += line_total
-
             verified_items.append({
                 "variant_id": vid,
-                "sku": variant_record['sku'],
+                "sku": var_record['sku'],
+                "title": var_record['product_title'],
                 "quantity": qty,
                 "unit_price": unit_price,
-                "line_total": line_total,
-                "available_stock": available_stock
+                "line_total": line_total
             })
 
-        shipping_fee = Decimal(str(city_row['shipping_fee']))
-        total_amount = subtotal + shipping_fee
+        # 5. Fixed Online Service Fee (as seen in checkout mockup)
+        service_fee = Decimal('217.47') if subtotal > Decimal('0.00') else Decimal('0.00')
+        total_amount = subtotal + service_fee + shipping_fee
 
+        # Pre-Flight Calculation Response (Powers the right sidebar)
         if validate_only:
             conn.rollback()
             return jsonify({
                 "status": "verified",
-                "message": "Stock reserved and entities verified under transactional lock.",
                 "calculation": {
                     "user": user_row['full_name'],
-                    "destination_city": city_row['city_name'],
-                    "shipping_fee": float(shipping_fee),
+                    "delivery_type": delivery_type,
+                    "destination": city_name,
                     "subtotal": float(subtotal),
+                    "service_fee": float(service_fee),
+                    "shipping_fee": float(shipping_fee),
                     "total_amount": float(total_amount),
                     "items": [
                         {
                             "variant_id": it['variant_id'],
                             "sku": it['sku'],
+                            "title": it['title'],
                             "quantity": it['quantity'],
                             "unit_price": float(it['unit_price']),
-                            "line_total": float(it['line_total']),
-                            "available_stock": it['available_stock']
+                            "line_total": float(it['line_total'])
                         }
                         for it in verified_items
                     ]
                 }
             }), 200
 
-        # --- WRITE PATH: 5-Table ACID Transaction ---
-        # 4. Create Shipment
-        shipping_status = 'PENDING'
+        # --- ACID COMMIT PATH ---
+        # 6. Insert Shipment
         tracking_number = f"TX-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
-        lead_days = city_row.get('base_lead_time_days') or 3
-        estimated_arrival = (datetime.now() + timedelta(days=int(lead_days))).date()
+        est_arrival = (datetime.now() + timedelta(days=int(lead_days))).date() if lead_days > 0 else None
 
         cursor.execute("""
-            INSERT INTO shipments (tracking_number, destination_city_id, shipping_status, estimated_arrival)
-            VALUES (%s, %s, %s, %s)
-        """, (tracking_number, shipping_city_id, shipping_status, estimated_arrival))
+            INSERT INTO shipments (
+                tracking_number, destination_city_id, shipping_status, 
+                estimated_arrival, delivery_address, recipient_phone
+            ) VALUES (%s, %s, 'PENDING', %s, %s, %s)
+        """, (tracking_number, shipping_city_id, est_arrival, shipping_address, phone))
         shipment_id = cursor.lastrowid
 
-        # 5. Create Order Header
-        order_status = 'PENDING'
+        # 7. Insert Order with Address Snapshots & Fee Breakdown
         cursor.execute("""
-            INSERT INTO orders (user_id, shipment_id, total_amount, status)
-            VALUES (%s, %s, %s, %s)
-        """, (user_id, shipment_id, total_amount, order_status))
+            INSERT INTO orders (
+                user_id, shipment_id, total_amount, status, delivery_type,
+                recipient_name, phone, shipping_address, billing_address,
+                subtotal, service_fee, shipping_fee
+            ) VALUES (%s, %s, %s, 'PENDING', %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            user_id, shipment_id, total_amount, delivery_type,
+            recipient_name, phone, shipping_address, billing_address,
+            subtotal, service_fee, shipping_fee
+        ))
         order_id = cursor.lastrowid
 
-        # 6. Insert Order Items & Decrement Inventory
+        # 8. Insert Order Items & Decrement Inventory
         for it in verified_items:
             cursor.execute("""
                 INSERT INTO order_items (order_id, variant_id, unit_price, quantity)
@@ -559,10 +541,11 @@ def checkout():
                 WHERE variant_id = %s
             """, (it['quantity'], it['variant_id']))
 
-        # 7. Record Financial Ledger Entry (payments table)
-        payment_method = payload.get('payment_method', 'CREDIT_CARD').strip()
+        # 9. Insert Payment Record
+        # For COD: payment remains 'INITIATED' until courier delivers.
+        # For Cards/Wallets: payment is marked 'SUCCESS'.
+        payment_status = 'INITIATED' if payment_method in ('COD', 'CASH_ON_DELIVERY') else 'SUCCESS'
         transaction_ref = f"TX-PAY-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
-        payment_status = resolve_payment_status(cursor)
 
         cursor.execute("""
             INSERT INTO payments (order_id, payment_method, transaction_ref, amount, payment_status, processed_at)
@@ -570,15 +553,13 @@ def checkout():
         """, (order_id, payment_method, transaction_ref, total_amount, payment_status))
         payment_id = cursor.lastrowid
 
-        
-        # 8. Invalidate active cart items for this customer upon purchase
+        # 10. Clear Active Cart
         cursor.execute("""
             DELETE ci FROM cart_items ci
             JOIN carts c ON ci.cart_id = c.cart_id
             WHERE c.user_id = %s
         """, (user_id,))
 
-        # 9. Commit ACID Transaction
         conn.commit()
 
         return jsonify({
@@ -591,20 +572,20 @@ def checkout():
                 "payment_id": payment_id,
                 "transaction_ref": transaction_ref,
                 "payment_status": payment_status,
+                "payment_method": payment_method,
+                "delivery_type": delivery_type,
+                "subtotal": float(subtotal),
+                "service_fee": float(service_fee),
+                "shipping_fee": float(shipping_fee),
                 "total_amount": float(total_amount),
-                "status": order_status,
-                "items_count": len(verified_items)
+                "status": "PENDING"
             }
         }), 201
 
     except Exception as e:
         if conn:
             conn.rollback()
-        return jsonify({
-            "status": "error",
-            "message": f"Database error: {str(e)}"
-        }), 500
-
+        return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
     finally:
         if cursor:
             cursor.close()
