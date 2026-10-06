@@ -687,7 +687,7 @@ def update_order_status(order_id):
                     WHERE variant_id = %s
                 """, (item['quantity'], item['variant_id']))
 
-        # 3. Synchronize Shipment Records
+        # 3. Synchronize Shipment Status
         shipment_id = order.get('shipment_id')
         if shipment_id:
             if new_status == 'SHIPPED':
@@ -696,12 +696,18 @@ def update_order_status(order_id):
                     SET shipping_status = 'DISPATCHED', dispatched_at = NOW() 
                     WHERE shipment_id = %s
                 """, (shipment_id,))
-            elif new_status == 'CANCELLED':
+            elif new_status == 'DELIVERED':
                 cursor.execute("""
                     UPDATE shipments 
-                    SET shipping_status = 'PENDING' 
+                    SET shipping_status = 'DELIVERED', delivered_at = NOW() 
                     WHERE shipment_id = %s
                 """, (shipment_id,))
+                # Settle Cash on Delivery payment
+                cursor.execute("""
+                    UPDATE payments 
+                    SET payment_status = 'SUCCESS' 
+                    WHERE order_id = %s AND payment_status = 'INITIATED'
+                """, (order_id,))
 
         # 4. Update Order Status
         cursor.execute("""
