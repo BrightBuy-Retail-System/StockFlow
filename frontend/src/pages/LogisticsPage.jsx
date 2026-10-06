@@ -38,6 +38,46 @@ export default function LogisticsPage() {
       return;
     }
 
+    setLoadingEstimate(true);
+    try {
+      const res = await api.post('/logistics/calculate-delivery', {
+        city_id: Number(cityId),
+        items: [{ variant_id: Number(variantId), quantity: Number(quantity) || 1 }],
+      });
+      setEstimate(res.data);
+    } catch (err) {
+      setEstimateError(err.response?.data?.error || 'Could not calculate delivery estimate.');
+    } finally {
+      setLoadingEstimate(false);
+    }
+  };
+
+  const handleTrack = async (e) => {
+    e.preventDefault();
+    setTrackError('');
+    setShipment(null);
+
+    if (!trackingNumber.trim()) {
+      setTrackError('Enter a tracking number.');
+      return;
+    }
+
+    setLoadingTrack(true);
+    try {
+      const res = await api.get(`/logistics/shipments/${trackingNumber.trim()}`);
+      setShipment(res.data);
+    } catch (err) {
+      setTrackError(err.response?.data?.error || 'Shipment not found.');
+    } finally {
+      setLoadingTrack(false);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid var(--border-color)',
   return (
     <div className="card">
       <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px' }}>Logistics & Delivery</h2>
