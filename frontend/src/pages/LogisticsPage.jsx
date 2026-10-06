@@ -37,7 +37,6 @@ export default function LogisticsPage() {
       setEstimateError('Please select a city and enter a variant ID.');
       return;
     }
-  };
 
     setLoadingEstimate(true);
     try {
