@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api/client';
 
 const STATUS_CHIP = {
@@ -37,6 +37,7 @@ export default function LogisticsPage() {
       setEstimateError('Please select a city and enter a variant ID.');
       return;
     }
+  };
 
   return (
     <div className="card">
