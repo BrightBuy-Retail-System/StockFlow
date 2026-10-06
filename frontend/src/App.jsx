@@ -21,7 +21,6 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<OverviewPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
-          <Route path="/auth-cart" element={<AuthCartPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/logistics" element={<LogisticsPage />} />
@@ -39,6 +38,11 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[3]} />}>
             <Route path="/system-administrator" element={<SystemAdministrator />} />
           </Route>
+
+          <Route element={<ProtectedRoute allowedRoles={[1, 2, 3]} />}>
+            <Route path="/auth-cart" element={<AuthCartPage />} />
+          </Route>
+
         </Route>
       </Routes>
     </BrowserRouter>

@@ -68,7 +68,7 @@ export default function DashboardLayout() {
 
   const getRoleLabel = () => {
     if (!user) return '';
-    if (user.role_id === 2) return 'Manager / Warehouse Admin';
+    if (user.role_id === 2) return 'Store Executive & Manager';
     if (user.role_id === 3) return 'System Administrator';
     return 'Customer Account';
   };
@@ -80,6 +80,19 @@ export default function DashboardLayout() {
 
   return (
     <div className="storefront-app">
+      {/* SimplyTek Top Announcement Bar */}
+      <div className="simplytek-announcement-bar">
+        <div className="announcement-inner">
+          <span className="announcement-pill">🚚 Islandwide Delivery</span>
+          <span className="announcement-text">
+            Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
+          </span>
+          <Link to="/catalog" className="announcement-link">
+            Shop Tech Deals &rarr;
+          </Link>
+        </div>
+      </div>
+
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
         <div className="navbar-inner">
@@ -101,7 +114,16 @@ export default function DashboardLayout() {
             <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Products
             </NavLink>
-            <NavLink to="/auth-cart" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink
+              to="/auth-cart"
+              onClick={(e) => {
+                if (!user) {
+                  e.preventDefault();
+                  navigate('/login');
+                }
+              }}
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
               Cart
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
