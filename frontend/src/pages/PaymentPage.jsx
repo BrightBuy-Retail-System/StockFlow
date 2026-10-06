@@ -4,7 +4,6 @@ import api from '../api/client';
 import {
   ShieldCheckIcon,
   CheckCircleIcon,
-  SparklesIcon,
   ArrowRightIcon,
 } from '../components/Icons';
 
@@ -86,10 +85,6 @@ export default function PaymentPage() {
     <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '24px 16px' }}>
       {/* Page Header */}
       <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--primary-light)', border: '1px solid var(--primary-border)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '8px' }}>
-          <SparklesIcon className="w-3.5 h-3.5" />
-          <span>Member 5 · Phase 3 Transaction Engine</span>
-        </div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
           Checkout & Secure Settlement
         </h1>
