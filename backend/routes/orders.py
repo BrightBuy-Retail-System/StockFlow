@@ -380,6 +380,16 @@ def checkout():
     if not isinstance(items, list) or len(items) == 0:
         return jsonify({"status": "error", "message": "Field 'items' must be a non-empty list."}), 400
 
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            return jsonify({"status": "error", "message": f"Item at index {idx} must be a JSON object."}), 400
+        vid = item.get('variant_id')
+        qty = item.get('quantity')
+        if not isinstance(vid, int) or vid <= 0:
+            return jsonify({"status": "error", "message": f"Item at index {idx} has an invalid 'variant_id'."}), 400
+        if not isinstance(qty, int) or qty <= 0:
+            return jsonify({"status": "error", "message": f"Item at index {idx} must specify a positive quantity."}), 400
+
     validate_only = payload.get('validate_only', False)
 
     # 1. Delivery & Address Ingestion
@@ -478,8 +488,8 @@ def checkout():
                 "line_total": line_total
             })
 
-        # 5. Fixed Online Service Fee (as seen in checkout mockup)
-        service_fee = Decimal('217.47') if subtotal > Decimal('0.00') else Decimal('0.00')
+        # 5. Service Fee (from payload if provided, defaults to 0.00)
+        service_fee = Decimal(str(payload.get('service_fee', '0.00')))
         total_amount = subtotal + service_fee + shipping_fee
 
         # Pre-Flight Calculation Response (Powers the right sidebar)
