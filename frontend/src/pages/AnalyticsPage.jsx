@@ -1,13 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../api/client';
 import {
-  SparklesIcon,
-  ShieldCheckIcon,
-  DatabaseIcon,
   ZapIcon,
-  ArrowRightIcon,
   SearchIcon,
-  CheckCircleIcon,
 } from '../components/Icons';
 
 export default function AnalyticsPage() {
@@ -26,7 +21,6 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(null);
-  const [showVivaNotes, setShowVivaNotes] = useState(true);
 
   // Fetch all analytical reports in parallel
   const fetchReports = async (year = selectedYear) => {
@@ -147,10 +141,6 @@ export default function AnalyticsPage() {
       {/* Top Banner Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--primary-light)', border: '1px solid var(--primary-border)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '8px' }}>
-            <SparklesIcon className="w-3.5 h-3.5" />
-            <span>Member 5 · Phase 4 Executive Analytics</span>
-          </div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
             Retail Intelligence & Financial Reports
           </h1>
@@ -161,27 +151,6 @@ export default function AnalyticsPage() {
 
         {/* Live Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => setShowVivaNotes(!showVivaNotes)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: '1px solid var(--border-color)',
-              background: showVivaNotes ? 'var(--primary-light)' : 'var(--bg-card)',
-              color: showVivaNotes ? 'var(--primary)' : 'var(--text-secondary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <DatabaseIcon className="w-3.5 h-3.5" />
-            <span>{showVivaNotes ? 'Hide Viva Explanations' : 'Show Viva Explanations'}</span>
-          </button>
-
           <button
             type="button"
             onClick={() => fetchReports()}
@@ -276,34 +245,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-
-      {/* ======================================================================
-          VIVA DEFENSE HELPER BOX (Toggled by user / for presentation)
-          ====================================================================== */}
-      {showVivaNotes && (
-        <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '14px', padding: '20px', color: '#ffffff', marginBottom: '24px', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <ShieldCheckIcon className="w-5 h-5" style={{ color: '#38bdf8' }} />
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, letterSpacing: '0.02em' }}>
-              CS3043 Viva Talking Points · Database Engine Computations
-            </h3>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', fontSize: '0.8rem', lineHeight: 1.5 }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '4px' }}>1. Window Moving Average</div>
-              <div>Calculated via <code style={{ color: '#fbcfe8' }}>ROWS BETWEEN 1 PRECEDING AND CURRENT ROW</code> without collapsing quarterly tuples.</div>
-            </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontWeight: 700, color: '#34d399', marginBottom: '4px' }}>2. DENSE_RANK() OVER (...)</div>
-              <div>Dense ranking prevents gaps when products have identical revenue (1, 1, 2 rather than 1, 1, 3 in standard <code style={{ color: '#a7f3d0' }}>RANK()</code>).</div>
-            </div>
-            <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontWeight: 700, color: '#fbbf24', marginBottom: '4px' }}>3. GROUP BY WITH ROLLUP</div>
-              <div>Produces multi-level subaggregates and appends an automatic Grand Total row evaluated by <code style={{ color: '#fde68a' }}>COALESCE()</code>.</div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ======================================================================
           SECTION 2: Tab Navigation for the 4 Views
