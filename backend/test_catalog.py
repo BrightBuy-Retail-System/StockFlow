@@ -61,6 +61,18 @@ check("GET /inventory/low-stock (default threshold=10)",
 check("GET /inventory/low-stock?threshold=50",
       requests.get(f"{BASE}/inventory/low-stock?threshold=50"))
 
+# Check stock limiting & validation endpoints
+if prod_id:
+    r_detail = requests.get(f"{BASE}/products/{prod_id}")
+    detail_data = r_detail.json() if r_detail.status_code == 200 else {}
+    first_var = detail_data.get('variants', [{}])[0]
+    first_vid = first_var.get('variant_id')
+    if first_vid:
+        check(f"GET /variants/{first_vid}/stock (live available stock limit)",
+              requests.get(f"{BASE}/variants/{first_vid}/stock"), expected_status=200, key="available_stock")
+        check("POST /validate-stock (valid quantity within stock)",
+              requests.post(f"{BASE}/validate-stock", json={"variant_id": first_vid, "quantity": 1}))
+
 # --- Write endpoints ---
 print("\n[2/3] Write endpoints")
 
@@ -103,6 +115,8 @@ check("GET /products/999999 (not found -> 404)",
       requests.get(f"{BASE}/products/999999"), expected_status=404)
 check("POST /products missing fields (expect 500 or 400)",
       requests.post(f"{BASE}/products", json={}), expected_status=500)
+check("POST /validate-stock with excessive quantity (expect 400 / insufficient)",
+      requests.post(f"{BASE}/validate-stock", json={"variant_id": 999999, "quantity": 99999}), expected_status=400)
 
 # --- Summary ---
 print()
@@ -110,3 +124,4 @@ print("=" * 55)
 print(f"  Results:  {passed} passed  |  {failed} failed")
 print("=" * 55)
 sys.exit(0 if failed == 0 else 1)
+
