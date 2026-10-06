@@ -78,10 +78,26 @@ export default function LogisticsPage() {
     padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid var(--border-color)',
+    fontSize: '0.875rem',
+    color: 'var(--text-main)',
+    marginTop: '4px',
+  };
+
+  const labelStyle = {
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+  };
+
   return (
-    <div className="card">
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px' }}>Logistics & Delivery</h2>
-      <p style={{ color: 'var(--text-muted)' }}>Delivery estimations, city routing, and dispatch tracking.</p>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Logistics & Delivery</h1>
+          <p className="page-desc">Delivery lead-time estimation, city routing, and shipment tracking.</p>
+        </div>
+      </div>
+
     </div>
   );
 }
