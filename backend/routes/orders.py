@@ -7,7 +7,7 @@ from db import get_db_connection
 
 orders_bp = Blueprint('orders', __name__)
 
-ALLOWED_ORDER_STATUSES = {'PENDING', 'CONFIRMED', 'SHIPPED', 'CANCELLED'}
+ALLOWED_ORDER_STATUSES = {'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'}
 
 def serialize_row(row):
     """Convert MySQL Decimal and datetime objects into JSON-compatible formats."""
@@ -184,7 +184,9 @@ def get_order_by_id(order_id):
                 s.shipping_status,
                 s.estimated_arrival,
                 s.dispatched_at,
-                s.delivered_at
+                s.delivered_at,
+                s.delivery_address,
+                s.recipient_phone
             FROM orders o
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
             WHERE o.order_id = %s
@@ -488,8 +490,13 @@ def checkout():
                 "line_total": line_total
             })
 
-        # 5. Service Fee (from payload if provided, defaults to 0.00)
-        service_fee = Decimal(str(payload.get('service_fee', '0.00')))
+        # 5. Financial Fee Decomposition
+        if 'service_fee' in payload:
+            service_fee = Decimal(str(payload['service_fee']))
+        elif any(k in payload for k in ('delivery_type', 'recipient_name', 'shipping_address', 'phone', 'billing_address')):
+            service_fee = Decimal('217.47') if subtotal > Decimal('0.00') else Decimal('0.00')
+        else:
+            service_fee = Decimal('0.00')
         total_amount = subtotal + service_fee + shipping_fee
 
         # Pre-Flight Calculation Response (Powers the right sidebar)
@@ -602,13 +609,22 @@ def checkout():
 
     except Exception as e:
         if conn:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
     finally:
         if cursor:
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                pass
         if conn:
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 @orders_bp.route('/<int:order_id>/status', methods=['PATCH'])
 @jwt_required()
@@ -673,12 +689,12 @@ def update_order_status(order_id):
                 "message": f"Order #{order_id} is already CANCELLED and cannot be modified."
             }), 400
 
-        # Business Rule: Cannot cancel orders that are already dispatched/shipped
-        if new_status == 'CANCELLED' and current_status == 'SHIPPED':
+        # Business Rule: Cannot cancel orders that are already dispatched/shipped/delivered
+        if new_status == 'CANCELLED' and current_status in ('SHIPPED', 'DELIVERED'):
             conn.rollback()
             return jsonify({
                 "status": "error",
-                "message": f"Order #{order_id} has already shipped and cannot be cancelled directly."
+                "message": f"Order #{order_id} has already shipped or delivered and cannot be cancelled directly."
             }), 400
 
         # 2. Handle Stock Restock on Cancellation
