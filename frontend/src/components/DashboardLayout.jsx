@@ -80,6 +80,19 @@ export default function DashboardLayout() {
 
   return (
     <div className="storefront-app">
+      {/* SimplyTek Top Announcement Bar */}
+      <div className="simplytek-announcement-bar">
+        <div className="announcement-inner">
+          <span className="announcement-pill">🚚 Islandwide Delivery</span>
+          <span className="announcement-text">
+            Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
+          </span>
+          <Link to="/catalog" className="announcement-link">
+            Shop Tech Deals &rarr;
+          </Link>
+        </div>
+      </div>
+
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
         <div className="navbar-inner">
@@ -115,6 +128,9 @@ export default function DashboardLayout() {
             </NavLink>
             <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Orders
+            </NavLink>
+            <NavLink to="/payment" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              Payment
             </NavLink>
             <NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Logistics

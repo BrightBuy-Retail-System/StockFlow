@@ -1,0 +1,76 @@
+-- Logistics & Warehouses Module
+
+
+CREATE TABLE IF NOT EXISTS texas_cities (
+    city_id              INT AUTO_INCREMENT PRIMARY KEY,
+    city_name            VARCHAR(100) NOT NULL UNIQUE,
+    hub_name             VARCHAR(100) NOT NULL,
+    base_lead_time_days  INT NOT NULL DEFAULT 2,
+    shipping_fee         DECIMAL(8,2) NOT NULL DEFAULT 0.00
+);
+
+CREATE TABLE IF NOT EXISTS shipments (
+    shipment_id          INT AUTO_INCREMENT PRIMARY KEY,
+    tracking_number      VARCHAR(64) NOT NULL UNIQUE,
+    destination_city_id  INT NOT NULL,
+    shipping_status      ENUM('PENDING','DISPATCHED','IN_TRANSIT','DELIVERED') DEFAULT 'PENDING',
+    estimated_arrival    DATE,
+    dispatched_at        TIMESTAMP NULL,
+    delivered_at         TIMESTAMP NULL,
+    FOREIGN KEY (destination_city_id) REFERENCES texas_cities(city_id)
+);
+
+-- Stored Function: fn_calculate_delivery_days
+-- product variant shipping to a given Texas city.
+-- Rule:
+--   total_days = city.base_lead_time_days
+--              + (3 day penalty if the variant's stock_quantity = 0)
+DELIMITER $$
+
+CREATE FUNCTION fn_calculate_delivery_days(
+    p_city_id INT,
+    p_variant_id INT
+)
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_base_days INT DEFAULT 2;
+    DECLARE v_stock INT DEFAULT 0;
+    DECLARE v_penalty INT DEFAULT 0;
+
+    SELECT base_lead_time_days INTO v_base_days
+    FROM texas_cities
+    WHERE city_id = p_city_id;
+
+    SELECT IFNULL(stock_quantity, 0) INTO v_stock
+    FROM inventory
+    WHERE variant_id = p_variant_id;
+
+    IF v_stock <= 0 THEN
+        SET v_penalty = 3;
+    ELSE
+        SET v_penalty = 0;
+    END IF;
+
+    RETURN IFNULL(v_base_days, 2) + v_penalty;
+END$$
+
+DELIMITER ;
+
+-- Trigger: trg_shipment_status_timestamp
+DELIMITER $$
+
+CREATE TRIGGER trg_shipment_status_timestamp
+BEFORE UPDATE ON shipments
+FOR EACH ROW
+BEGIN
+    IF NEW.shipping_status = 'DISPATCHED' AND OLD.shipping_status != 'DISPATCHED' THEN
+        SET NEW.dispatched_at = CURRENT_TIMESTAMP;
+    END IF;
+    IF NEW.shipping_status = 'DELIVERED' AND OLD.shipping_status != 'DELIVERED' THEN
+        SET NEW.delivered_at = CURRENT_TIMESTAMP;
+    END IF;
+END$$
+
+DELIMITER ;
