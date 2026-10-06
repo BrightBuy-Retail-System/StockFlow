@@ -1,13 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import { 
-  AnalyticsIcon, 
-  OrdersIcon, 
-  LogisticsIcon, 
-  LayersIcon, 
-  DatabaseIcon, 
-  SearchIcon 
+import {
+  AnalyticsIcon,
+  OrdersIcon,
+  LogisticsIcon,
+  LayersIcon,
+  DatabaseIcon,
+  SearchIcon,
+  UserIcon,
+  ShieldCheckIcon,
+  CheckCircleIcon
 } from '../components/Icons';
 
 export default function ManagerDashboard() {
@@ -24,9 +27,26 @@ export default function ManagerDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
   // UI Tabs & Filters
-  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'analytics' | 'evaluation'
+  const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'analytics' | 'evaluation' | 'staff'
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState('ALL'); // 'ALL' | 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'CANCELLED'
+
+  // Staff Management State
+  const [staffList, setStaffList] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('ALL'); // 'ALL' | '2' | '3'
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [staffForm, setStaffForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role_id: 2, // 2: Manager, 3: System Administrator
+  });
+  const [staffFormSubmitting, setStaffFormSubmitting] = useState(false);
+  const [staffFormError, setStaffFormError] = useState('');
+  const [staffFormSuccess, setStaffFormSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Authentication check
   useEffect(() => {
@@ -62,9 +82,87 @@ export default function ManagerDashboard() {
     }
   };
 
+  // Fetch Internal Staff Roster
+  const fetchStaffMembers = async () => {
+    try {
+      setLoadingStaff(true);
+      const res = await api.get('/auth_cart/staff');
+      setStaffList(res.data?.staff || []);
+    } catch (err) {
+      console.error('Failed to load staff list:', err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
   useEffect(() => {
     fetchExecutiveData();
+    fetchStaffMembers();
   }, []);
+
+  // Quick Random Password Generator
+  const generateRandomPassword = () => {
+    const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let generated = 'Stf!';
+    for (let i = 0; i < 8; i++) {
+      generated += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    setStaffForm((prev) => ({ ...prev, password: generated }));
+    setShowPassword(true);
+  };
+
+  // Handle Staff Registration
+  const handleRegisterStaff = async (e) => {
+    e.preventDefault();
+    setStaffFormSubmitting(true);
+    setStaffFormError('');
+    setStaffFormSuccess('');
+
+    try {
+      const res = await api.post('/auth_cart/staff/register', {
+        username: staffForm.username.trim(),
+        email: staffForm.email.trim(),
+        password: staffForm.password,
+        role_id: Number(staffForm.role_id),
+      });
+
+      const roleTitle = Number(staffForm.role_id) === 3 ? 'System Administrator' : 'Store Executive & Manager';
+      setStaffFormSuccess(`Successfully registered ${staffForm.username} as ${roleTitle}!`);
+
+      await fetchStaffMembers();
+
+      // Reset form fields
+      setStaffForm({
+        username: '',
+        email: '',
+        password: '',
+        role_id: 2,
+      });
+      setShowPassword(false);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Staff registration failed.';
+      setStaffFormError(msg);
+    } finally {
+      setStaffFormSubmitting(false);
+    }
+  };
+
+  // Filtered Staff Roster
+  const filteredStaff = useMemo(() => {
+    return staffList.filter((member) => {
+      const q = staffSearch.toLowerCase();
+      const matchesSearch =
+        !q ||
+        (member.full_name && member.full_name.toLowerCase().includes(q)) ||
+        (member.email && member.email.toLowerCase().includes(q)) ||
+        String(member.user_id).includes(q);
+
+      const matchesRole =
+        staffRoleFilter === 'ALL' || String(member.role_id) === String(staffRoleFilter);
+
+      return matchesSearch && matchesRole;
+    });
+  }, [staffList, staffSearch, staffRoleFilter]);
 
   // Filtered Fulfillment Pipeline
   const filteredPipeline = useMemo(() => {
@@ -89,7 +187,7 @@ export default function ManagerDashboard() {
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
+
       {/* Executive Command Header */}
       <div
         className="card"
@@ -145,12 +243,42 @@ export default function ManagerDashboard() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setStaffFormError('');
+              setStaffFormSuccess('');
+              setIsRegisterModalOpen(true);
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            <span style={{ fontSize: '1.1rem', lineHeight: '1' }}>+</span> Onboard Staff Member
+          </button>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             Synced: {lastRefreshed.toLocaleTimeString()}
           </span>
           <button
             type="button"
-            onClick={fetchExecutiveData}
+            onClick={() => {
+              fetchExecutiveData();
+              fetchStaffMembers();
+            }}
             disabled={refreshing}
             style={{
               padding: '8px 16px',
@@ -170,12 +298,12 @@ export default function ManagerDashboard() {
 
       {/* High-Level Store Performance Evaluation (Executive KPI Cards) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        
+
         {/* KPI 1: Gross Store Revenue */}
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Gross Merchandise Value (GMV)</span>
-            <AnalyticsIcon style={{ width: '20px', height: '20px', color: '#10b981' }} />
+            <AnalyticsIcon style={{ width: '10px', height: '10px', color: '#10b981' }} />
           </div>
           <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#10b981' }}>
             ${Number(summary.gross_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -280,6 +408,38 @@ export default function ManagerDashboard() {
         >
           📋 Store Health &amp; Executive Assessment
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('staff')}
+          style={{
+            padding: '10px 18px',
+            border: 'none',
+            background: 'transparent',
+            borderBottom: activeTab === 'staff' ? '2px solid var(--accent, #6366f1)' : '2px solid transparent',
+            color: activeTab === 'staff' ? 'var(--accent, #6366f1)' : 'var(--text-muted)',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>👥 Staff &amp; Access Management</span>
+          <span
+            style={{
+              fontSize: '0.72rem',
+              padding: '1px 8px',
+              borderRadius: '999px',
+              background: activeTab === 'staff' ? 'var(--accent, #6366f1)' : 'var(--bg-subtle)',
+              color: activeTab === 'staff' ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 700,
+            }}
+          >
+            {staffList.length}
+          </span>
+        </button>
       </div>
 
       {/* -------------------------------------------------------------
@@ -287,7 +447,7 @@ export default function ManagerDashboard() {
       -------------------------------------------------------------- */}
       {activeTab === 'pipeline' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
           {/* Pipeline Stage Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
             <div
@@ -578,7 +738,7 @@ export default function ManagerDashboard() {
       -------------------------------------------------------------- */}
       {activeTab === 'analytics' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '20px' }}>
-          
+
           {/* Top Selling Products Report */}
           <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
@@ -696,7 +856,7 @@ export default function ManagerDashboard() {
       -------------------------------------------------------------- */}
       {activeTab === 'evaluation' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-          
+
           <div className="card" style={{ padding: '24px' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 12px 0' }}>
               Financial &amp; Revenue Evaluation
@@ -776,6 +936,721 @@ export default function ManagerDashboard() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------
+          TAB 4: STAFF & ACCESS MANAGEMENT (Onboard New Staff)
+      -------------------------------------------------------------- */}
+      {activeTab === 'staff' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          {/* Quick Staff KPI Metrics Banner */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px' }}>
+            
+            <div className="card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                <UserIcon style={{ width: '24px', height: '24px' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Staff Roster</div>
+                <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: '1.2' }}>
+                  {staffList.length} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#10b981' }}>Active</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669' }}>
+                <AnalyticsIcon style={{ width: '22px', height: '22px' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Store Managers (Role 2)</div>
+                <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#059669', lineHeight: '1.2' }}>
+                  {staffList.filter((s) => s.role_id === 2).length}
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c3aed' }}>
+                <ShieldCheckIcon style={{ width: '24px', height: '24px' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>System Admins (Role 3)</div>
+                <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#7c3aed', lineHeight: '1.2' }}>
+                  {staffList.filter((s) => s.role_id === 3).length}
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                <CheckCircleIcon style={{ width: '24px', height: '24px' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Access Governance</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#b45309', marginTop: '4px' }}>
+                  RBAC Multi-Tier Secured
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Directory Action & Filter Bar */}
+          <div className="card" style={{ padding: '16px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              
+              {/* Search Box */}
+              <div style={{ position: 'relative', flex: '1', minWidth: '260px', maxWidth: '420px' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                  <SearchIcon />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search staff by full name, email, or ID..."
+                  value={staffSearch}
+                  onChange={(e) => setStaffSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px 9px 38px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Role Filter Pills */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {[
+                  { id: 'ALL', label: 'All Roles' },
+                  { id: '2', label: 'Managers (Role 2)' },
+                  { id: '3', label: 'System Admins (Role 3)' },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    type="button"
+                    onClick={() => setStaffRoleFilter(pill.id)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: staffRoleFilter === pill.id ? '1px solid var(--accent, #6366f1)' : '1px solid var(--border-color)',
+                      background: staffRoleFilter === pill.id ? 'var(--accent-light, #e0e7ff)' : 'transparent',
+                      color: staffRoleFilter === pill.id ? 'var(--accent, #6366f1)' : 'var(--text-muted)',
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Primary Action Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStaffFormError('');
+                  setStaffFormSuccess('');
+                  setIsRegisterModalOpen(true);
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
+                }}
+              >
+                <span style={{ fontSize: '1.2rem', lineHeight: '1' }}>+</span> Onboard New Staff Member
+              </button>
+
+            </div>
+          </div>
+
+          {/* Staff Roster Table */}
+          <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+                  Internal Staff Directory ({filteredStaff.length})
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Verified personnel with operational or technical credentials.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchStaffMembers}
+                disabled={loadingStaff}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {loadingStaff ? 'Loading...' : '↻ Refresh Roster'}
+              </button>
+            </div>
+
+            {loadingStaff ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Loading verified staff personnel...
+              </div>
+            ) : filteredStaff.length === 0 ? (
+              <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto' }}>
+                  <UserIcon style={{ width: '28px', height: '28px' }} />
+                </div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '1.05rem' }}>No Staff Members Found</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 16px 0' }}>
+                  {staffSearch ? `No staff matched "${staffSearch}".` : 'No staff personnel registered under this filter.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStaffSearch('');
+                    setStaffRoleFilter('ALL');
+                    setIsRegisterModalOpen(true);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'var(--accent, #6366f1)',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  + Onboard New Staff Member
+                </button>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      <th style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)' }}>Staff Personnel</th>
+                      <th style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)' }}>Official Email</th>
+                      <th style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)' }}>Assigned Role</th>
+                      <th style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)' }}>Access Scope</th>
+                      <th style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)' }}>Account Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStaff.map((member) => {
+                      const isCurrentUser = user && (member.user_id === user.id || member.email === user.email);
+                      const isSystemAdmin = member.role_id === 3;
+                      const initials = (member.full_name || 'Staff')
+                        .split(' ')
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
+
+                      return (
+                        <tr
+                          key={member.user_id}
+                          style={{
+                            borderBottom: '1px solid var(--border-color)',
+                            background: isCurrentUser ? 'rgba(99, 102, 241, 0.03)' : 'transparent',
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          {/* Name & Avatar */}
+                          <td style={{ padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '10px',
+                                  background: isSystemAdmin
+                                    ? 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)'
+                                    : 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                                  color: '#ffffff',
+                                  fontWeight: 700,
+                                  fontSize: '0.85rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                }}
+                              >
+                                {initials}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {member.full_name}
+                                  {isCurrentUser && (
+                                    <span
+                                      style={{
+                                        fontSize: '0.68rem',
+                                        padding: '1px 6px',
+                                        borderRadius: '4px',
+                                        background: '#e0e7ff',
+                                        color: '#4338ca',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      You
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  ID: #STF-00{member.user_id}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Email */}
+                          <td style={{ padding: '14px 20px', color: 'var(--text-main)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                            {member.email}
+                          </td>
+
+                          {/* Role Badge */}
+                          <td style={{ padding: '14px 20px' }}>
+                            {isSystemAdmin ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  background: '#f5f3ff',
+                                  color: '#6d28d9',
+                                  border: '1px solid #ddd6fe',
+                                }}
+                              >
+                                🛡️ System Administrator (3)
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  background: '#ecfdf5',
+                                  color: '#047857',
+                                  border: '1px solid #a7f3d0',
+                                }}
+                              >
+                                📊 Store Executive &amp; Manager (2)
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Access Scope Description */}
+                          <td style={{ padding: '14px 20px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {isSystemAdmin
+                              ? 'Catalog Schema, SKUs, Stock Thresholds'
+                              : 'Order Logistics, GMV Reports, Dispatch'}
+                          </td>
+
+                          {/* Status */}
+                          <td style={{ padding: '14px 20px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#047857', fontWeight: 600 }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                              Active Staff
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------
+          MODAL: ONBOARD NEW STAFF MEMBER (Managers & Admins only)
+      -------------------------------------------------------------- */}
+      {isRegisterModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsRegisterModalOpen(false);
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              padding: '28px',
+              background: '#ffffff',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    background: 'var(--accent-light, #e0e7ff)',
+                    color: 'var(--accent, #6366f1)',
+                  }}
+                >
+                  🔒 Executive Access Delegator
+                </span>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: '6px 0 2px 0', color: 'var(--text-main)' }}>
+                  Onboard New Staff Member
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Grant operational or administrative access credentials to a verified team member.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsRegisterModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  lineHeight: '1',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Notification Alerts */}
+            {staffFormError && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '0.85rem',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>⚠️</span>
+                <span>{staffFormError}</span>
+              </div>
+            )}
+
+            {staffFormSuccess && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  color: '#047857',
+                  fontSize: '0.85rem',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>✓</span>
+                <span>{staffFormSuccess}</span>
+              </div>
+            )}
+
+            {/* Staff Registration Form */}
+            <form onSubmit={handleRegisterStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* 1. Interactive Role Picker Cards */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
+                  Assign Staff Operational Role
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  
+                  {/* Option: Store Manager */}
+                  <div
+                    onClick={() => setStaffForm({ ...staffForm, role_id: 2 })}
+                    style={{
+                      padding: '14px',
+                      borderRadius: '10px',
+                      border: Number(staffForm.role_id) === 2 ? '2px solid #059669' : '1.5px solid var(--border-color)',
+                      background: Number(staffForm.role_id) === 2 ? '#f0fdf4' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '1rem' }}>📊</span>
+                      <span
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          border: Number(staffForm.role_id) === 2 ? '5px solid #059669' : '2px solid var(--border-color)',
+                          background: '#ffffff',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: Number(staffForm.role_id) === 2 ? '#047857' : 'var(--text-main)' }}>
+                      Store Manager
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.3' }}>
+                      Fulfillment pipeline, Texas logistics &amp; BI reports.
+                    </div>
+                  </div>
+
+                  {/* Option: System Administrator */}
+                  <div
+                    onClick={() => setStaffForm({ ...staffForm, role_id: 3 })}
+                    style={{
+                      padding: '14px',
+                      borderRadius: '10px',
+                      border: Number(staffForm.role_id) === 3 ? '2px solid #7c3aed' : '1.5px solid var(--border-color)',
+                      background: Number(staffForm.role_id) === 3 ? '#faf5ff' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '1rem' }}>🛡️</span>
+                      <span
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          border: Number(staffForm.role_id) === 3 ? '5px solid #7c3aed' : '2px solid var(--border-color)',
+                          background: '#ffffff',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: Number(staffForm.role_id) === 3 ? '#6d28d9' : 'var(--text-main)' }}>
+                      System Admin
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.3' }}>
+                      Database, SKU creation &amp; stock management.
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* 2. Full Name / Username */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Full Name / Staff Username <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                    <UserIcon style={{ width: '16px', height: '16px' }} />
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kasun Fernando"
+                    value={staffForm.username}
+                    onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Official Corporate Email */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Official Email Address <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                    ✉️
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    placeholder="staff.name@brightbuy.lk"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 4. Password with Generator */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    Initial Access Password <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateRandomPassword}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      color: 'var(--accent, #6366f1)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    🎲 Generate Secure Password
+                  </button>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                    🔑
+                  </span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter password or click Generate"
+                    value={staffForm.password}
+                    onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 70px 10px 38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      fontFamily: showPassword ? 'monospace' : 'inherit',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  The staff member can use either their username or email together with this password to log in.
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterModalOpen(false)}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={staffFormSubmitting}
+                  style={{
+                    padding: '9px 22px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: Number(staffForm.role_id) === 3
+                      ? 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)'
+                      : 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  {staffFormSubmitting ? 'Registering Staff...' : 'Onboard Staff Member'}
+                </button>
+              </div>
+
+            </form>
+
+          </div>
         </div>
       )}
 

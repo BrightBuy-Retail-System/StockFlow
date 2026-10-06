@@ -3,7 +3,7 @@
    Aesthetic: Linear / Stripe / Vercel modern light storefront
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Open+Sans:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg-app: #f8fafc;
@@ -1481,3 +1481,1467 @@ body {
     gap: 20px;
   }
 }
+
+/* ==========================================================================
+   SimplyTek Sri Lanka E-Commerce Design System & Storefront Theme
+   Aesthetic: Premium Gadget Storefront (SimplyTek.lk visual identity)
+   ========================================================================== */
+
+/* 1. Announcement Top Bar */
+.simplytek-announcement-bar {
+  background: linear-gradient(90deg, #ea580c 0%, #f79c03 50%, #f59e0b 100%);
+  color: #ffffff;
+  font-size: 0.825rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  position: relative;
+  z-index: 60;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.announcement-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  text-align: center;
+}
+
+.announcement-pill {
+  background: rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.announcement-text {
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.announcement-link {
+  color: #ffffff;
+  text-decoration: underline;
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: opacity 0.2s ease;
+}
+.announcement-link:hover {
+  opacity: 0.85;
+}
+
+/* 2. SimplyTek Hero Carousel / Slider */
+.st-hero-slider {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  margin-bottom: 36px;
+}
+
+.st-slide {
+  display: none;
+  min-height: 440px;
+  padding: 44px 56px;
+  position: relative;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.st-slide.active {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 36px;
+  animation: stFadeIn 0.5s ease-out;
+}
+
+@keyframes stFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.st-slide-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.st-badge-fire {
+  background: #fef2f2;
+  color: #c62a32;
+  border: 1px solid #fecaca;
+}
+
+.st-badge-new {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.st-badge-gold {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.st-slide-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #1a1c1d;
+  margin-bottom: 12px;
+}
+
+.st-slide-subtitle {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #475569;
+  margin-bottom: 20px;
+  max-width: 520px;
+}
+
+.st-slide-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.st-spec-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.st-slide-pricing {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.st-price-current {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #4963c5;
+}
+
+.st-price-original {
+  font-size: 1.15rem;
+  color: #94a3b8;
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+.st-price-save {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #c62a32;
+  background: #fef2f2;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.st-slide-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.st-btn-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #4963c5;
+  color: #ffffff;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(73, 99, 197, 0.35);
+  transition: all 0.2s ease;
+}
+.st-btn-pill-primary:hover {
+  background: #3952b2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(73, 99, 197, 0.45);
+}
+
+.st-btn-pill-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.st-btn-pill-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+/* Slider Controls */
+.st-slider-arrows {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.st-arrow-btn {
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+.st-arrow-btn:hover {
+  background: #ffffff;
+  color: #4963c5;
+  transform: scale(1.08);
+}
+
+.st-slider-dots {
+  position: absolute;
+  bottom: 20px;
+  left: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.st-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.st-dot.active {
+  width: 28px;
+  background: #4963c5;
+}
+
+/* Slide Right Visual Preview */
+.st-slide-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.st-visual-glow {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(73, 99, 197, 0.18) 0%, rgba(247, 156, 3, 0.1) 50%, transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.st-gadget-card {
+  position: relative;
+  z-index: 2;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+.st-gadget-card:hover {
+  transform: translateY(-4px);
+}
+
+.st-gadget-img-box {
+  width: 100%;
+  height: 200px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+}
+
+.st-float-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #c62a32;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+/* 3. SimplyTek Perks / Trust Badges (4 Columns) */
+.st-perks-section {
+  margin-bottom: 48px;
+}
+
+.st-perks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.st-perk-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+}
+.st-perk-card:hover {
+  border-color: #bfdbfe;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+}
+
+.st-perk-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #4963c5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.st-perk-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.st-perk-desc {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+/* 4. Shop by Popular Categories (Circular Icons & Pill Cards) */
+.st-categories-section {
+  margin-bottom: 56px;
+}
+
+.st-section-title-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.st-section-heading {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #1a1c1d;
+  letter-spacing: -0.02em;
+}
+
+.st-section-subheading {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.st-view-all-link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #4963c5;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.2s ease;
+}
+.st-view-all-link:hover {
+  transform: translateX(3px);
+  text-decoration: underline;
+}
+
+.st-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 16px;
+}
+
+.st-cat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.st-cat-card:hover {
+  border-color: #4963c5;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(73, 99, 197, 0.12);
+}
+
+.st-cat-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4963c5;
+  margin-bottom: 12px;
+  transition: all 0.25s ease;
+  border: 2px solid transparent;
+}
+.st-cat-card:hover .st-cat-circle {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #bfdbfe;
+  transform: scale(1.08);
+}
+
+.st-cat-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.25;
+}
+
+.st-cat-count {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* 5. SimplyTek Flash Deals Section with Countdown */
+.st-flash-deals-box {
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 40%);
+  border: 2px solid #fde68a;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 56px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.08);
+}
+
+.st-flash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.st-flash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #c62a32;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.st-flash-countdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-countdown-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #b45309;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.st-timer-box {
+  background: #1a1c1d;
+  color: #ffffff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 34px;
+  text-align: center;
+}
+
+.st-timer-divider {
+  font-weight: 800;
+  color: #1a1c1d;
+}
+
+/* SimplyTek Product Grid & Card */
+.st-products-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.st-product-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+.st-product-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+}
+
+.st-card-badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 5;
+}
+
+.st-badge-discount {
+  background: #c62a32;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.st-badge-bestseller {
+  background: #279a4b;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.st-card-img-wrap {
+  width: 100%;
+  height: 180px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.st-card-cat-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.st-card-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.35;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 2.7em;
+}
+
+.st-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.775rem;
+  color: #ffaa47;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.st-card-rating-count {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.st-card-stock-bar {
+  margin-bottom: 12px;
+}
+
+.st-stock-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #c62a32;
+  margin-bottom: 4px;
+}
+
+.st-stock-progress {
+  width: 100%;
+  height: 5px;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.st-stock-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ea580c 0%, #ef4444 100%);
+  border-radius: 9999px;
+}
+
+.st-card-pricing-row {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.st-card-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1a1c1d;
+}
+
+.st-card-mrp {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.st-card-add-btn {
+  width: 100%;
+  background: #4963c5;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 25px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(73, 99, 197, 0.25);
+}
+.st-card-add-btn:hover {
+  background: #3952b2;
+  box-shadow: 0 5px 15px rgba(73, 99, 197, 0.35);
+  transform: translateY(-1px);
+}
+.st-card-add-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 6. Dual Promotional Split Banners */
+.st-split-banners-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 56px;
+}
+
+.st-banner-card {
+  border-radius: 20px;
+  padding: 36px 40px;
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 240px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease;
+}
+.st-banner-card:hover {
+  transform: translateY(-3px);
+}
+
+.st-banner-blue {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+}
+
+.st-banner-purple {
+  background: linear-gradient(135deg, #312e81 0%, #6366f1 100%);
+}
+
+.st-banner-pill {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  letter-spacing: 0.04em;
+}
+
+.st-banner-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.st-banner-desc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 20px;
+  max-width: 380px;
+}
+
+.st-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 10px 22px;
+  border-radius: 25px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  width: fit-content;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+.st-banner-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+
+/* 7. Product Tabs (Best Sellers, New Arrivals) */
+.st-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+  overflow-x: auto;
+}
+
+.st-tab-btn {
+  padding: 8px 18px;
+  border-radius: 25px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.st-tab-btn:hover {
+  color: #1e293b;
+  background: #f1f5f9;
+}
+.st-tab-btn.active {
+  background: #4963c5;
+  color: #ffffff;
+  border-color: #4963c5;
+  box-shadow: 0 2px 8px rgba(73, 99, 197, 0.25);
+}
+
+/* 8. Official Brand Partners Showcase */
+.st-brands-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 28px 36px;
+  margin-bottom: 56px;
+  text-align: center;
+}
+
+.st-brands-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+.st-brands-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.st-brand-badge {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #64748b;
+  padding: 8px 18px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.st-brand-badge:hover {
+  color: #4963c5;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  transform: translateY(-2px);
+}
+
+/* 9. Verified Customer Reviews (Judge.me Widget Style) */
+.st-reviews-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 36px;
+  margin-bottom: 56px;
+}
+
+.st-reviews-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.st-reviews-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.st-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.st-review-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+.st-review-card:hover {
+  background: #ffffff;
+  border-color: #bfdbfe;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.st-rev-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ffaa47;
+  margin-bottom: 12px;
+}
+
+.st-rev-text {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #334155;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.st-rev-author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.st-rev-author-name {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.st-rev-verified-tag {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.st-rev-product-tag {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* 10. SimplyTek VIP Club Newsletter Banner */
+.st-newsletter-box {
+  background: linear-gradient(135deg, #1e222d 0%, #2c3242 100%);
+  color: #ffffff;
+  border-radius: 20px;
+  padding: 44px 48px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+  gap: 36px;
+  margin-bottom: 56px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15);
+}
+
+.st-news-heading {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.st-news-desc {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.st-news-form {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+
+.st-news-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.st-news-input {
+  flex-grow: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 25px;
+  padding: 12px 20px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.st-news-input:focus {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: #4963c5;
+}
+.st-news-input::placeholder {
+  color: #94a3b8;
+}
+
+.st-news-btn {
+  background: #f79c03;
+  color: #ffffff;
+  padding: 12px 26px;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.st-news-btn:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+}
+
+.st-news-subtext {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* 11. Toast Feedback Component */
+.st-toast-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.st-toast {
+  pointer-events: auto;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: stSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 360px;
+}
+
+@keyframes stSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.st-toast-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.st-toast-content {
+  flex-grow: 1;
+}
+
+.st-toast-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.st-toast-msg {
+  font-size: 0.775rem;
+  color: #cbd5e1;
+}
+
+.st-toast-link {
+  color: #60a5fa;
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .st-slide.active {
+    grid-template-columns: 1fr;
+    padding: 32px 28px;
+  }
+  .st-perks-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .st-categories-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .st-products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .st-split-banners-grid {
+    grid-template-columns: 1fr;
+  }
+  .st-reviews-grid {
+    grid-template-columns: 1fr;
+  }
+  .st-newsletter-box {
+    grid-template-columns: 1fr;
+    padding: 32px 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .st-categories-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .st-products-grid {
+    grid-template-columns: 1fr;
+  }
+  .st-perks-grid {
+    grid-template-columns: 1fr;
+  }
+  .st-slide-title {
+    font-size: 2rem;
+  }
+  .st-slider-dots {
+    left: 20px;
+  }
+}
+
+/* ==========================================================================
+   SimplyTek Customer Auth Pages (Login & Register)
+   ========================================================================== */
+.st-auth-page-wrapper {
+  min-height: calc(100vh - 220px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+.st-auth-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 10px 35px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.st-auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #ea580c 0%, #f79c03 50%, #4963c5 100%);
+}
+
+.st-auth-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.st-auth-logo-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: #eff6ff;
+  color: #4963c5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(73, 99, 197, 0.15);
+}
+
+.st-auth-title {
+  font-family: 'Open Sans', 'Poppins', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #1a1c1d;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.st-auth-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.st-auth-alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.st-auth-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.st-auth-alert-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.st-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.st-auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.st-auth-label {
+  font-size: 0.775rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.st-auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.st-auth-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-auth-input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 0.925rem;
+  color: #0f172a;
+  outline: none;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.st-auth-input:focus {
+  background: #ffffff;
+  border-color: #4963c5;
+  box-shadow: 0 0 0 3px rgba(73, 99, 197, 0.15);
+}
+
+.st-auth-input::placeholder {
+  color: #94a3b8;
+}
+
+.st-auth-submit-btn {
+  width: 100%;
+  background: #4963c5;
+  color: #ffffff;
+  padding: 13px 24px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(73, 99, 197, 0.35);
+  transition: all 0.2s ease;
+  margin-top: 6px;
+}
+
+.st-auth-submit-btn:hover:not(:disabled) {
+  background: #3952b2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(73, 99, 197, 0.45);
+}
+
+.st-auth-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.st-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 20px;
+  color: #94a3b8;
+  font-size: 0.775rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.st-auth-divider::before,
+.st-auth-divider::after {
+  content: '';
+  flex-grow: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.st-auth-switch-box {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.st-auth-switch-link {
+  color: #4963c5;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 6px;
+  transition: color 0.2s ease;
+}
+
+.st-auth-switch-link:hover {
+  color: #3952b2;
+}
+
+.st-auth-perks-row {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+}
+
+.st-auth-perk-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.st-auth-perk-icon {
+  color: #4963c5;
+}
+
+.st-auth-perk-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
