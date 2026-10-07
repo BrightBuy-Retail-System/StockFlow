@@ -35,9 +35,10 @@ export default function PaymentPage() {
 
   // Quick preset orders for easy testing and viva demonstration
   const presetOrders = [
-    { id: 1, label: 'Apex Pro Terminal', amount: 1299.00, city: 'Dallas Hub' },
-    { id: 2, label: 'Enterprise Server Node', amount: 3450.00, city: 'Houston Hub' },
-    { id: 3, label: 'Logistics Scanner SKU', amount: 289.50, city: 'Austin Hub' },
+    { id: 90002, label: 'Customer Order #90002 (Test Customer)', amount: 1304.98, city: 'Dallas Hub' },
+    { id: 150006, label: 'Customer Order #150006 (Test Customer)', amount: 1304.98, city: 'Houston Hub' },
+    { id: 1, label: 'Platform Order #1', amount: 1299.00, city: 'Dallas Hub' },
+    { id: 2, label: 'Platform Order #2', amount: 3450.00, city: 'Houston Hub' },
   ];
 
   const handlePresetSelect = (preset) => {

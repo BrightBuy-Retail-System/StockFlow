@@ -923,10 +923,22 @@ body {
 .footer-brand-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
+  gap: 10px;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
+}
+
+.footer-brand-title svg,
+.footer-brand-title .brand-logo-icon {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  flex-shrink: 0;
+  color: var(--primary);
 }
 
 .footer-brand-desc {
@@ -1445,3 +1457,24 @@ body {
     gap: 20px;
   }
 }
+
+/* Global SVG & Icon Utility Classes */
+svg.w-3, .w-3 { width: 12px !important; height: 12px !important; }
+svg.w-3\.5, .w-3\.5 { width: 14px !important; height: 14px !important; }
+svg.w-4, .w-4 { width: 16px !important; height: 16px !important; }
+svg.w-5, .w-5 { width: 20px !important; height: 20px !important; }
+svg.w-6, .w-6 { width: 24px !important; height: 24px !important; }
+svg.w-8, .w-8 { width: 32px !important; height: 32px !important; }
+svg.w-10, .w-10 { width: 40px !important; height: 40px !important; }
+svg.w-12, .w-12 { width: 48px !important; height: 48px !important; }
+
+.h-3 { height: 12px !important; }
+.h-4 { height: 16px !important; }
+.h-5 { height: 20px !important; }
+.h-6 { height: 24px !important; }
+.h-8 { height: 32px !important; }
+.h-10 { height: 40px !important; }
+.h-12 { height: 48px !important; }
+
+.mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.text-success { color: var(--success) !important; }
