@@ -4,7 +4,6 @@ import api from '../api/client';
 import {
   ShieldCheckIcon,
   CheckCircleIcon,
-  SparklesIcon,
   ArrowRightIcon,
 } from '../components/Icons';
 
@@ -36,9 +35,10 @@ export default function PaymentPage() {
 
   // Quick preset orders for easy testing and viva demonstration
   const presetOrders = [
-    { id: 1, label: 'Apex Pro Terminal', amount: 1299.00, city: 'Dallas Hub' },
-    { id: 2, label: 'Enterprise Server Node', amount: 3450.00, city: 'Houston Hub' },
-    { id: 3, label: 'Logistics Scanner SKU', amount: 289.50, city: 'Austin Hub' },
+    { id: 90002, label: 'Customer Order #90002 (Test Customer)', amount: 1304.98, city: 'Dallas Hub' },
+    { id: 150006, label: 'Customer Order #150006 (Test Customer)', amount: 1304.98, city: 'Houston Hub' },
+    { id: 1, label: 'Platform Order #1', amount: 1299.00, city: 'Dallas Hub' },
+    { id: 2, label: 'Platform Order #2', amount: 3450.00, city: 'Houston Hub' },
   ];
 
   const handlePresetSelect = (preset) => {
@@ -86,10 +86,6 @@ export default function PaymentPage() {
     <div style={{ maxWidth: '1040px', margin: '0 auto', padding: '24px 16px' }}>
       {/* Page Header */}
       <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--primary-light)', border: '1px solid var(--primary-border)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)', marginBottom: '8px' }}>
-          <SparklesIcon className="w-3.5 h-3.5" />
-          <span>Member 5 · Phase 3 Transaction Engine</span>
-        </div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
           Checkout & Secure Settlement
         </h1>
