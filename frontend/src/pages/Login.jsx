@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -34,7 +35,7 @@ export default function LoginPage() {
           throw new Error(axiosErr.response.data.message || 'Invalid email or password.');
         }
         // Fallback to direct fetch if network/proxy issue
-        const response = await fetch('http://localhost:5000/api/auth_cart/login', {
+        const response = await fetch(`${baseUrl}/api/auth_cart/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: usernameOrEmail, username: usernameOrEmail, password }),
