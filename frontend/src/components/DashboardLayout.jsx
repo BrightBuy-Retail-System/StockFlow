@@ -66,11 +66,18 @@ export default function DashboardLayout() {
     return '/customer-dashboard';
   };
 
+  const getDashboardName = () => {
+    if (!user) return 'My Dashboard';
+    if (user.role_id === 2) return 'Manager Operations Hub';
+    if (user.role_id === 3) return 'Administrator Console';
+    return 'Customer Dashboard';
+  };
+
   const getRoleLabel = () => {
     if (!user) return '';
-    if (user.role_id === 2) return 'Store Executive & Manager';
-    if (user.role_id === 3) return 'System Administrator';
-    return 'Customer Account';
+    if (user.role_id === 2) return 'Store Manager (Role 2)';
+    if (user.role_id === 3) return 'Administrator (Role 3)';
+    return 'Customer Account (Role 1)';
   };
 
   useEffect(() => {
@@ -161,6 +168,16 @@ export default function DashboardLayout() {
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent', }}>
                   <UserIcon className="btn-icon" />
                   <span>{user.username || user.full_name}</span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
+                    color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
+                  }}>
+                    {user.role_id === 1 ? 'Customer' : user.role_id === 2 ? 'Manager' : 'Admin'}
+                  </span>
                   <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{dropdownOpen ? '▲' : '▼'}</span>
                 </button>
 
@@ -170,7 +187,7 @@ export default function DashboardLayout() {
                       position: 'absolute',
                       right: 0,
                       top: 'calc(100% + 8px)',
-                      minWidth: '200px',
+                      minWidth: '220px',
                       background: 'var(--bg-card, #1e222d)',
                       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
                       borderRadius: '10px',
@@ -194,7 +211,7 @@ export default function DashboardLayout() {
                       onClick={() => setDropdownOpen(false)}
                     >
                       <UserIcon className="btn-icon" />
-                      My Dashboard
+                      {getDashboardName()}
                     </Link>
 
                     <Link
@@ -278,7 +295,7 @@ export default function DashboardLayout() {
         <div className="footer-inner">
           <div className="footer-col-brand">
             <div className="footer-brand-title">
-              <ShoppingBagIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+              <ShoppingBagIcon style={{ width: '22px', height: '22px', minWidth: '22px', color: 'var(--primary)', flexShrink: 0 }} />
               <span>Bright Buy Retail Systems</span>
             </div>
             <p className="footer-brand-desc">
