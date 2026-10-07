@@ -19,12 +19,36 @@ export default function AuthCartPage() {
     fetchCart();
   }, [navigate]);
 
+  const syncLocalStorage = (cartItems) => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const formatted = (cartItems || []).map((it) => ({
+        product_id: it.product_id,
+        name: it.product_name || it.name,
+        variant_id: it.variant_id,
+        sku: it.sku,
+        attribute_name: it.attribute_name,
+        attribute_value: it.attribute_value,
+        price: it.unit_price,
+        quantity: it.quantity,
+      }));
+      if (user?.user_id) {
+        localStorage.setItem(`cart_${user.user_id}`, JSON.stringify(formatted));
+      }
+      localStorage.setItem('cart', JSON.stringify(formatted));
+    } catch {
+      // ignore
+    }
+  };
+
   const fetchCart = async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
     } finally {
@@ -42,6 +66,7 @@ export default function AuthCartPage() {
       }
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update item quantity.');
     } finally {
@@ -55,6 +80,7 @@ export default function AuthCartPage() {
       await api.delete(`/auth_cart/cart/items/${cartItemId}`);
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to remove item.');
     } finally {
@@ -69,6 +95,7 @@ export default function AuthCartPage() {
       await api.delete('/auth_cart/cart/clear');
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to clear cart.');
     } finally {

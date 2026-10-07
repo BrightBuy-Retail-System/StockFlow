@@ -363,9 +363,46 @@ def update_cart_item(cart_item_id):
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
+        # Get existing cart item
+        cursor.execute(
+            "SELECT variant_id, quantity FROM cart_items WHERE cart_item_id = %s AND cart_id = %s",
+            (cart_item_id, cart_id)
+        )
+        existing = cursor.fetchone()
+        if not existing:
+            return jsonify({"message": "Cart item not found"}), 404
+
+        old_qty = int(existing['quantity'])
+        variant_id = existing['variant_id']
+        diff = quantity - old_qty
+
         if quantity <= 0:
+            # Restore all stock to inventory and delete item
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (old_qty, variant_id)
+            )
             cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
         else:
+            if diff > 0:
+                # Need more items: check stock
+                cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s FOR UPDATE", (variant_id,))
+                inv_row = cursor.fetchone()
+                curr_stock = int(inv_row['stock_quantity']) if inv_row else 0
+                if curr_stock < diff:
+                    return jsonify({"message": f"Insufficient stock. Only {curr_stock} additional unit(s) available."}), 400
+
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE variant_id = %s",
+                    (diff, variant_id)
+                )
+            elif diff < 0:
+                # Reduce items: restore surplus back to inventory
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                    (-diff, variant_id)
+                )
+
             cursor.execute(
                 "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s AND cart_id = %s",
                 (quantity, cart_item_id, cart_id)
@@ -375,6 +412,7 @@ def update_cart_item(cart_item_id):
         return jsonify({"message": "Cart item updated successfully"}), 200
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
@@ -390,11 +428,28 @@ def delete_cart_item(cart_item_id):
 
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
-        cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
-        conn.commit()
-        return jsonify({"message": "Item removed from cart"}), 200
+
+        # Get existing cart item to restore inventory
+        cursor.execute(
+            "SELECT variant_id, quantity FROM cart_items WHERE cart_item_id = %s AND cart_id = %s",
+            (cart_item_id, cart_id)
+        )
+        item = cursor.fetchone()
+
+        if item:
+            # Restore stock to inventory table
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (item['quantity'], item['variant_id'])
+            )
+            cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
+            conn.commit()
+            return jsonify({"message": "Item removed from cart and stock restored"}), 200
+        else:
+            return jsonify({"message": "Cart item not found"}), 404
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
@@ -410,13 +465,25 @@ def clear_cart():
 
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
+
+        # Fetch all items to restore stock to inventory table
+        cursor.execute("SELECT variant_id, quantity FROM cart_items WHERE cart_id = %s", (cart_id,))
+        items = cursor.fetchall()
+        for item in items:
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (item['quantity'], item['variant_id'])
+            )
+
         cursor.execute("DELETE FROM cart_items WHERE cart_id = %s", (cart_id,))
         conn.commit()
-        return jsonify({"message": "Cart cleared successfully"}), 200
+        return jsonify({"message": "Cart cleared and stock restored successfully"}), 200
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
+
 
