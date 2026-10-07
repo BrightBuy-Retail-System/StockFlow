@@ -578,12 +578,15 @@ def checkout():
         """, (order_id, payment_method, transaction_ref, total_amount, payment_status))
         payment_id = cursor.lastrowid
 
-        # 10. Clear Active Cart
-        cursor.execute("""
-            DELETE ci FROM cart_items ci
-            JOIN carts c ON ci.cart_id = c.cart_id
-            WHERE c.user_id = %s
-        """, (user_id,))
+        # 10. Clear Ordered Items from Active Cart (leaving unselected items intact)
+        ordered_variant_ids = [it['variant_id'] for it in verified_items]
+        if ordered_variant_ids:
+            format_strings = ','.join(['%s'] * len(ordered_variant_ids))
+            cursor.execute(f"""
+                DELETE ci FROM cart_items ci
+                JOIN carts c ON ci.cart_id = c.cart_id
+                WHERE c.user_id = %s AND ci.variant_id IN ({format_strings})
+            """, [user_id] + ordered_variant_ids)
 
         conn.commit()
 
