@@ -453,14 +453,16 @@ export default function OverviewPage() {
     try {
       setAddingId(product.product_id);
       await api.post('/auth_cart/cart/add', {
-        variant_id: product.product_id,
+        product_id: product.product_id,
+        variant_id: product.variant_id || product.product_id,
         quantity: quantity,
       });
       showToast('Added to Cart! 🛒', `"${product.name}" (${quantity}x) added to your shopping cart.`, 'success', '/auth-cart');
       if (quickViewProduct) setQuickViewProduct(null);
-    } catch {
-      showToast('Added to Cart! 🛒', `"${product.name}" is now in your active cart.`, 'success', '/auth-cart');
-      if (quickViewProduct) setQuickViewProduct(null);
+    } catch (err) {
+      console.error('Failed to add item to cart:', err);
+      const errorMsg = err.response?.data?.message || `Could not add "${product.name}" to cart.`;
+      showToast('Cart Notice', errorMsg, 'error');
     } finally {
       setAddingId(null);
     }

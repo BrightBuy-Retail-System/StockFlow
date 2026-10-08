@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
   const testAccounts = [
     {
@@ -65,8 +66,8 @@ export default function LoginPage() {
         if (axiosErr.response?.data?.message) {
           throw new Error(axiosErr.response.data.message);
         }
-        // Fallback to direct fetch
-        const response = await fetch('http://localhost:5000/api/auth_cart/login', {
+        // Fallback to direct fetch if network/proxy issue
+        const response = await fetch(`${baseUrl}/api/auth_cart/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailOrUser, username: emailOrUser, password: pwdToUse }),
