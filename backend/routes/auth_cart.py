@@ -310,15 +310,37 @@ def add_to_cart():
     user_id = get_jwt_identity()
     data = request.get_json() or {}
     variant_id = data.get('variant_id')
+    product_id = data.get('product_id')
     quantity = int(data.get('quantity', 1))
 
-    if not variant_id or quantity <= 0:
-        return jsonify({"message": "Valid variant_id and positive quantity are required"}), 400
+    if quantity <= 0:
+        return jsonify({"message": "Valid positive quantity is required"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
+        # If variant_id is not directly supplied but product_id is, resolve first variant of that product
+        if not variant_id and product_id:
+            cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (product_id,))
+            v_match = cursor.fetchone()
+            if v_match:
+                variant_id = v_match['variant_id']
+
+        # If variant_id is supplied, ensure it exists in product_variants.
+        # If it doesn't match a variant_id, check if caller passed product_id as variant_id.
+        if variant_id:
+            cursor.execute("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
+            if not cursor.fetchone():
+                cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (variant_id,))
+                fallback_variant = cursor.fetchone()
+                if fallback_variant:
+                    variant_id = fallback_variant['variant_id']
+                else:
+                    return jsonify({"message": f"No active product variant found for ID {variant_id}"}), 404
+        else:
+            return jsonify({"message": "Valid variant_id or product_id is required"}), 400
+
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
         # Check if this variant is already in the cart
@@ -341,7 +363,12 @@ def add_to_cart():
             )
 
         conn.commit()
-        return jsonify({"message": "Item added to cart successfully"}), 200
+        return jsonify({
+            "message": "Item added to cart successfully",
+            "cart_id": cart_id,
+            "variant_id": variant_id,
+            "quantity": quantity
+        }), 200
 
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500
