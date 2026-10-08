@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -25,28 +26,41 @@ export default function RegisterPage() {
     setIsSuccess(false);
 
     try {
-      const response = await api.post('/auth_cart/register', {
-        username: name,
-        password: password,
-        email: email
-      });
-      const data = response.data;
-
-      if (response.status === 201 || response.status === 200) {
-        if (data.access_token) {
-          localStorage.setItem('token', data.access_token);
+      let data;
+      try {
+        const res = await api.post('/auth_cart/register', {
+          username: name,
+          email: email,
+          password: password,
+        });
+        data = res.data;
+      } catch (axiosErr) {
+        if (axiosErr.response?.data) {
+          throw new Error(axiosErr.response.data.message || 'Registration failed.');
         }
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setIsSuccess(true);
-        setMessage('Registration successful! Redirecting to your dashboard...');
-
-        setTimeout(() => {
-          navigate('/customer-dashboard');
-        }, 600);
-      } else {
-        setMessage(data.message || "Invalid credentials. Please try again.");
+        const response = await fetch(`${baseUrl}/api/auth_cart/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: name, email: email, password: password }),
+        });
+        data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed. Please check your details.');
+        }
       }
 
+      if (data?.access_token) {
+        localStorage.setItem('token', data.access_token);
+      }
+      if (data?.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      setIsSuccess(true);
+      setMessage('Registration successful! Redirecting to your dashboard...');
+
+      setTimeout(() => {
+        navigate('/customer-dashboard');
+      }, 600);
     } catch (error) {
       console.error("Registration error:", error);
       setMessage(error.response?.data?.message || error.message || "An error occurred during registration. Please try again.");
