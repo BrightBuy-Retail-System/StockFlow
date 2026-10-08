@@ -512,7 +512,7 @@ export default function OverviewPage() {
     });
 
   return (
-    <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '0 24px 72px' }}>
+    <div style={{ width: '100%', margin: '0 auto', paddingBottom: '72px' }}>
       {/* ==========================================================================
           1. Hero Carousel with Live Progress Bar
           ========================================================================== */}
