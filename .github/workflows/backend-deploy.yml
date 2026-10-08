@@ -38,4 +38,4 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           npm install -g @railway/cli
-          railway redeploy --service 5037143c-2027-4c20-8153-57db693f4f8c
+          railway redeploy --service 5037143c-2027-4c20-8153-57db693f4f8c --yes
