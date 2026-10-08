@@ -16,10 +16,10 @@ export default function PaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState('card'); // 'card' or 'cod'
 
   // Simulated Card Details
-  const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8824');
-  const [cardHolder, setCardHolder] = useState('ALEXANDER WRIGHT');
-  const [expiry, setExpiry] = useState('09/28');
-  const [cvv, setCvv] = useState('742');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
 
   // UI Flow State
   const [loading, setLoading] = useState(false);
@@ -33,18 +33,34 @@ export default function PaymentPage() {
     if (qAmount) setAmount(qAmount);
   }, [searchParams]);
 
-  // Quick preset orders for easy testing and viva demonstration
-  const presetOrders = [
-    { id: 90002, label: 'Customer Order #90002 (Test Customer)', amount: 1304.98, city: 'Dallas Hub' },
-    { id: 150006, label: 'Customer Order #150006 (Test Customer)', amount: 1304.98, city: 'Houston Hub' },
-    { id: 1, label: 'Platform Order #1', amount: 1299.00, city: 'Dallas Hub' },
-    { id: 2, label: 'Platform Order #2', amount: 3450.00, city: 'Houston Hub' },
-  ];
+  // Format card number with auto 4-digit division (e.g. 1234 5678 1234 5678)
+  const handleCardNumberChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const parts = digits.match(/.{1,4}/g);
+    setCardNumber(parts ? parts.join(' ') : digits);
+  };
 
-  const handlePresetSelect = (preset) => {
-    setOrderId(String(preset.id));
-    setAmount(String(preset.amount));
-    setError(null);
+  // Format expiry date with auto slash division (MM/YY)
+  const handleExpiryChange = (e) => {
+    const raw = e.target.value;
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    if (digits.length > 2) {
+      setExpiry(`${digits.slice(0, 2)}/${digits.slice(2)}`);
+    } else if (digits.length === 2 && !raw.endsWith('/') && expiry.length < 2) {
+      setExpiry(`${digits}/`);
+    } else {
+      setExpiry(digits);
+    }
+  };
+
+  // Auto-detect brand based on card digits
+  const getCardType = () => {
+    const clean = cardNumber.replace(/\D/g, '');
+    if (clean.startsWith('4')) return 'VISA';
+    if (/^5[1-5]/.test(clean)) return 'MASTERCARD';
+    if (/^3[47]/.test(clean)) return 'AMEX';
+    if (/^6(?:011|5)/.test(clean)) return 'DISCOVER';
+    return 'VISA';
   };
 
   const handleProcessPayment = async (e) => {
@@ -173,37 +189,8 @@ export default function PaymentPage() {
           {/* Left Column: Payment Form */}
           <div className="card" style={{ padding: '28px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '16px' }}>
-              1. Select Order & Payment Mode
+              1. Order & Payment Details
             </h2>
-
-            {/* Quick Presets for Demo */}
-            <div style={{ marginBottom: '20px' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
-                Quick Presets (Viva Demonstration)
-              </span>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {presetOrders.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handlePresetSelect(p)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      border: orderId === String(p.id) ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                      background: orderId === String(p.id) ? 'var(--primary-light)' : 'var(--bg-subtle)',
-                      color: orderId === String(p.id) ? 'var(--primary)' : 'var(--text-secondary)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    #{p.id} · ${p.amount}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <form onSubmit={handleProcessPayment}>
               {/* Order ID & Amount Grid */}
@@ -322,14 +309,14 @@ export default function PaymentPage() {
                       />
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Delivery settlement · Status remains <strong style={{ color: 'var(--warning-text)' }}>Pending</strong>
+                      Doorstep settlement · Status remains <strong style={{ color: 'var(--warning-text)' }}>Pending</strong>
                     </span>
                   </label>
                 </div>
               </div>
 
               {/* Conditional Card Simulation Inputs */}
-              {paymentMethod === 'card' && (
+              {paymentMethod === 'card' ? (
                 <div style={{ background: 'var(--bg-subtle)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
                     Card Information (Simulated Gateway)
@@ -339,9 +326,11 @@ export default function PaymentPage() {
                     <input
                       id="card-number-input"
                       type="text"
+                      placeholder="4532 8824 1234 5678"
+                      maxLength={19}
                       value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                      onChange={handleCardNumberChange}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem', fontFamily: 'monospace', letterSpacing: '0.05em' }}
                     />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px' }}>
@@ -350,6 +339,7 @@ export default function PaymentPage() {
                       <input
                         id="card-holder-input"
                         type="text"
+                        placeholder="ALEXANDER WRIGHT"
                         value={cardHolder}
                         onChange={(e) => setCardHolder(e.target.value)}
                         style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem' }}
@@ -360,9 +350,11 @@ export default function PaymentPage() {
                       <input
                         id="card-expiry-input"
                         type="text"
+                        placeholder="MM/YY"
+                        maxLength={5}
                         value={expiry}
-                        onChange={(e) => setExpiry(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                        onChange={handleExpiryChange}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem', fontFamily: 'monospace' }}
                       />
                     </div>
                     <div>
@@ -370,11 +362,22 @@ export default function PaymentPage() {
                       <input
                         id="card-cvv-input"
                         type="password"
-                        maxLength="4"
+                        placeholder="742"
+                        maxLength={4}
                         value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
+                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                         style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.85rem' }}
                       />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--warning-bg)', padding: '16px', borderRadius: '12px', border: '1px solid var(--warning-border)', color: 'var(--warning-text)', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>💵</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '2px' }}>Cash on Delivery Selected</div>
+                    <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                      No card details required. You will pay in cash upon doorstep delivery.
                     </div>
                   </div>
                 </div>
@@ -398,7 +401,10 @@ export default function PaymentPage() {
                   <span>Executing ACID Transaction...</span>
                 ) : (
                   <span>
-                    Pay ${parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} Now
+                    {paymentMethod === 'card'
+                      ? `Pay $${parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} Now`
+                      : `Confirm Cash on Delivery ($${parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })})`
+                    }
                   </span>
                 )}
               </button>
@@ -407,36 +413,130 @@ export default function PaymentPage() {
 
           {/* Right Column: Visual Card Preview & DB Guarantees */}
           <div>
-            {/* Visual Glassmorphism Card */}
-            <div style={{
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              borderRadius: '16px',
-              padding: '24px',
-              color: '#ffffff',
-              boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.3)',
-              position: 'relative',
-              overflow: 'hidden',
-              marginBottom: '20px',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', opacity: 0.8 }}>BRIGHTBUY CORPORATE</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#38bdf8' }}>VISA</span>
-              </div>
+            {/* 3D Flip Card Container */}
+            <div style={{ perspective: '1000px', marginBottom: '20px' }}>
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '225px',
+                  transition: 'transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1)',
+                  transformStyle: 'preserve-3d',
+                  transform: paymentMethod === 'cod' ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                }}
+              >
+                {/* FRONT FACE: ATM Card Preview */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    color: '#ffffff',
+                    boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.3)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', opacity: 0.8 }}>BRIGHTBUY CORPORATE</span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.05em' }}>{getCardType()}</span>
+                  </div>
 
-              <div style={{ width: '38px', height: '28px', borderRadius: '4px', background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)', marginBottom: '20px' }} />
+                  <div style={{ width: '38px', height: '28px', borderRadius: '4px', background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' }} />
 
-              <div style={{ fontFamily: 'monospace', fontSize: '1.15rem', letterSpacing: '0.15em', marginBottom: '20px' }}>
-                {cardNumber || '•••• •••• •••• ••••'}
-              </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '1.15rem', letterSpacing: '0.15em' }}>
+                    {cardNumber || '•••• •••• •••• ••••'}
+                  </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.75rem' }}>
-                <div>
-                  <div style={{ opacity: 0.6, fontSize: '0.65rem', textTransform: 'uppercase' }}>Cardholder</div>
-                  <div style={{ fontWeight: 600, letterSpacing: '0.05em' }}>{cardHolder || 'CUSTOMER NAME'}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.75rem' }}>
+                    <div>
+                      <div style={{ opacity: 0.6, fontSize: '0.65rem', textTransform: 'uppercase' }}>Cardholder</div>
+                      <div style={{ fontWeight: 600, letterSpacing: '0.05em' }}>{cardHolder ? cardHolder.toUpperCase() : 'ALEXANDER WRIGHT'}</div>
+                    </div>
+                    <div>
+                      <div style={{ opacity: 0.6, fontSize: '0.65rem', textTransform: 'uppercase' }}>Expires</div>
+                      <div style={{ fontWeight: 600 }}>{expiry || 'MM/YY'}</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ opacity: 0.6, fontSize: '0.65rem', textTransform: 'uppercase' }}>Expires</div>
-                  <div style={{ fontWeight: 600 }}>{expiry || 'MM/YY'}</div>
+
+                {/* BACK FACE: Cash on Delivery Preview */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #022c22 100%)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    color: '#ffffff',
+                    boxShadow: '0 20px 25px -5px rgba(6, 78, 59, 0.4)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    border: '1px solid rgba(52, 211, 153, 0.3)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', opacity: 0.9, color: '#a7f3d0' }}>
+                      BRIGHTBUY LOGISTICS
+                    </span>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      background: 'rgba(52, 211, 153, 0.2)',
+                      border: '1px solid #34d399',
+                      color: '#6ee7b7',
+                      padding: '3px 8px',
+                      borderRadius: '9999px',
+                    }}>
+                      CASH ON DELIVERY
+                    </span>
+                  </div>
+
+                  <div style={{ textAlign: 'center', padding: '6px 0' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      marginBottom: '8px',
+                      fontSize: '1.4rem'
+                    }}>
+                      💵
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.01em' }}>
+                      Cash on Delivery
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#a7f3d0', fontWeight: 600, marginTop: '2px' }}>
+                      No card details required
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', opacity: 0.9, borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '10px' }}>
+                    <div>
+                      <span style={{ opacity: 0.7, fontSize: '0.65rem', display: 'block', textTransform: 'uppercase' }}>Amount Due at Doorstep</span>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#6ee7b7' }}>
+                        ${parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ opacity: 0.7, fontSize: '0.65rem', display: 'block', textTransform: 'uppercase' }}>Settlement Mode</span>
+                      <span style={{ fontWeight: 600 }}>Cash Handover</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
