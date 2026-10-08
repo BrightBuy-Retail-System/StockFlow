@@ -245,11 +245,11 @@ export default function CatalogPage() {
   const [newReview, setNewReview] = useState({ rating: 5, name: '', title: '', comment: '' });
   const [userReviews, setUserReviews] = useState([]);
 
-  // In-cart quantity helper for any variant (strictly for authenticated customer)
+  // In-cart quantity helper for any variant (supports both guest and authenticated users)
   const getVariantInCart = useCallback((vId) => {
-    if (!productDetail || !isLoggedIn || !currentUser?.user_id) return 0;
+    if (!productDetail) return 0;
     try {
-      const userCartKey = `cart_${currentUser.user_id}`;
+      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
       const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const list = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(list)) return 0;
@@ -260,7 +260,7 @@ export default function CatalogPage() {
     } catch {
       return 0;
     }
-  }, [productDetail, isLoggedIn, currentUser?.user_id, cartVersion]);
+  }, [productDetail, currentUser?.user_id, cartVersion]);
 
   // In-cart quantity for current variant
   const inCartQuantity = useMemo(() => {
@@ -592,15 +592,6 @@ export default function CatalogPage() {
 
   // ── Cart & Add-to-cart Toast ──
   const handleAddToCart = async () => {
-    if (!isLoggedIn) {
-      setToastMessage('🔒 Please log in to add items to your cart.');
-      setTimeout(() => {
-        setToastMessage(null);
-        navigate('/login');
-      }, 1200);
-      return;
-    }
-
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
@@ -665,9 +656,9 @@ export default function CatalogPage() {
     setCartVersion((v) => v + 1);
     setQuantity(1);
 
-    // 2. Persist to database shopping cart & reserve stock
-    try {
-      if (selectedVariant?.variant_id) {
+    // 2. Persist to database shopping cart & reserve stock if logged in
+    if (isLoggedIn && selectedVariant?.variant_id) {
+      try {
         // Sync item to database cart table for AuthCartPage & CustomerDashboard
         await api.post('/auth_cart/cart/add', {
           variant_id: selectedVariant.variant_id,
@@ -678,11 +669,11 @@ export default function CatalogPage() {
           variant_id: selectedVariant.variant_id,
           quantity: qtyToAdd,
         });
+        refreshDetail(true);
+        refreshProducts();
+      } catch (err) {
+        console.warn('Backend cart sync note:', err);
       }
-      refreshDetail(true);
-      refreshProducts();
-    } catch (err) {
-      console.warn('Backend cart sync note:', err);
     }
 
     setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
@@ -1481,26 +1472,18 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={isLoggedIn && !inStock}
+                  disabled={!inStock}
                   style={{
                     flex: 1,
                     height: '46px',
                     borderRadius: '9999px',
                     border: 'none',
-                    background: !isLoggedIn
-                      ? '#0f172a'
-                      : inStock
-                        ? '#3b5bcf'
-                        : '#a8a29e',
+                    background: inStock ? '#3b5bcf' : '#a8a29e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    cursor: (isLoggedIn && !inStock) ? 'not-allowed' : 'pointer',
-                    boxShadow: !isLoggedIn
-                      ? '0 4px 14px rgba(15,23,42,0.25)'
-                      : inStock
-                        ? '0 4px 14px rgba(59,91,207,0.35)'
-                        : 'none',
+                    cursor: !inStock ? 'not-allowed' : 'pointer',
+                    boxShadow: inStock ? '0 4px 14px rgba(59,91,207,0.35)' : 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1508,20 +1491,11 @@ export default function CatalogPage() {
                     gap: '8px',
                   }}
                 >
-                  {!isLoggedIn ? (
-                    <>
-                      <span>🔒</span>
-                      <span>Sign in to add to cart</span>
-                    </>
-                  ) : inStock ? (
-                    'Add to cart'
-                  ) : (
-                    'Out of Stock'
-                  )}
+                  {inStock ? 'Add to cart' : 'Out of Stock'}
                 </button>
               </div>
 
-              {isLoggedIn && inCartQuantity > 0 && (
+              {inCartQuantity > 0 && (
                 <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '-2px' }}>
                   <span>🛒</span>
                   <span>
