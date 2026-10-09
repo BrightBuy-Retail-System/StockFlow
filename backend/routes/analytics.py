@@ -544,3 +544,86 @@ def customer_summary_report():
             cursor.close()
         if conn:
             conn.close()
+
+# ============================================================================
+# PHASE 2: ENDPOINT 6 - Delivery Time Estimates for Upcoming Orders
+# References:
+#   Course Project SRS: Feature 5 & Management Report 4
+#   Rule: Main cities (Dallas, Fort Worth, Austin, Houston, San Antonio): 5 days
+#         Other cities: 7 days
+#         + 3 days out-of-stock penalty
+# ============================================================================
+@analytics_bp.route('/reports/delivery-estimates', methods=['GET'])
+def delivery_estimates_report():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        sql = """
+            SELECT 
+                o.order_id,
+                o.placed_at,
+                o.total_amount,
+                o.status AS order_status,
+                COALESCE(o.payment_status, 'Pending') AS payment_status,
+                u.user_id,
+                u.full_name AS customer_name,
+                u.email AS customer_email,
+                s.shipment_id,
+                s.tracking_number,
+                COALESCE(s.shipping_status, 'PENDING') AS shipping_status,
+                s.estimated_arrival,
+                COALESCE(c.city_name, 'Texas Regional') AS city_name,
+                COALESCE(c.hub_name, 'Central Hub') AS hub_name,
+                CASE 
+                    WHEN LOWER(c.city_name) IN ('dallas', 'fort worth', 'austin', 'houston', 'san antonio') THEN 5
+                    ELSE 7
+                END AS base_days,
+                COALESCE((
+                    SELECT MAX(CASE WHEN inv.stock_quantity <= 0 THEN 3 ELSE 0 END)
+                    FROM order_items oi
+                    LEFT JOIN inventory inv ON oi.variant_id = inv.variant_id
+                    WHERE oi.order_id = o.order_id
+                ), 0) AS stock_penalty_days
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            LEFT JOIN texas_cities c ON s.destination_city_id = c.city_id
+            WHERE o.status != 'CANCELLED'
+            ORDER BY o.placed_at DESC
+        """
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+
+        # Compute calculated delivery lead time and display metrics
+        formatted_rows = []
+        for r in rows:
+            clean = serialize_row(r)
+            base_days = int(clean.get('base_days') or 5)
+            penalty_days = int(clean.get('stock_penalty_days') or 0)
+            total_lead_time_days = base_days + penalty_days
+            clean['total_lead_days'] = total_lead_time_days
+            clean['delivery_formula'] = f"{base_days}d hub lead + {penalty_days}d stock penalty = {total_lead_time_days} days"
+            formatted_rows.append(clean)
+
+        return jsonify({
+            'status': 'success',
+            'count': len(formatted_rows),
+            'data': formatted_rows
+        }), 200
+
+    except Exception as exc:
+        return jsonify({
+            'status': 'error',
+            'error': 'Unable to fetch delivery time estimates report.',
+            'details': str(exc)
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+

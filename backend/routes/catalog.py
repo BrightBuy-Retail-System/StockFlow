@@ -40,7 +40,7 @@ def get_role():
 def manager_required():
     """Return a 403 error response if the caller is not a manager or admin."""
     role = get_role()
-    if role not in (2, 3):
+    if role not in (2, 3, 4):
         return jsonify({"error": "Manager or Admin access required"}), 403
     return None  # all good
 
@@ -66,14 +66,14 @@ def get_products():
     like = f"%{q}%"
 
     sql = """
-        SELECT p.product_id, p.title AS name, p.description, p.base_price,
-               p.is_active, c.name AS category_name
+        SELECT p.product_id, p.title, p.title AS name, p.description, p.image_url, p.base_price,
+               p.is_active, c.category_id, c.name AS category_name
         FROM   products p
         JOIN   categories c ON c.category_id = p.category_id
         """
 
     # Customers and guests only see active products
-    active_filter = "" if role in (2, 3) else "AND p.is_active = 1 "
+    active_filter = "" if role in (2, 3, 4) else "AND p.is_active = 1 "
 
     if category_id and q:
         rows = query(sql + f"WHERE p.category_id = %s {active_filter}AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (category_id, like, like))
@@ -94,7 +94,7 @@ def get_product_detail(product_id):
     """
     products = query(
         """
-        SELECT p.product_id, p.title AS name, p.description, p.base_price,
+        SELECT p.product_id, p.title AS name, p.description, p.image_url, p.base_price,
                p.is_active, c.name AS category_name
         FROM   products p
         JOIN   categories c ON c.category_id = p.category_id
@@ -273,20 +273,20 @@ def create_product():
 
     data = request.get_json()
     res = execute(
-        "INSERT INTO products (title, description, base_price, category_id, is_active) VALUES (%s, %s, %s, %s, 1)",
-        (data['title'], data.get('description', ''), data['base_price'], data['category_id'])
+        "INSERT INTO products (title, description, image_url, base_price, category_id, is_active) VALUES (%s, %s, %s, %s, %s, 1)",
+        (data['title'], data.get('description', ''), data.get('image_url'), data['base_price'], data['category_id'])
     )
     return jsonify({"product_id": res['lastrowid']}), 201
 
 # update product — managers & admins only
-@catalog_bp.route('/products/<int:product_id>', methods=['PATCH'])
+@catalog_bp.route('/products/<int:product_id>', methods=['PATCH', 'PUT'])
 @jwt_required()
 def update_product(product_id):
     err = manager_required()
     if err: return err
 
     data = request.get_json()
-    fields = {k: v for k, v in data.items() if k in ('title', 'description', 'base_price', 'category_id', 'is_active')}
+    fields = {k: v for k, v in data.items() if k in ('title', 'description', 'image_url', 'base_price', 'category_id', 'is_active')}
     if not fields:
         return jsonify({"error": "No valid fields provided"}), 400
     set_clause = ", ".join(f"{k} = %s" for k in fields)
@@ -304,9 +304,10 @@ def delete_product(product_id):
     return jsonify({"deleted": product_id})
 
 # create variant — managers & admins only
+@catalog_bp.route('/variants', methods=['POST'])
 @catalog_bp.route('/products/<int:product_id>/variants', methods=['POST'])
 @jwt_required()
-def create_variant(product_id):
+def create_variant(product_id=None):
     err = manager_required()
     if err: return err
 
@@ -314,17 +315,23 @@ def create_variant(product_id):
     Add a new variant (SKU, attribute_name, attribute_value, optional price_override)
     to an existing product.
     """
-    data = request.get_json()
-    sku            = data.get('sku', '').strip()
-    attribute_name  = data.get('attribute_name', '').strip() or None
+    data = request.get_json() or {}
+    target_product_id = product_id or data.get('product_id')
+    if not target_product_id:
+        return jsonify({"error": "product_id is required"}), 400
+
+    sku = data.get('sku', '').strip()
+    attribute_name = data.get('attribute_name', '').strip() or None
     attribute_value = data.get('attribute_value', '').strip() or None
-    price_override  = data.get('price_override') or None
+    price_override = data.get('price_override') or None
+    initial_stock = int(data.get('stock_quantity', 0))
+    low_stock = int(data.get('low_stock_threshold', 10))
 
     if not sku:
         return jsonify({"error": "SKU is required"}), 400
 
     # Check the parent product exists
-    product = query("SELECT product_id FROM products WHERE product_id = %s", (product_id,))
+    product = query("SELECT product_id FROM products WHERE product_id = %s", (target_product_id,))
     if not product:
         return jsonify({"error": "Product not found"}), 404
 
@@ -333,21 +340,21 @@ def create_variant(product_id):
         INSERT INTO product_variants (product_id, sku, attribute_name, attribute_value, price_override)
         VALUES (%s, %s, %s, %s, %s)
         """,
-        (product_id, sku, attribute_name, attribute_value, price_override)
+        (target_product_id, sku, attribute_name, attribute_value, price_override)
     )
     variant_id = res['lastrowid']
 
-    # Seed a stock row so the variant shows up in inventory queries
+    # Seed an inventory row
     execute(
-        "INSERT INTO inventory (variant_id, stock_quantity, low_stock_threshold) VALUES (%s, 0, 10)",
-        (variant_id,)
+        "INSERT INTO inventory (variant_id, stock_quantity, low_stock_threshold) VALUES (%s, %s, %s)",
+        (variant_id, max(0, initial_stock), max(1, low_stock))
     )
 
     return jsonify({"variant_id": variant_id}), 201
 
 
 # update variant — managers & admins only
-@catalog_bp.route('/variants/<int:variant_id>', methods=['PATCH'])
+@catalog_bp.route('/variants/<int:variant_id>', methods=['PATCH', 'PUT'])
 @jwt_required()
 def update_variant(variant_id):
     err = manager_required()
@@ -357,7 +364,7 @@ def update_variant(variant_id):
     Update mutable fields of a variant: sku, attribute_name, attribute_value,
     price_override.
     """
-    data   = request.get_json()
+    data = request.get_json()
     fields = {k: v for k, v in data.items()
               if k in ('sku', 'attribute_name', 'attribute_value', 'price_override')}
     if not fields:
@@ -386,9 +393,8 @@ def delete_variant(variant_id):
     return jsonify({"deleted": variant_id})
 
 
-
 # restock / adjust stock for a variant — managers & admins only
-@catalog_bp.route('/inventory/<int:variant_id>', methods=['PATCH'])
+@catalog_bp.route('/inventory/<int:variant_id>', methods=['PATCH', 'PUT'])
 @jwt_required()
 def update_inventory(variant_id):
     err = manager_required()
@@ -430,6 +436,40 @@ def update_inventory(variant_id):
         (variant_id,)
     )
     return jsonify(rows[0] if rows else {"variant_id": variant_id})
+
+
+# admin inventory overview — product variants + stock
+@catalog_bp.route('/admin/inventory', methods=['GET'])
+def get_admin_inventory():
+    """
+    Return all product variants joined with parent product, category, and inventory stock.
+    Accessible to managers and admins.
+    """
+    sql = """
+        SELECT 
+            pv.variant_id,
+            pv.product_id,
+            pv.sku,
+            pv.attribute_name,
+            pv.attribute_value,
+            pv.price_override,
+            p.title AS product_name,
+            p.base_price,
+            COALESCE(pv.price_override, p.base_price) AS effective_price,
+            p.is_active,
+            p.image_url,
+            c.category_id,
+            c.name AS category_name,
+            COALESCE(i.stock_quantity, 0) AS stock_quantity,
+            COALESCE(i.low_stock_threshold, 10) AS low_stock_threshold
+        FROM product_variants pv
+        JOIN products p ON p.product_id = pv.product_id
+        LEFT JOIN categories c ON c.category_id = p.category_id
+        LEFT JOIN inventory i ON i.variant_id = pv.variant_id
+        ORDER BY p.title, pv.sku
+    """
+    rows = query(sql)
+    return jsonify(rows)
 
 
 # reserve stock when added to cart

@@ -1,0 +1,57 @@
+=== PAGE 1 ===
+Project 2 - Retail Inventory and Online Order Management System 
+BrightBuy is a medium-scale consumer electronics retail chain based in Texas. To expand 
+its presence and respond to market competition from online giants, BrightBuy has 
+decided to launch a digital commerce platform for online product browsing, ordering, 
+and delivery within Texas. 
+Your team has been hired to design the backend database system for the first phase of 
+this platform. In this phase, the platform will only support a limited catalogue (e.g., 
+electronic gadgets and toys) with a focus on proper stock keeping, order processing, and 
+basic delivery integration. 
+Since database reliability is crucial for product availability, billing, and customer 
+satisfaction, BrightBuy management has prioritised database design. Your system must 
+include an UI interface. 
+The business and system requirements are as follows: 
+• BrightBuy operates a central warehouse  where all stock is maintained. Each 
+product belongs to one or more categories (e.g., Mobiles, Audio Devices, Toys), 
+and may have one or more variants (e.g., colour, memory size). The variant 
+determines the final price and stock availability. 
+• Some products have only one default variant. Products are assigned a unique SKU 
+at the warehouse level. 
+• Each variant has a stock quantity that is decremented upon order confirmation. 
+• Users can browse as guests  or register as customers . Only registered 
+customers can check out their cart and place an order. 
+• Each order contains one or more items, each mapped to a specific product 
+variant and quantity. Orders must contain delivery and payment details. 
+• On checkout, the system should validate available stock and update inventory 
+accordingly. Inventory updates must be atomic with order placement to avoid 
+stock mismatches. 
+• BrightBuy offers two delivery modes: 
+o Store Pickup 
+o Standard Delivery 
+• It supports two payment methods: 
+o Cash on Delivery 
+o Card Payment 
+=== PAGE 2 ===
+• Estimated delivery time is calculated based on stock availability and destination 
+city. 
+o Main cities: 5 days if in stock 
+o Other cities: 7 days if in stock 
+o Add 3 days to both if item is out of stock at the time of order 
+The management requires the following reports from the system: 
+1. Quarterly sales report for a given year 
+2. Top-selling products in a given period 
+3. Category-wise total number of orders 
+4. Delivery time estimates for upcoming orders 
+5. Customer-wise order summary and payment status 
+Task 
+Your task is to model the database design to encapsulate these requirements. It should 
+consider all entities and relationships given in the description. Moreover, you need to 
+identify the places where procedures, functions, and triggers  can be employed to 
+guarantee ACID properties. Foreign keys and primary keys must be set to maintain 
+consistency. Indexing should be done when necessary. 
+Additionally, you must understand the domain by reading related material and take 
+assumptions when not explicitly provided (e.g., category hierarchy, variant rules, delivery 
+cost structure). The database must be populated with at least 40 products, with variants 
+and at least 10 different categories.  
+ 

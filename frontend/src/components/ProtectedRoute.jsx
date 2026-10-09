@@ -32,7 +32,7 @@ export default function ProtectedRoute({ allowedRoles }) {
     // Redirect user to their own role-appropriate dashboard
     if (userRole === 1) return <Navigate to="/customer-dashboard" replace />;
     if (userRole === 2) return <Navigate to="/manager-dashboard" replace />;
-    if (userRole === 3) return <Navigate to="/system-administrator" replace />;
+    if (userRole === 3 || userRole === 4) return <Navigate to="/system-administrator" replace />;
     return <Navigate to="/" replace />;
   }
 

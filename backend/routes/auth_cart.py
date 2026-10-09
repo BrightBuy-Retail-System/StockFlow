@@ -150,7 +150,7 @@ def get_staff_members():
     """Retrieve all internal staff accounts (Managers and System Administrators)."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Managers and Administrators only."}), 403
 
     conn = get_db_connection()
@@ -159,7 +159,7 @@ def get_staff_members():
         query = """
             SELECT user_id, full_name, email, role_id
             FROM users
-            WHERE role_id IN (2, 3)
+            WHERE role_id IN (2, 3, 4)
             ORDER BY role_id DESC, user_id ASC
         """
         cursor.execute(query)
@@ -178,7 +178,7 @@ def register_staff_member():
     """Allow Managers (role 2) and System Administrators (role 3) to onboard new staff."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Only Managers and Administrators can register staff."}), 403
 
     data = request.get_json() or {}
@@ -195,8 +195,8 @@ def register_staff_member():
     except (ValueError, TypeError):
         return jsonify({"message": "Invalid role ID"}), 400
 
-    if role_id not in (2, 3):
-        return jsonify({"message": "Staff role must be either Store Manager (2) or System Administrator (3)"}), 400
+    if role_id not in (2, 3, 4):
+        return jsonify({"message": "Staff role must be Store Manager (2) or System Administrator (3/4)"}), 400
 
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')

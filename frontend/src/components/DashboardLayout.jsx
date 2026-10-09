@@ -64,14 +64,14 @@ export default function DashboardLayout() {
   const getDashboardRoute = () => {
     if (!user) return '/login';
     if (roleId === 2) return '/manager-dashboard';
-    if (roleId === 3) return '/system-administrator';
+    if (roleId === 3 || roleId === 4) return '/system-administrator';
     return '/customer-dashboard';
   };
 
   const getRoleLabel = () => {
     if (!user) return '';
     if (roleId === 2) return 'Store Executive & Manager';
-    if (roleId === 3) return 'System Administrator';
+    if (roleId === 3 || roleId === 4) return 'System Administrator';
     return 'Customer Account';
   };
 
@@ -109,8 +109,8 @@ export default function DashboardLayout() {
       ];
     }
 
-    // 4. System Administrator (Role 3)
-    if (roleId === 3) {
+    // 4. System Administrator (Roles 3 & 4)
+    if (roleId === 3 || roleId === 4) {
       return [
         { label: 'Admin Console', to: '/system-administrator' },
         { label: 'Manager Pipeline', to: '/manager-dashboard' },
@@ -134,37 +134,13 @@ export default function DashboardLayout() {
 
   return (
     <div className="storefront-app">
-      {/* Dynamic Announcement Bar */}
-      {roleId === 2 ? (
-        <div className="simplytek-announcement-bar" style={{ background: '#78350f', color: '#fef3c7' }}>
-          <div className="announcement-inner">
-            <span className="announcement-pill" style={{ background: '#f59e0b', color: '#78350f' }}>👔 Store Management</span>
-            <span className="announcement-text">
-              Store Executive &amp; Manager Console — Orders Fulfillment Pipeline, Inventory, and Texas Logistics
-            </span>
-            <Link to="/manager-dashboard" className="announcement-link">
-              Management Dashboard &rarr;
-            </Link>
-          </div>
-        </div>
-      ) : roleId === 3 ? (
-        <div className="simplytek-announcement-bar" style={{ background: '#14532d', color: '#dcfce7' }}>
-          <div className="announcement-inner">
-            <span className="announcement-pill" style={{ background: '#22c55e', color: '#14532d' }}>⚡ System Administrator</span>
-            <span className="announcement-text">
-              System Admin Console — Database Inventory, Security Grants, and Analytics Operations
-            </span>
-            <Link to="/system-administrator" className="announcement-link">
-              Admin Console &rarr;
-            </Link>
-          </div>
-        </div>
-      ) : (
+      {/* Dynamic Announcement Bar: Only for customer-facing storefront */}
+      {roleId <= 1 && (
         <div className="simplytek-announcement-bar">
           <div className="announcement-inner">
-            <span className="announcement-pill">🚚 Islandwide Delivery</span>
+            <span className="announcement-pill">Islandwide Delivery</span>
             <span className="announcement-text">
-              Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
+              Free Delivery on orders over $150 | 100% Genuine Guaranteed | Fast Express Hub Dispatch
             </span>
             <Link to="/catalog" className="announcement-link">
               Shop Tech Deals &rarr;

@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../api/client';
 import {
-  ZapIcon,
+  AnalyticsIcon,
+  OrdersIcon,
+  CheckCircleIcon,
+  DatabaseIcon,
   SearchIcon,
+  RefreshCwIcon
 } from '../components/Icons';
 
 export default function AnalyticsPage() {
@@ -46,7 +50,6 @@ export default function AnalyticsPage() {
         err.response?.data?.error ||
         'Unable to load live database views. Showing demo dataset for evaluation.'
       );
-      // Fallback demo data so viva presentation never fails on empty dev databases
       populateDemoData();
       setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } finally {
@@ -93,7 +96,7 @@ export default function AnalyticsPage() {
     fetchReports(selectedYear);
   }, [selectedYear]);
 
-  // Aggregate Executive KPIs from category grand total or quarterly sums
+  // Aggregate Executive KPIs
   const executiveKPIs = useMemo(() => {
     const grandRollup = categoryData.find((c) => c.category_name.includes('GRAND TOTAL'));
     if (grandRollup) {
@@ -136,480 +139,515 @@ export default function AnalyticsPage() {
     );
   }, [customerData, customerSearch]);
 
+  // Export CSV Helper
+  const exportToCSV = (data, filename) => {
+    if (!data || data.length === 0) return;
+    const keys = Object.keys(data[0]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [
+        keys.join(','),
+        ...data.map((row) =>
+          keys
+            .map((k) => {
+              let val = row[k];
+              if (val === null || val === undefined) return '""';
+              if (typeof val === 'string') return `"${val.replace(/"/g, '""')}"`;
+              return val;
+            })
+            .join(',')
+        )
+      ].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>
-      {/* Top Banner Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+    <div className="st-admin-container">
+      
+      {/* ==================================================================== */}
+      {/* 1. CLEAN ANALYTICS HEADER                                            */}
+      {/* ==================================================================== */}
+      <div className="st-admin-header">
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
-            Retail Intelligence & Financial Reports
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem', marginTop: '4px' }}>
-            Database-level virtual views: <code style={{ fontSize: '0.8rem', background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px' }}>v_quarterly_sales_report</code>, <code style={{ fontSize: '0.8rem', background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px' }}>v_top_selling_products</code>, <code style={{ fontSize: '0.8rem', background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px' }}>v_category_order_totals</code>, and <code style={{ fontSize: '0.8rem', background: 'var(--bg-subtle)', padding: '2px 6px', borderRadius: '4px' }}>v_customer_order_summary</code>.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+            <span className="st-badge-admin-role">Business Intelligence &amp; OLAP</span>
+            <span className="st-badge-cluster-status">
+              <span className="st-pulse-dot" />
+              Live Database Views Synced
+            </span>
+            {lastRefreshed && (
+              <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                Last synced at <strong>{lastRefreshed}</strong>
+              </span>
+            )}
+          </div>
+
+          <h1 className="st-admin-title">Retail Analytics &amp; Reports</h1>
+          <p className="st-admin-subtitle">
+            Relational queries across <code>v_quarterly_sales_report</code>, <code>v_top_selling_products</code>, <code>v_category_order_totals</code>, and <code>v_customer_order_summary</code>.
           </p>
         </div>
 
-        {/* Live Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            type="button"
-            onClick={() => fetchReports()}
-            disabled={loading}
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: '1px solid var(--primary-border)',
-              background: 'var(--primary)',
-              color: '#ffffff',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <ZapIcon className="w-3.5 h-3.5" />
-            <span>{loading ? 'Refreshing...' : 'Refresh DB Views'}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => fetchReports()}
+          disabled={loading}
+          className="st-btn-header-sync"
+        >
+          <RefreshCwIcon style={{ width: '0.875rem', height: '0.875rem', animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+          <span>{loading ? 'Refreshing...' : 'Refresh DB Views'}</span>
+        </button>
       </div>
 
-      {/* Optional Error Alert */}
+      {/* Optional Error Notice */}
       {error && (
-        <div style={{ padding: '10px 16px', borderRadius: '8px', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', color: 'var(--warning-text)', fontSize: '0.825rem', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span><strong>Notice:</strong> {error}</span>
-          <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>Last synced: {lastRefreshed}</span>
+        <div style={{ padding: '10px 16px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.85rem' }}>
+          <strong>Notice:</strong> {error}
         </div>
       )}
 
-      {/* ======================================================================
-          SECTION 1: Executive KPI Cards (Lecture Note #9 Aggregations)
-          ====================================================================== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {/* Gross Revenue */}
-        <div className="card" style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gross Revenue</span>
-            <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, background: 'var(--primary-light)', color: 'var(--primary)' }}>OLAP View</span>
+      {/* ==================================================================== */}
+      {/* 2. 4-COLUMN KPI METRIC CARDS                                         */}
+      {/* ==================================================================== */}
+      <div className="st-admin-kpi-grid">
+        
+        {/* KPI 1: Gross Revenue */}
+        <div className="st-admin-kpi-card">
+          <div className="st-admin-kpi-top">
+            <span className="st-admin-kpi-label">Gross Revenue</span>
+            <div className="st-admin-kpi-iconbox">
+              <AnalyticsIcon style={{ width: '1rem', height: '1rem', color: '#2563eb' }} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <div className="st-admin-kpi-value">
             ${executiveKPIs.grossRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+          <div className="st-admin-kpi-foot">
             Across all catalog order items
           </div>
         </div>
 
-        {/* Net Collected Revenue */}
-        <div className="card" style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Net Collected</span>
-            <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, background: 'var(--success-bg)', color: 'var(--success-text)' }}>
-              {executiveKPIs.collectionRate.toFixed(1)}% Paid
-            </span>
+        {/* KPI 2: Net Collected Revenue */}
+        <div className="st-admin-kpi-card">
+          <div className="st-admin-kpi-top">
+            <span className="st-admin-kpi-label">Net Collected (Paid)</span>
+            <div className="st-admin-kpi-iconbox">
+              <CheckCircleIcon style={{ width: '1rem', height: '1rem', color: '#059669' }} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--success)', letterSpacing: '-0.02em' }}>
+          <div className="st-admin-kpi-value" style={{ color: '#059669' }}>
             ${executiveKPIs.netCollected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Orders settled with <code style={{ fontSize: '0.75rem' }}>payment_status='Paid'</code>
+          <div className="st-admin-kpi-foot">
+            <strong style={{ color: '#059669' }}>{executiveKPIs.collectionRate.toFixed(1)}%</strong> settlement rate
           </div>
         </div>
 
-        {/* Total Orders Processed */}
-        <div className="card" style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Orders</span>
-            <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>ACID Count</span>
+        {/* KPI 3: Total Orders Processed */}
+        <div className="st-admin-kpi-card">
+          <div className="st-admin-kpi-top">
+            <span className="st-admin-kpi-label">Total Orders</span>
+            <div className="st-admin-kpi-iconbox">
+              <OrdersIcon style={{ width: '1rem', height: '1rem', color: '#4f46e5' }} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <div className="st-admin-kpi-value">
             {executiveKPIs.totalOrders.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Distinct orders placed on platform
+          <div className="st-admin-kpi-foot">
+            Transactional orders on platform
           </div>
         </div>
 
-        {/* Units Sold & Throughput */}
-        <div className="card" style={{ padding: '20px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Units Shipped</span>
-            <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700, background: 'var(--accent-light)', color: 'var(--accent)' }}>Texas Hubs</span>
+        {/* KPI 4: Units Sold */}
+        <div className="st-admin-kpi-card">
+          <div className="st-admin-kpi-top">
+            <span className="st-admin-kpi-label">Units Shipped</span>
+            <div className="st-admin-kpi-iconbox">
+              <DatabaseIcon style={{ width: '1rem', height: '1rem', color: '#0284c7' }} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <div className="st-admin-kpi-value">
             {executiveKPIs.totalUnits.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Physical items fulfilled across 5 hubs
+          <div className="st-admin-kpi-foot">
+            Physical items fulfilled across hubs
           </div>
         </div>
+
       </div>
 
-      {/* ======================================================================
-          SECTION 2: Tab Navigation for the 4 Views
-          ====================================================================== */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '20px', gap: '4px', overflowX: 'auto' }}>
+      {/* ==================================================================== */}
+      {/* 3. SUB-TABS NAVIGATION                                               */}
+      {/* ==================================================================== */}
+      <div className="st-admin-subtabs-wrap">
         {[
-          { id: 'quarterly', label: 'Quarterly Sales & Moving Averages', tag: 'View 1' },
-          { id: 'top-selling', label: 'Top 10 Selling Products', tag: 'View 2' },
-          { id: 'categories', label: 'Category Revenue & ROLLUP', tag: 'View 3' },
-          { id: 'customers', label: 'Customer Lifetime Spending', tag: 'View 4' },
+          { id: 'quarterly', label: '1. Quarterly Sales & Moving Averages' },
+          { id: 'top-selling', label: '2. Top 10 Selling Products' },
+          { id: 'categories', label: '3. Category Revenue & ROLLUP' },
+          { id: 'customers', label: '4. Customer Lifetime Value Ledger' },
         ].map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '12px 18px',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '0.875rem',
-              fontWeight: activeTab === tab.id ? 700 : 500,
-              color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s ease',
-            }}
+            className={`st-admin-subtab-btn ${activeTab === tab.id ? 'active' : ''}`}
           >
-            <span>{tab.label}</span>
-            <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: activeTab === tab.id ? 'var(--primary-light)' : 'var(--bg-subtle)', color: activeTab === tab.id ? 'var(--primary)' : 'var(--text-dim)', fontWeight: 600 }}>
-              {tab.tag}
-            </span>
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* ======================================================================
-          TAB CONTENT 1: Quarterly Sales Report (v_quarterly_sales_report)
-          ====================================================================== */}
+      {/* ==================================================================== */}
+      {/* TAB CONTENT 1: QUARTERLY SALES REPORT                                */}
+      {/* ==================================================================== */}
       {activeTab === 'quarterly' && (
-        <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Quarterly Financial Trajectory
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-                Queries <code style={{ fontWeight: 600 }}>v_quarterly_sales_report</code> with window moving averages.
+              <h3 className="st-admin-card-title">Quarterly Financial Trajectory</h3>
+              <p className="st-admin-card-subtitle">
+                Queries <code>v_quarterly_sales_report</code> with windowed 2-quarter moving averages.
               </p>
             </div>
 
-            {/* Year Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label htmlFor="year-select" style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Filter Year:
-              </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <select
                 id="year-select"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                className="st-admin-select"
               >
                 <option value="">All Historical Years</option>
                 <option value="2026">2026 Fiscal Year</option>
                 <option value="2025">2025 Fiscal Year</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => exportToCSV(quarterlyData, 'quarterly_sales_analytics')}
+                className="st-btn-pill-export"
+              >
+                Export CSV
+              </button>
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.725rem', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 14px' }}>Fiscal Period</th>
-                  <th style={{ padding: '12px 14px' }}>Orders Placed</th>
-                  <th style={{ padding: '12px 14px' }}>Units Sold</th>
-                  <th style={{ padding: '12px 14px' }}>Gross Revenue</th>
-                  <th style={{ padding: '12px 14px' }}>Net Collected (Paid)</th>
-                  <th style={{ padding: '12px 14px' }}>2-Quarter Moving Avg</th>
-                  <th style={{ padding: '12px 14px' }}>Collection Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quarterlyData.map((row, idx) => {
-                  const rate = row.gross_revenue > 0 ? (row.net_collected_revenue / row.gross_revenue) * 100 : 0;
-                  return (
-                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)', transition: 'background 0.15s ease' }}>
-                      <td style={{ padding: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
-                        FY{row.sales_year} · Quarter {row.sales_quarter}
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                        {row.total_orders.toLocaleString()} orders
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                        {row.total_units_sold.toLocaleString()} units
-                      </td>
-                      <td style={{ padding: '14px', fontWeight: 700, color: 'var(--primary)' }}>
-                        ${row.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '14px', fontWeight: 700, color: 'var(--success-text)' }}>
-                        ${row.net_collected_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-main)', fontFamily: 'monospace', fontWeight: 600 }}>
-                        ${(row.moving_avg_quarterly_revenue || row.gross_revenue).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '60px', height: '6px', background: 'var(--bg-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(rate, 100)}%`, height: '100%', background: 'var(--success)' }} />
-                          </div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                            {rate.toFixed(0)}%
+          <div className="st-admin-card">
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th>Fiscal Period</th>
+                    <th>Orders Placed</th>
+                    <th>Units Sold</th>
+                    <th>Gross Revenue</th>
+                    <th>Net Collected (Paid)</th>
+                    <th>2-Quarter Moving Avg</th>
+                    <th>Collection Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quarterlyData.map((row, idx) => {
+                    const rate = row.gross_revenue > 0 ? (row.net_collected_revenue / row.gross_revenue) * 100 : 0;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                          FY{row.sales_year} · Q{row.sales_quarter}
+                        </td>
+                        <td>{row.total_orders.toLocaleString()} orders</td>
+                        <td>{row.total_units_sold.toLocaleString()} units</td>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                          ${row.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ fontWeight: 600, color: '#059669' }}>
+                          ${row.net_collected_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 500, color: '#475569' }}>
+                          ${(row.moving_avg_quarterly_revenue || row.gross_revenue).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td>
+                          <span className="st-chip-paid">
+                            {rate.toFixed(0)}% Settled
                           </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ======================================================================
-          TAB CONTENT 2: Top 10 Selling Products (v_top_selling_products)
-          ====================================================================== */}
+      {/* ==================================================================== */}
+      {/* TAB CONTENT 2: TOP 10 SELLING PRODUCTS                              */}
+      {/* ==================================================================== */}
       {activeTab === 'top-selling' && (
-        <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Top 10 Revenue Generating Products Leaderboard
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-              Computed via window function <code style={{ fontWeight: 600 }}>DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code> without rank gaps.
-            </p>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.725rem', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 14px', width: '80px' }}>Rank</th>
-                  <th style={{ padding: '12px 14px' }}>Product Title</th>
-                  <th style={{ padding: '12px 14px' }}>Category</th>
-                  <th style={{ padding: '12px 14px' }}>Units Sold</th>
-                  <th style={{ padding: '12px 14px' }}>Total Revenue</th>
-                  <th style={{ padding: '12px 14px' }}>Performance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topSellingData.map((item) => {
-                  const isTop3 = item.revenue_rank <= 3;
-                  const rankBadgeBg =
-                    item.revenue_rank === 1 ? '#fef3c7' : item.revenue_rank === 2 ? '#f1f5f9' : item.revenue_rank === 3 ? '#ffedd5' : 'transparent';
-                  const rankBadgeColor =
-                    item.revenue_rank === 1 ? '#b45309' : item.revenue_rank === 2 ? '#475569' : item.revenue_rank === 3 ? '#c2410c' : 'var(--text-muted)';
-
-                  return (
-                    <tr key={item.product_id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '14px' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            background: rankBadgeBg,
-                            color: rankBadgeColor,
-                            fontWeight: 800,
-                            fontSize: '0.8rem',
-                            border: isTop3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                          }}
-                        >
-                          #{item.revenue_rank}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px', fontWeight: 600, color: 'var(--text-main)' }}>
-                        {item.product_name}
-                      </td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
-                          {item.category_name}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                        {item.total_units_sold.toLocaleString()} units
-                      </td>
-                      <td style={{ padding: '14px', fontWeight: 700, color: 'var(--primary)' }}>
-                        ${item.total_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isTop3 ? 'var(--success-text)' : 'var(--text-muted)' }}>
-                          {isTop3 ? '🔥 High Velocity' : 'Standard Volume'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================================
-          TAB CONTENT 3: Category Revenue & ROLLUP (v_category_order_totals)
-          ====================================================================== */}
-      {activeTab === 'categories' && (
-        <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Category Volume with Automatic Grand Total ROLLUP
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-              Multi-dimensional grouping using <code style={{ fontWeight: 600 }}>GROUP BY c.name WITH ROLLUP</code>.
-            </p>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.725rem', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 14px' }}>Category Name</th>
-                  <th style={{ padding: '12px 14px' }}>Total Orders</th>
-                  <th style={{ padding: '12px 14px' }}>Units Sold</th>
-                  <th style={{ padding: '12px 14px' }}>Total Revenue</th>
-                  <th style={{ padding: '12px 14px' }}>Catalog Contribution</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categoryData.map((cat, idx) => {
-                  const isGrandTotal = cat.category_name.includes('GRAND TOTAL') || cat.category_name === 'ALL CATEGORIES (GRAND TOTAL)';
-                  const totalRev = categoryData.find((c) => c.category_name.includes('GRAND TOTAL'))?.total_category_revenue || 1;
-                  const pct = isGrandTotal ? 100 : (cat.total_category_revenue / totalRev) * 100;
-
-                  return (
-                    <tr
-                      key={idx}
-                      style={{
-                        borderBottom: isGrandTotal ? '2px solid var(--primary)' : '1px solid var(--border-light)',
-                        background: isGrandTotal ? 'var(--primary-light)' : 'transparent',
-                        fontWeight: isGrandTotal ? 800 : 500,
-                      }}
-                    >
-                      <td style={{ padding: '14px', color: isGrandTotal ? 'var(--primary)' : 'var(--text-main)' }}>
-                        {isGrandTotal ? '⭐ ' : ''}{cat.category_name}
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                        {cat.total_orders.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                        {cat.total_units_sold.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '14px', color: isGrandTotal ? 'var(--primary)' : 'var(--text-main)', fontSize: isGrandTotal ? '1rem' : '0.85rem' }}>
-                        ${cat.total_category_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: '14px' }}>
-                        <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, background: isGrandTotal ? 'var(--primary)' : 'var(--bg-subtle)', color: isGrandTotal ? '#ffffff' : 'var(--text-secondary)' }}>
-                          {pct.toFixed(1)}% Share
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================================
-          TAB CONTENT 4: Customer Lifetime Value (v_customer_order_summary)
-          ====================================================================== */}
-      {activeTab === 'customers' && (
-        <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                Customer Lifetime Spending & Settlement Ledger
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>
-                Relational view <code style={{ fontWeight: 600 }}>v_customer_order_summary</code> using multi-table outer joins.
+              <h3 className="st-admin-card-title">Top 10 Revenue Generating Products Leaderboard</h3>
+              <p className="st-admin-card-subtitle">
+                Computed via window function <code>DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code>.
               </p>
             </div>
 
-            {/* Search Box */}
-            <div style={{ position: 'relative', minWidth: '240px' }}>
-              <SearchIcon className="search-icon" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <button
+              type="button"
+              onClick={() => exportToCSV(topSellingData, 'top_selling_analytics')}
+              className="st-btn-pill-export"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="st-admin-card">
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '80px' }}>Rank</th>
+                    <th>Product Title</th>
+                    <th>Category</th>
+                    <th>Units Sold</th>
+                    <th>Total Revenue</th>
+                    <th>Velocity Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topSellingData.map((item) => {
+                    const isTop3 = item.revenue_rank <= 3;
+                    return (
+                      <tr key={item.product_id}>
+                        <td>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: item.revenue_rank === 1 ? '#fef3c7' : item.revenue_rank === 2 ? '#f1f5f9' : item.revenue_rank === 3 ? '#eff6ff' : '#ffffff',
+                              color: item.revenue_rank === 1 ? '#92400e' : item.revenue_rank === 2 ? '#334155' : item.revenue_rank === 3 ? '#1d4ed8' : '#64748b',
+                              border: '1px solid #e2e8f0',
+                              textAlign: 'center',
+                              lineHeight: '22px',
+                              fontWeight: 700,
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            {item.revenue_rank}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                          {item.product_name}
+                        </td>
+                        <td>
+                          <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#475569' }}>
+                            {item.category_name}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 500 }}>
+                          {item.total_units_sold.toLocaleString()} units
+                        </td>
+                        <td style={{ fontWeight: 600, color: '#059669' }}>
+                          ${item.total_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td>
+                          <span className={isTop3 ? 'st-chip-paid' : 'st-chip-role-mgr'}>
+                            {isTop3 ? 'High Velocity' : 'Standard'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB CONTENT 3: CATEGORY REVENUE & ROLLUP                            */}
+      {/* ==================================================================== */}
+      {activeTab === 'categories' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div>
+              <h3 className="st-admin-card-title">Category Volume with Automatic Grand Total ROLLUP</h3>
+              <p className="st-admin-card-subtitle">
+                Multi-dimensional grouping using <code>GROUP BY c.name WITH ROLLUP</code>.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => exportToCSV(categoryData, 'category_revenue_analytics')}
+              className="st-btn-pill-export"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="st-admin-card">
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th>Category Name</th>
+                    <th>Total Orders</th>
+                    <th>Units Sold</th>
+                    <th>Total Revenue</th>
+                    <th>Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categoryData.map((cat, idx) => {
+                    const isGrandTotal = cat.category_name.includes('GRAND TOTAL') || cat.category_name === 'ALL CATEGORIES (GRAND TOTAL)';
+                    const totalRev = categoryData.find((c) => c.category_name.includes('GRAND TOTAL'))?.total_category_revenue || 1;
+                    const pct = isGrandTotal ? 100 : (cat.total_category_revenue / totalRev) * 100;
+
+                    return (
+                      <tr
+                        key={idx}
+                        style={{
+                          background: isGrandTotal ? '#f8fafc' : '#ffffff',
+                          borderTop: isGrandTotal ? '2px solid #cbd5e1' : undefined,
+                          fontWeight: isGrandTotal ? 700 : 400
+                        }}
+                      >
+                        <td>
+                          {isGrandTotal ? (
+                            <span style={{ color: '#0f172a', fontWeight: 700 }}>Total Rollup</span>
+                          ) : (
+                            <span style={{ color: '#1e293b', fontWeight: 500 }}>{cat.category_name}</span>
+                          )}
+                        </td>
+                        <td>{cat.total_orders.toLocaleString()} orders</td>
+                        <td>{cat.total_units_sold.toLocaleString()} units</td>
+                        <td style={{ fontWeight: 600, color: isGrandTotal ? '#0f172a' : '#059669' }}>
+                          ${cat.total_category_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td>
+                          <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', fontWeight: 600, color: '#334155' }}>
+                            {pct.toFixed(1)}% Share
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB CONTENT 4: CUSTOMER LIFETIME VALUE                              */}
+      {/* ==================================================================== */}
+      {activeTab === 'customers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div>
+              <h3 className="st-admin-card-title">Customer Lifetime Spending &amp; Settlement Ledger</h3>
+              <p className="st-admin-card-subtitle">
+                Relational view <code>v_customer_order_summary</code> using multi-table outer joins.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => exportToCSV(filteredCustomers, 'customer_summary_analytics')}
+              className="st-btn-pill-export"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="st-admin-card" style={{ padding: '12px 18px' }}>
+            <div className="st-admin-search-wrap">
+              <span className="st-admin-search-icon">
+                <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
+              </span>
               <input
                 type="text"
-                placeholder="Search customer, email, city..."
+                placeholder="Search by customer name, email, or city..."
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px 8px 32px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.85rem',
-                }}
+                className="st-admin-search-input"
               />
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.725rem', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 14px' }}>Customer Name</th>
-                  <th style={{ padding: '12px 14px' }}>Primary City / Hub</th>
-                  <th style={{ padding: '12px 14px' }}>Order Count</th>
-                  <th style={{ padding: '12px 14px' }}>Lifetime Spending</th>
-                  <th style={{ padding: '12px 14px' }}>Paid / Pending Ratio</th>
-                  <th style={{ padding: '12px 14px' }}>Pending Settlement</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.map((cust) => (
-                  <tr key={cust.customer_id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{cust.customer_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{cust.email}</div>
-                    </td>
-                    <td style={{ padding: '14px' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
-                        📍 {cust.primary_city}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px', color: 'var(--text-secondary)' }}>
-                      {cust.total_orders} orders
-                    </td>
-                    <td style={{ padding: '14px', fontWeight: 800, color: 'var(--primary)' }}>
-                      ${cust.lifetime_spending.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '14px' }}>
-                      <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>{cust.paid_orders} Paid</span>
-                      <span style={{ color: 'var(--text-dim)', margin: '0 4px' }}>/</span>
-                      <span style={{ color: 'var(--warning-text)', fontWeight: 700 }}>{cust.pending_orders} Pending</span>
-                    </td>
-                    <td style={{ padding: '14px' }}>
-                      {cust.pending_order_value > 0 ? (
-                        <span style={{ color: 'var(--warning-text)', fontWeight: 700 }}>
-                          ${cust.pending_order_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--success-text)', fontSize: '0.75rem', fontWeight: 600 }}>
-                          ✓ All Settled
-                        </span>
-                      )}
-                    </td>
+          <div className="st-admin-card">
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Primary Hub</th>
+                    <th>Orders</th>
+                    <th>Lifetime Spend</th>
+                    <th>Settlement Status</th>
+                    <th>Pending Settlement</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredCustomers.map((cust) => (
+                    <tr key={cust.customer_id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{cust.customer_name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{cust.email}</div>
+                      </td>
+                      <td>
+                        <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#475569' }}>
+                          {cust.primary_city}
+                        </span>
+                      </td>
+                      <td>{cust.total_orders} orders</td>
+                      <td style={{ fontWeight: 600, color: '#059669' }}>
+                        ${cust.lifetime_spending.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span className="st-chip-paid">
+                            {cust.paid_orders} Paid
+                          </span>
+                          <span className="st-chip-pending">
+                            {cust.pending_orders} Pending
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {cust.pending_order_value > 0 ? (
+                          <span style={{ fontWeight: 600, color: '#d97706' }}>
+                            ${cust.pending_order_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="st-chip-paid">
+                            All Settled
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

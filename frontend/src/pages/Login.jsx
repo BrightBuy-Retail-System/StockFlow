@@ -65,7 +65,7 @@ export default function LoginPage() {
           navigate('/customer-dashboard');
         } else if (roleId === 2) {
           navigate('/manager-dashboard');
-        } else if (roleId === 3) {
+        } else if (roleId === 3 || roleId === 4) {
           navigate('/system-administrator');
         } else {
           navigate('/');
