@@ -58,7 +58,9 @@ export default function CustomerDashboard() {
         fetchCustomerInfo();
     }, [navigate]);
 
-    if (!user) return null;
+  // Modal State
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [toast, setToast] = useState(null);
 
     const summary = customerData.summary || {
         total_orders: customerData.orders?.length || 0,
@@ -125,7 +127,67 @@ export default function CustomerDashboard() {
                         Browse Catalog
                     </Link>
                 </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Express Guarantee Callout */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)',
+              border: '1px solid #bfdbfe',
+              borderRadius: '20px',
+              padding: '24px 28px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#2563eb',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <TruckIcon className="w-6 h-6" />
             </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', color: '#1e3a8a', marginBottom: '2px' }}>
+                Islandwide Doorstep Delivery Guarantee
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#3b82f6' }}>
+                Every consignment is fully insured during transit with tamper-evident serial seals and SMS dispatch notifications.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================================================
+          7. TAB 4: Profile & Security Overview
+          ========================================================================== */}
+      {activeTab === 'profile' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+          {/* User Profile Card */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              border: '1.5px solid #e2e8f0',
+              padding: '28px',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            }}
+          >
+            <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 18px', color: '#0f172a' }}>
+              Account Identity
+            </h3>
 
             {/* Customer Personal Metrics Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
@@ -138,6 +200,7 @@ export default function CustomerDashboard() {
                         Calculated from view <code>v_customer_order_summary</code>
                     </div>
                 </div>
+              </div>
 
                 <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
                     <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Orders</div>
@@ -148,6 +211,58 @@ export default function CustomerDashboard() {
                         Recorded in database table <code>orders</code>
                     </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Security & Stack Credentials */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              border: '1.5px solid #e2e8f0',
+              padding: '28px',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            }}
+          >
+            <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 18px', color: '#0f172a' }}>
+              Security &amp; Data Isolation
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ShieldCheckIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>JWT Bearer 256-Bit Cryptography</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Stateless authenticated API sessions verified on every order mutation.</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <DatabaseIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>MySQL InnoDB ACID Compliance</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Row-level locking guarantees stock reservation consistency without overselling.</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fffbeb', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ZapIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>Zero Data Leakage</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Strict role-based tenant filters prevent unauthorized order visibility.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
                 <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
                     <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Settled (Paid) Orders</div>
@@ -304,6 +419,9 @@ export default function CustomerDashboard() {
                     </div>
                 )}
             </div>
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 }

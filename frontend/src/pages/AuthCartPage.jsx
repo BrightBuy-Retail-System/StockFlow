@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/client';
-import { ShoppingBagIcon } from '../components/Icons';
+import { ShoppingBagIcon, UserIcon, ShieldCheckIcon } from '../components/Icons';
 
 export default function AuthCartPage() {
   const [cart, setCart] = useState({ items: [], subtotal: 0, item_count: 0 });
@@ -10,14 +10,54 @@ export default function AuthCartPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const token = localStorage.getItem('token');
+  const isLoggedIn = Boolean(token);
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
+    loadCart();
+  }, [token]);
+
+  const loadCart = async () => {
+    setLoading(true);
+    setError(null);
+
+    if (token) {
+      // 1. Sync any guest items in localStorage into the authenticated cart
+      try {
+        const rawLocal = localStorage.getItem('cart');
+        if (rawLocal) {
+          const localItems = JSON.parse(rawLocal);
+          if (Array.isArray(localItems) && localItems.length > 0) {
+            for (const item of localItems) {
+              const variantId = item.variant_id || item.product_id;
+              if (variantId) {
+                await api.post('/auth_cart/cart/add', {
+                  variant_id: variantId,
+                  quantity: item.quantity || 1,
+                }).catch(() => null);
+              }
+            }
+            localStorage.removeItem('cart');
+          }
+        }
+      } catch (err) {
+        console.warn('Cart sync warning:', err);
+      }
+
+      // 2. Fetch authenticated cart from API
+      try {
+        const res = await api.get('/auth_cart/cart');
+        setCart(res.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Guest Mode: load from localStorage
+      loadGuestCart();
     }
-    fetchCart();
-  }, [navigate]);
+  };
 
   const syncLocalStorage = (cartItems) => {
     try {
@@ -50,15 +90,43 @@ export default function AuthCartPage() {
       setCart(res.data);
       syncLocalStorage(res.data.items);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
+      console.error('Error reading guest cart:', err);
+      setCart({ items: [], subtotal: 0, item_count: 0 });
     } finally {
       setLoading(false);
     }
   };
 
   const handleUpdateQuantity = async (cartItemId, newQty) => {
+    setUpdatingId(cartItemId);
+
+    if (!token) {
+      // Guest update in localStorage
+      const raw = localStorage.getItem('cart');
+      const list = raw ? JSON.parse(raw) : [];
+      if (newQty <= 0) {
+        const updated = list.filter((it, idx) => {
+          const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
+          return id !== cartItemId;
+        });
+        localStorage.setItem('cart', JSON.stringify(updated));
+      } else {
+        const updated = list.map((it, idx) => {
+          const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
+          if (id === cartItemId) {
+            return { ...it, quantity: newQty };
+          }
+          return it;
+        });
+        localStorage.setItem('cart', JSON.stringify(updated));
+      }
+      loadGuestCart();
+      setUpdatingId(null);
+      return;
+    }
+
+    // Authenticated update via backend API
     try {
-      setUpdatingId(cartItemId);
       if (newQty <= 0) {
         await api.delete(`/auth_cart/cart/items/${cartItemId}`);
       } else {
@@ -75,8 +143,23 @@ export default function AuthCartPage() {
   };
 
   const handleRemoveItem = async (cartItemId) => {
+    setUpdatingId(cartItemId);
+
+    if (!token) {
+      // Guest removal from localStorage
+      const raw = localStorage.getItem('cart');
+      const list = raw ? JSON.parse(raw) : [];
+      const updated = list.filter((it, idx) => {
+        const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
+        return id !== cartItemId;
+      });
+      localStorage.setItem('cart', JSON.stringify(updated));
+      loadGuestCart();
+      setUpdatingId(null);
+      return;
+    }
+
     try {
-      setUpdatingId(cartItemId);
       await api.delete(`/auth_cart/cart/items/${cartItemId}`);
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
@@ -90,8 +173,15 @@ export default function AuthCartPage() {
 
   const handleClearCart = async () => {
     if (!window.confirm('Are you sure you want to clear your entire cart?')) return;
+    setLoading(true);
+
+    if (!token) {
+      localStorage.removeItem('cart');
+      loadGuestCart();
+      return;
+    }
+
     try {
-      setLoading(true);
       await api.delete('/auth_cart/cart/clear');
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
@@ -101,6 +191,14 @@ export default function AuthCartPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCheckoutClick = () => {
+    if (!token) {
+      navigate('/login?redirect=/auth-cart');
+      return;
+    }
+    navigate('/orders');
   };
 
   if (loading && cart.items.length === 0) {
@@ -139,6 +237,47 @@ export default function AuthCartPage() {
           </button>
         )}
       </div>
+
+      {/* Guest Notice Banner */}
+      {!isLoggedIn && cart.items.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            padding: '14px 20px',
+            background: 'rgba(37, 99, 235, 0.08)',
+            border: '1px solid rgba(37, 99, 235, 0.25)',
+            borderRadius: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <UserIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+            <div>
+              <strong style={{ color: 'var(--text-main)', fontSize: '0.925rem' }}>Guest Mode:</strong>{' '}
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                Your cart is saved locally. Please sign in or register when you are ready to checkout.
+              </span>
+            </div>
+          </div>
+          <Link
+            to="/login?redirect=/auth-cart"
+            style={{
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              background: 'rgba(37, 99, 235, 0.12)',
+              padding: '6px 14px',
+              borderRadius: '6px',
+            }}
+          >
+            Sign In &rarr;
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="card" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
@@ -225,17 +364,17 @@ export default function AuthCartPage() {
                         onClick={() => handleUpdateQuantity(item.cart_item_id, item.quantity - 1)}
                         disabled={updatingId === item.cart_item_id}
                         style={{
-                          background: 'var(--bg-subtle)',
+                          background: 'var(--bg-card)',
                           border: 'none',
                           padding: '6px 12px',
                           cursor: 'pointer',
+                          color: 'var(--text-main)',
                           fontWeight: 700,
-                          fontSize: '1rem',
                         }}
                       >
-                        −
+                        -
                       </button>
-                      <span style={{ padding: '0 14px', fontWeight: 600, fontSize: '0.9rem' }}>
+                      <span style={{ padding: '0 12px', fontWeight: 600, minWidth: '24px', textAlign: 'center' }}>
                         {item.quantity}
                       </span>
                       <button
@@ -243,21 +382,17 @@ export default function AuthCartPage() {
                         onClick={() => handleUpdateQuantity(item.cart_item_id, item.quantity + 1)}
                         disabled={updatingId === item.cart_item_id}
                         style={{
-                          background: 'var(--bg-subtle)',
+                          background: 'var(--bg-card)',
                           border: 'none',
                           padding: '6px 12px',
                           cursor: 'pointer',
+                          color: 'var(--text-main)',
                           fontWeight: 700,
-                          fontSize: '1rem',
                         }}
                       >
                         +
                       </button>
                     </div>
-
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      × ${parseFloat(item.unit_price).toFixed(2)} each
-                    </span>
 
                     <button
                       type="button"
@@ -315,20 +450,28 @@ export default function AuthCartPage() {
               </span>
             </div>
 
-            <Link
-              to="/orders"
+            <button
+              type="button"
+              onClick={handleCheckoutClick}
               className="btn-primary"
               style={{
+                width: '100%',
                 textAlign: 'center',
-                textDecoration: 'none',
                 padding: '12px 20px',
                 borderRadius: '8px',
                 fontWeight: 600,
                 marginTop: '8px',
+                cursor: 'pointer',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
               }}
             >
-              Proceed to Orders / Checkout
-            </Link>
+              <ShoppingBagIcon className="w-4 h-4" />
+              <span>{isLoggedIn ? 'Proceed to Orders / Checkout' : 'Sign In to Checkout'}</span>
+            </button>
 
             <Link
               to="/catalog"

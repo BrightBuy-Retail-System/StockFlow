@@ -4,45 +4,71 @@ import api from '../api/client';
 
 // ─── category metadata & thumbnail images ────────────────────────────────────
 const CATEGORY_THUMBNAILS = {
-  'mobile-phones': {
-    name: 'Mobile Phones',
+  'smartphones-tablets': {
+    name: 'Smartphones & Tablets',
     img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=90&auto=format&fit=crop&q=80',
     icon: '📱',
   },
-  'mobile-phone-accessories': {
-    name: 'Mobile Phone Accessories',
-    img: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=90&auto=format&fit=crop&q=80',
+  'laptops-computers': {
+    name: 'Laptops & Computers',
+    img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=90&auto=format&fit=crop&q=80',
+    icon: '💻',
+  },
+  'smart-audio-headphones': {
+    name: 'Smart Audio & Headphones',
+    img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=90&auto=format&fit=crop&q=80',
     icon: '🎧',
   },
-  'power-banks': {
-    name: 'Power Banks',
+  'wearables-smartwatches': {
+    name: 'Wearables & Smartwatches',
+    img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=90&auto=format&fit=crop&q=80',
+    icon: '⌚',
+  },
+  'gaming-consoles-gear': {
+    name: 'Gaming Consoles & Gear',
+    img: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=90&auto=format&fit=crop&q=80',
+    icon: '🎮',
+  },
+  'cameras-drones': {
+    name: 'Cameras & Drones',
+    img: 'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?w=90&auto=format&fit=crop&q=80',
+    icon: '📷',
+  },
+  'smart-home-iot': {
+    name: 'Smart Home & IoT',
+    img: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=90&auto=format&fit=crop&q=80',
+    icon: '🏠',
+  },
+  'electronic-toys-stem': {
+    name: 'Electronic Toys & STEM',
+    img: 'https://images.unsplash.com/photo-1585366119957-e9730b6d0f60?w=90&auto=format&fit=crop&q=80',
+    icon: '🤖',
+  },
+  'power-banks-chargers': {
+    name: 'Power Banks & Chargers',
     img: 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=90&auto=format&fit=crop&q=80',
     icon: '🔋',
   },
-  'speakers': {
-    name: 'Speakers',
-    img: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=90&auto=format&fit=crop&q=80',
-    icon: '🔊',
+  'accessories': {
+    name: 'Computer Accessories',
+    img: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=90&auto=format&fit=crop&q=80',
+    icon: '⌨️',
   },
-  'projectors': {
-    name: 'Projectors',
-    img: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=90&auto=format&fit=crop&q=80',
-    icon: '📽️',
+  'storage-networking': {
+    name: 'Storage & Networking',
+    img: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=90&auto=format&fit=crop&q=80',
+    icon: '💾',
   },
-  'car-accessories': {
-    name: 'Car Accessories',
+  'car-electronics': {
+    name: 'Car Electronics & Mounts',
     img: 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=90&auto=format&fit=crop&q=80',
     icon: '🚗',
-  },
-  'electronics': {
-    name: 'Electronics',
-    img: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=90&auto=format&fit=crop&q=80',
-    icon: '⚡',
   },
 };
 
 // ─── smart product image resolver ─────────────────────────────────────────────
 function getProductPhoto(product) {
+  if (product?.image_url) return product.image_url;
   const name = (product?.name || product?.title || '').toLowerCase();
   if (name.includes('soundcore r50i nc') || (name.includes('soundcore') && name.includes('nc'))) {
     return 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=700&auto=format&fit=crop&q=80';
@@ -78,6 +104,13 @@ function getProductPhoto(product) {
 }
 
 function getProductGallery(product) {
+  if (product?.image_url) {
+    return [
+      product.image_url,
+      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
+    ];
+  }
   const name = (product?.name || product?.title || '').toLowerCase();
   if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone')) {
     return [
@@ -246,11 +279,11 @@ export default function CatalogPage() {
   const [newReview, setNewReview] = useState({ rating: 5, name: '', title: '', comment: '' });
   const [userReviews, setUserReviews] = useState([]);
 
-  // In-cart quantity helper for any variant (strictly for authenticated customer)
+  // In-cart quantity helper for any variant (supports both guest and authenticated users)
   const getVariantInCart = useCallback((vId) => {
-    if (!productDetail || !isLoggedIn || !currentUser?.user_id) return 0;
+    if (!productDetail) return 0;
     try {
-      const userCartKey = `cart_${currentUser.user_id}`;
+      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
       const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const list = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(list)) return 0;
@@ -261,7 +294,7 @@ export default function CatalogPage() {
     } catch {
       return 0;
     }
-  }, [productDetail, isLoggedIn, currentUser?.user_id, cartVersion]);
+  }, [productDetail, currentUser?.user_id, cartVersion]);
 
   // In-cart quantity for current variant
   const inCartQuantity = useMemo(() => {
@@ -1695,7 +1728,7 @@ export default function CatalogPage() {
                 </button>
               </div>
 
-              {isLoggedIn && inCartQuantity > 0 && (
+              {inCartQuantity > 0 && (
                 <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '-2px' }}>
                   <span>🛒</span>
                   <span>
@@ -2683,7 +2716,7 @@ export default function CatalogPage() {
                         onClick={openCreateCategory}
                         title="Add New Category"
                         style={{
-                          padding: '8px 16px',
+                          padding: '8px 18px',
                           borderRadius: '9999px',
                           border: '1px solid rgba(0,0,0,0.14)',
                           background: '#ffffff',

@@ -150,7 +150,7 @@ def get_staff_members():
     """Retrieve all internal staff accounts (Managers and System Administrators)."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Managers and Administrators only."}), 403
 
     conn = get_db_connection()
@@ -159,7 +159,7 @@ def get_staff_members():
         query = """
             SELECT user_id, full_name, email, role_id
             FROM users
-            WHERE role_id IN (2, 3)
+            WHERE role_id IN (2, 3, 4)
             ORDER BY role_id DESC, user_id ASC
         """
         cursor.execute(query)
@@ -178,7 +178,7 @@ def register_staff_member():
     """Allow Managers (role 2) and System Administrators (role 3) to onboard new staff."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Only Managers and Administrators can register staff."}), 403
 
     data = request.get_json() or {}
@@ -195,8 +195,8 @@ def register_staff_member():
     except (ValueError, TypeError):
         return jsonify({"message": "Invalid role ID"}), 400
 
-    if role_id not in (2, 3):
-        return jsonify({"message": "Staff role must be either Store Manager (2) or System Administrator (3)"}), 400
+    if role_id not in (2, 3, 4):
+        return jsonify({"message": "Staff role must be Store Manager (2) or System Administrator (3/4)"}), 400
 
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
@@ -310,15 +310,37 @@ def add_to_cart():
     user_id = get_jwt_identity()
     data = request.get_json() or {}
     variant_id = data.get('variant_id')
+    product_id = data.get('product_id')
     quantity = int(data.get('quantity', 1))
 
-    if not variant_id or quantity <= 0:
-        return jsonify({"message": "Valid variant_id and positive quantity are required"}), 400
+    if quantity <= 0:
+        return jsonify({"message": "Valid positive quantity is required"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
+        # If variant_id is not directly supplied but product_id is, resolve first variant of that product
+        if not variant_id and product_id:
+            cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (product_id,))
+            v_match = cursor.fetchone()
+            if v_match:
+                variant_id = v_match['variant_id']
+
+        # If variant_id is supplied, ensure it exists in product_variants.
+        # If it doesn't match a variant_id, check if caller passed product_id as variant_id.
+        if variant_id:
+            cursor.execute("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
+            if not cursor.fetchone():
+                cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (variant_id,))
+                fallback_variant = cursor.fetchone()
+                if fallback_variant:
+                    variant_id = fallback_variant['variant_id']
+                else:
+                    return jsonify({"message": f"No active product variant found for ID {variant_id}"}), 404
+        else:
+            return jsonify({"message": "Valid variant_id or product_id is required"}), 400
+
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
         # Check if this variant is already in the cart
@@ -341,7 +363,12 @@ def add_to_cart():
             )
 
         conn.commit()
-        return jsonify({"message": "Item added to cart successfully"}), 200
+        return jsonify({
+            "message": "Item added to cart successfully",
+            "cart_id": cart_id,
+            "variant_id": variant_id,
+            "quantity": quantity
+        }), 200
 
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500

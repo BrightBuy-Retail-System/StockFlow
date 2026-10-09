@@ -2,7 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import {
-  ZapIcon,
+  AnalyticsIcon,
+  OrdersIcon,
+  CheckCircleIcon,
+  DatabaseIcon,
   SearchIcon,
   ShieldCheckIcon,
   CheckCircleIcon,
@@ -826,6 +829,7 @@ export default function AnalyticsPage() {
             Physical items fulfilled across 5 Texas hubs
           </div>
         </div>
+
       </div>
 
       {/* Admin Tab Navigation Across All Views & Security Console */}
@@ -889,6 +893,14 @@ export default function AnalyticsPage() {
                 <option value="2026">2026</option>
                 <option value="2025">2025</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => exportToCSV(quarterlyData, 'quarterly_sales_analytics')}
+                className="st-btn-pill-export"
+              >
+                Export CSV
+              </button>
             </div>
           </div>
 
@@ -1183,9 +1195,49 @@ export default function AnalyticsPage() {
                     <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}><code>{g.privileges}</code></td>
                     <td style={{ padding: '12px 8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{g.lecture_reference}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredCustomers.map((cust) => (
+                    <tr key={cust.customer_id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{cust.customer_name}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{cust.email}</div>
+                      </td>
+                      <td>
+                        <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#475569' }}>
+                          {cust.primary_city}
+                        </span>
+                      </td>
+                      <td>{cust.total_orders} orders</td>
+                      <td style={{ fontWeight: 600, color: '#059669' }}>
+                        ${cust.lifetime_spending.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span className="st-chip-paid">
+                            {cust.paid_orders} Paid
+                          </span>
+                          <span className="st-chip-pending">
+                            {cust.pending_orders} Pending
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {cust.pending_order_value > 0 ? (
+                          <span style={{ fontWeight: 600, color: '#d97706' }}>
+                            ${cust.pending_order_value.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="st-chip-paid">
+                            All Settled
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {dclData.recent_audit_logs?.length > 0 && (
@@ -1210,6 +1262,7 @@ export default function AnalyticsPage() {
           )}
         </div>
       )}
+
     </div>
   );
 }

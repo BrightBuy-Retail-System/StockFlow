@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import {
   ShoppingBagIcon,
@@ -11,11 +11,15 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectUrl = searchParams.get('redirect');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
   const testAccounts = [
     {
@@ -87,11 +91,13 @@ export default function LoginPage() {
 
       setTimeout(() => {
         const roleId = Number(data.user?.role_id);
-        if (roleId === 1) {
+        if (redirectUrl && roleId === 1) {
+          navigate(redirectUrl);
+        } else if (roleId === 1) {
           navigate('/customer-dashboard');
         } else if (roleId === 2) {
           navigate('/manager-dashboard');
-        } else if (roleId === 3) {
+        } else if (roleId === 3 || roleId === 4) {
           navigate('/system-administrator');
         } else {
           navigate('/analytics');
@@ -264,7 +270,7 @@ export default function LoginPage() {
         {/* Switch to Register */}
         <div className="st-auth-switch-box">
           <span>Don't have an account yet?</span>
-          <Link to="/register" className="st-auth-switch-link">
+          <Link to={`/register${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="st-auth-switch-link">
             Create an Account
           </Link>
         </div>
