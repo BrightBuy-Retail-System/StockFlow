@@ -269,6 +269,7 @@ export default function CatalogPage() {
   const [selectedVariantId, setSelectedVariantId] = useState(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
   const [cartVersion, setCartVersion] = useState(0);
   const [shortDescOpen, setShortDescOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
@@ -563,18 +564,34 @@ export default function CatalogPage() {
     api.delete(`/catalog/variants/${v.variant_id}`).then(refreshDetail);
   };
 
-  const adjustStock = (variantId) => {
-    const raw = stockInputs[variantId];
-    const delta = parseInt(raw, 10);
-    if (isNaN(delta) || delta === 0) return;
+  const adjustStock = (variantId, customVal = null) => {
+    const raw = customVal !== null ? String(customVal) : stockInputs[variantId];
+    if (raw === undefined || raw === null || !String(raw).trim()) return;
+
+    const trimmed = String(raw).trim();
+    let payload = {};
+
+    if (trimmed.startsWith('+') || trimmed.startsWith('-')) {
+      const delta = parseInt(trimmed, 10);
+      if (isNaN(delta) || delta === 0) return;
+      payload = { adjust: delta };
+    } else {
+      const exact = parseInt(trimmed, 10);
+      if (isNaN(exact) || exact < 0) {
+        alert('Please enter a valid non-negative number');
+        return;
+      }
+      payload = { stock_quantity: exact };
+    }
 
     setStockSaving((s) => ({ ...s, [variantId]: true }));
-    api.patch(`/catalog/inventory/${variantId}`, { adjust: delta })
+    api.patch(`/catalog/inventory/${variantId}`, payload)
       .then(() => {
         setStockInputs((s) => ({ ...s, [variantId]: '' }));
         refreshDetail();
+        refreshProducts();
       })
-      .catch((err) => alert(`Failed to adjust stock: ${err.message}`))
+      .catch((err) => alert(`Failed to update stock: ${err.response?.data?.error || err.message}`))
       .finally(() => setStockSaving((s) => ({ ...s, [variantId]: false })));
   };
 
@@ -625,6 +642,17 @@ export default function CatalogPage() {
 
   // ── Cart & Add-to-cart Toast ──
   const handleAddToCart = async () => {
+    if (addingToCart) return;
+
+    if (!isLoggedIn) {
+      setToastMessage('🔒 Please log in to add items to your cart.');
+      setTimeout(() => {
+        setToastMessage(null);
+        navigate('/login');
+      }, 1200);
+      return;
+    }
+
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
@@ -643,74 +671,79 @@ export default function CatalogPage() {
       return;
     }
 
-    // 1. Optimistically deduct stock on the frontend state immediately
-    setProductDetail((prev) => {
-      if (!prev) return prev;
-      const updatedVariants = (prev.variants || []).map((v) =>
-        v.variant_id === selectedVariant.variant_id
-          ? { ...v, stock: Math.max(0, (Number(v.stock) || 0) - qtyToAdd) }
-          : v
+    setAddingToCart(true);
+
+    try {
+      // 1. Optimistically deduct stock on the frontend state immediately
+      setProductDetail((prev) => {
+        if (!prev) return prev;
+        const updatedVariants = (prev.variants || []).map((v) =>
+          v.variant_id === selectedVariant.variant_id
+            ? { ...v, stock: Math.max(0, (Number(v.stock) || 0) - qtyToAdd) }
+            : v
+        );
+        return { ...prev, variants: updatedVariants };
+      });
+
+      const itemPrice = selectedVariant && selectedVariant.price !== undefined && selectedVariant.price !== null
+        ? Number(selectedVariant.price)
+        : Number(productDetail.base_price) || 0;
+
+      const cartItem = {
+        product_id: productDetail.product_id,
+        name: productDetail.name || productDetail.title,
+        variant_id: selectedVariant?.variant_id || null,
+        sku: selectedVariant?.sku || 'STD',
+        attribute_name: selectedVariant?.attribute_name || null,
+        attribute_value: selectedVariant?.attribute_value || 'Default',
+        price: itemPrice,
+        quantity: qtyToAdd,
+        available_stock: availableStock - qtyToAdd,
+        image: getProductPhoto(productDetail),
+      };
+
+      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const matchIndex = list.findIndex(
+        (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
       );
-      return { ...prev, variants: updatedVariants };
-    });
 
-    const itemPrice = selectedVariant && selectedVariant.price !== undefined && selectedVariant.price !== null
-      ? Number(selectedVariant.price)
-      : Number(productDetail.base_price) || 0;
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + qtyToAdd;
+      } else {
+        list.push(cartItem);
+      }
+      localStorage.setItem(userCartKey, JSON.stringify(list));
+      localStorage.setItem('cart', JSON.stringify(list));
+      setCartVersion((v) => v + 1);
+      setQuantity(1);
 
-    const cartItem = {
-      product_id: productDetail.product_id,
-      name: productDetail.name || productDetail.title,
-      variant_id: selectedVariant?.variant_id || null,
-      sku: selectedVariant?.sku || 'STD',
-      attribute_name: selectedVariant?.attribute_name || null,
-      attribute_value: selectedVariant?.attribute_value || 'Default',
-      price: itemPrice,
-      quantity: qtyToAdd,
-      available_stock: availableStock - qtyToAdd,
-      image: getProductPhoto(productDetail),
-    };
-
-    const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
-    const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
-    const existing = raw ? JSON.parse(raw) : [];
-    const list = Array.isArray(existing) ? existing : [];
-    const matchIndex = list.findIndex(
-      (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
-    );
-
-    if (matchIndex > -1) {
-      list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + qtyToAdd;
-    } else {
-      list.push(cartItem);
-    }
-    localStorage.setItem(userCartKey, JSON.stringify(list));
-    localStorage.setItem('cart', JSON.stringify(list));
-    setCartVersion((v) => v + 1);
-    setQuantity(1);
-
-    // 2. Persist to database shopping cart & reserve stock if logged in
-    if (isLoggedIn && selectedVariant?.variant_id) {
+      // 2. Persist reservation to database catalog
       try {
-        // Sync item to database cart table for AuthCartPage & CustomerDashboard
-        await api.post('/auth_cart/cart/add', {
-          variant_id: selectedVariant.variant_id,
-          quantity: qtyToAdd,
-        });
-
-        await api.post('/catalog/cart/reserve', {
-          variant_id: selectedVariant.variant_id,
-          quantity: qtyToAdd,
-        });
+        if (selectedVariant?.variant_id) {
+          await api.post('/catalog/cart/reserve', {
+            variant_id: selectedVariant.variant_id,
+            quantity: qtyToAdd,
+          });
+          // 3. Save item to database cart (carts + cart_items tables)
+          await api.post('/catalog/cart/add', {
+            variant_id: selectedVariant.variant_id,
+            quantity: qtyToAdd,
+          });
+        }
         refreshDetail(true);
         refreshProducts();
       } catch (err) {
-        console.warn('Backend cart sync note:', err);
+        console.warn('Backend cart note:', err);
       }
-    }
 
-    setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
-    setTimeout(() => setToastMessage(null), 3500);
+      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   const handleAddReview = (e) => {
@@ -1098,9 +1131,153 @@ export default function CatalogPage() {
   const renderProductDetailPage = () => {
     if (detailLoading) {
       return (
-        <div style={{ padding: '80px 20px', textAlign: 'center', color: '#78716c' }}>
-          <div style={{ fontSize: '1.8rem', marginBottom: '12px' }}>⏳</div>
-          <p style={{ fontSize: '1rem', fontWeight: 600 }}>Loading product details from database…</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', width: '100%', maxWidth: '1280px', margin: '0 auto', animation: 'fadeInUp 0.3s ease' }}>
+          {/* Top Breadcrumb & Loading Indicator Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', padding: '12px 18px', background: '#ffffff', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+            <button
+              onClick={() => setSelectedProductId(null)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#f8fafc',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '9999px',
+                padding: '8px 16px',
+                fontSize: '0.86rem',
+                fontWeight: 600,
+                color: '#475569',
+                cursor: 'pointer',
+              }}
+            >
+              <span>←</span>
+              <span>Back to Products</span>
+            </button>
+
+            {/* Dynamic Animated Motion Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #3b5bcf 0%, #6366f1 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  fontSize: '0.9rem',
+                  animation: 'pulseRing 1.8s infinite',
+                }}
+              >
+                <div style={{ animation: 'spinSlow 2.5s linear infinite', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  ⚡
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                  Loading product details
+                  <span style={{ animation: 'dotBounce 1.4s infinite ease-in-out', display: 'inline-block', marginLeft: '3px' }}>.</span>
+                  <span style={{ animation: 'dotBounce 1.4s infinite ease-in-out 0.2s', display: 'inline-block' }}>.</span>
+                  <span style={{ animation: 'dotBounce 1.4s infinite ease-in-out 0.4s', display: 'inline-block' }}>.</span>
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Syncing live inventory &amp; product variants
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Shimmer Skeleton Cards Layout */}
+          <div className="product-top-grid" style={{ width: '100%' }}>
+            {/* Left Column Skeleton (Gallery) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div
+                className="skeleton-shimmer"
+                style={{
+                  width: '100%',
+                  aspectRatio: '1 / 1',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '20px',
+                    background: 'rgba(255,255,255,0.8)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                    animation: 'floatOrb 3s ease-in-out infinite',
+                  }}
+                >
+                  <span style={{ fontSize: '1.8rem' }}>📦</span>
+                </div>
+              </div>
+
+              {/* Thumbnail skeletons */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="skeleton-shimmer"
+                    style={{
+                      width: '74px',
+                      height: '74px',
+                      borderRadius: '14px',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column Skeleton (Details & Actions) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: '#ffffff', borderRadius: '24px', padding: '32px', border: '1px solid rgba(0,0,0,0.06)' }}>
+              {/* Category pill skeleton */}
+              <div className="skeleton-shimmer" style={{ width: '110px', height: '24px', borderRadius: '9999px' }} />
+
+              {/* Title skeleton */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="skeleton-shimmer" style={{ width: '85%', height: '34px', borderRadius: '8px' }} />
+                <div className="skeleton-shimmer" style={{ width: '50%', height: '24px', borderRadius: '6px' }} />
+              </div>
+
+              {/* Price skeleton */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginTop: '6px' }}>
+                <div className="skeleton-shimmer" style={{ width: '160px', height: '42px', borderRadius: '10px' }} />
+                <div className="skeleton-shimmer" style={{ width: '90px', height: '20px', borderRadius: '6px' }} />
+              </div>
+
+              {/* Installment banner skeleton */}
+              <div className="skeleton-shimmer" style={{ width: '100%', height: '54px', borderRadius: '14px' }} />
+
+              {/* Variant options skeleton */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                <div className="skeleton-shimmer" style={{ width: '140px', height: '18px', borderRadius: '6px' }} />
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <div className="skeleton-shimmer" style={{ width: '90px', height: '38px', borderRadius: '9999px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '90px', height: '38px', borderRadius: '9999px' }} />
+                  <div className="skeleton-shimmer" style={{ width: '90px', height: '38px', borderRadius: '9999px' }} />
+                </div>
+              </div>
+
+              {/* Button skeleton */}
+              <div style={{ display: 'flex', gap: '14px', marginTop: '12px' }}>
+                <div className="skeleton-shimmer" style={{ width: '120px', height: '48px', borderRadius: '10px' }} />
+                <div className="skeleton-shimmer" style={{ flex: 1, height: '48px', borderRadius: '9999px' }} />
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -1464,15 +1641,15 @@ export default function CatalogPage() {
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1 || availableStock <= 0}
+                    disabled={addingToCart || quantity <= 1 || availableStock <= 0}
                     style={{
                       width: '38px',
                       height: '100%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
-                      cursor: (quantity <= 1 || availableStock <= 0) ? 'not-allowed' : 'pointer',
-                      color: (quantity <= 1 || availableStock <= 0) ? '#cbd5e1' : '#44403c',
+                      cursor: (addingToCart || quantity <= 1 || availableStock <= 0) ? 'not-allowed' : 'pointer',
+                      color: (addingToCart || quantity <= 1 || availableStock <= 0) ? '#cbd5e1' : '#44403c',
                       fontWeight: 600,
                     }}
                   >
@@ -1486,15 +1663,15 @@ export default function CatalogPage() {
                     onClick={() => {
                       setQuantity((q) => Math.min(availableStock, q + 1));
                     }}
-                    disabled={availableStock <= 0 || quantity >= availableStock}
+                    disabled={addingToCart || availableStock <= 0 || quantity >= availableStock}
                     style={{
                       width: '38px',
                       height: '100%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
-                      cursor: (availableStock <= 0 || quantity >= availableStock) ? 'not-allowed' : 'pointer',
-                      color: (availableStock <= 0 || quantity >= availableStock) ? '#cbd5e1' : '#44403c',
+                      cursor: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? 'not-allowed' : 'pointer',
+                      color: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? '#cbd5e1' : '#44403c',
                       fontWeight: 600,
                     }}
                   >
@@ -1505,18 +1682,27 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={!inStock}
+                  disabled={addingToCart || (isLoggedIn && !inStock)}
                   style={{
                     flex: 1,
                     height: '46px',
                     borderRadius: '9999px',
                     border: 'none',
-                    background: inStock ? '#3b5bcf' : '#a8a29e',
+                    background: !isLoggedIn
+                      ? '#0f172a'
+                      : inStock
+                        ? (addingToCart ? '#6366f1' : '#3b5bcf')
+                        : '#a8a29e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    cursor: !inStock ? 'not-allowed' : 'pointer',
-                    boxShadow: inStock ? '0 4px 14px rgba(59,91,207,0.35)' : 'none',
+                    cursor: (addingToCart || (isLoggedIn && !inStock)) ? 'not-allowed' : 'pointer',
+                    opacity: addingToCart ? 0.85 : 1,
+                    boxShadow: !isLoggedIn
+                      ? '0 4px 14px rgba(15,23,42,0.25)'
+                      : inStock
+                        ? '0 4px 14px rgba(59,91,207,0.35)'
+                        : 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1524,7 +1710,21 @@ export default function CatalogPage() {
                     gap: '8px',
                   }}
                 >
-                  {inStock ? 'Add to cart' : 'Out of Stock'}
+                  {!isLoggedIn ? (
+                    <>
+                      <span>🔒</span>
+                      <span>Sign in to add to cart</span>
+                    </>
+                  ) : addingToCart ? (
+                    <>
+                      <span>⏳</span>
+                      <span>Adding to cart...</span>
+                    </>
+                  ) : inStock ? (
+                    'Add to cart'
+                  ) : (
+                    'Out of Stock'
+                  )}
                 </button>
               </div>
 
@@ -1640,7 +1840,7 @@ export default function CatalogPage() {
                     <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>SKU</th>
                     <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Attribute</th>
                     <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Live Stock</th>
-                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Adjust ±5</th>
+                    <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Update / Adjust Stock</th>
                     <th style={{ padding: '12px 10px', fontWeight: 700, fontSize: '0.92rem' }}>Actions</th>
                   </tr>
                 </thead>
@@ -1659,39 +1859,89 @@ export default function CatalogPage() {
                         {v.stock || 0} units
                       </td>
                       <td style={{ padding: '12px 10px' }}>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                           <button
-                            onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: -5 }).then(refreshDetail)}
+                            type="button"
+                            onClick={() => adjustStock(v.variant_id, -5)}
+                            disabled={stockSaving[v.variant_id]}
                             title="Decrease stock by 5"
                             style={{
-                              padding: '5px 12px',
+                              padding: '5px 10px',
                               borderRadius: '6px',
                               border: '1px solid rgba(239,68,68,0.3)',
                               background: '#fef2f2',
                               color: '#dc2626',
-                              cursor: 'pointer',
+                              cursor: stockSaving[v.variant_id] ? 'not-allowed' : 'pointer',
                               fontWeight: 700,
-                              fontSize: '0.92rem',
+                              fontSize: '0.88rem',
                             }}
                           >
                             −5
                           </button>
                           <button
-                            onClick={() => api.patch(`/catalog/inventory/${v.variant_id}`, { adjust: 5 }).then(refreshDetail)}
+                            type="button"
+                            onClick={() => adjustStock(v.variant_id, 5)}
+                            disabled={stockSaving[v.variant_id]}
                             title="Increase stock by 5"
                             style={{
-                              padding: '5px 12px',
+                              padding: '5px 10px',
                               borderRadius: '6px',
                               border: '1px solid rgba(16,185,129,0.3)',
                               background: '#ecfdf5',
                               color: '#059669',
-                              cursor: 'pointer',
+                              cursor: stockSaving[v.variant_id] ? 'not-allowed' : 'pointer',
                               fontWeight: 700,
-                              fontSize: '0.92rem',
+                              fontSize: '0.88rem',
                             }}
                           >
                             +5
                           </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="Set Quantity"
+                              value={stockInputs[v.variant_id] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setStockInputs((s) => ({ ...s, [v.variant_id]: val }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  adjustStock(v.variant_id);
+                                }
+                              }}
+                              disabled={stockSaving[v.variant_id]}
+                              style={{
+                                width: '120px',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(0,0,0,0.18)',
+                                fontSize: '0.86rem',
+                                fontWeight: 600,
+                                outline: 'none',
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => adjustStock(v.variant_id)}
+                              disabled={stockSaving[v.variant_id] || !stockInputs[v.variant_id]}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: stockSaving[v.variant_id] || !stockInputs[v.variant_id] ? '#cbd5e1' : '#3b5bcf',
+                                color: '#ffffff',
+                                fontWeight: 700,
+                                fontSize: '0.84rem',
+                                cursor: stockSaving[v.variant_id] || !stockInputs[v.variant_id] ? 'not-allowed' : 'pointer',
+                                transition: 'background 0.2s ease',
+                              }}
+                            >
+                              {stockSaving[v.variant_id] ? '...' : 'Set'}
+                            </button>
+                          </div>
                         </div>
                       </td>
                       <td style={{ padding: '12px 10px' }}>
@@ -2198,6 +2448,32 @@ export default function CatalogPage() {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .skeleton-shimmer {
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 40%, #f1f5f9 65%);
+          background-size: 300% 100%;
+          animation: shimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes pulseRing {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 91, 207, 0.45); }
+          70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(59, 91, 207, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 91, 207, 0); }
+        }
+        @keyframes spinSlow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes floatOrb {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes dotBounce {
+          0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-3px); }
+        }
       `}</style>
 
       {/* ── CONDITIONAL RENDER: PRODUCT DETAILS PAGE vs CATALOG BROWSE GRID ── */}
@@ -2440,7 +2716,7 @@ export default function CatalogPage() {
                         onClick={openCreateCategory}
                         title="Add New Category"
                         style={{
-                          padding: '8px 16px',
+                          padding: '8px 18px',
                           borderRadius: '9999px',
                           border: '1px solid rgba(0,0,0,0.14)',
                           background: '#ffffff',

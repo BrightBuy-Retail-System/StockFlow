@@ -68,11 +68,18 @@ export default function DashboardLayout() {
     return '/customer-dashboard';
   };
 
+  const getDashboardName = () => {
+    if (!user) return 'My Dashboard';
+    if (user.role_id === 2) return 'Manager Operations Hub';
+    if (user.role_id === 3) return 'Administrator Console';
+    return 'Customer Dashboard';
+  };
+
   const getRoleLabel = () => {
     if (!user) return '';
-    if (roleId === 2) return 'Store Executive & Manager';
-    if (roleId === 3 || roleId === 4) return 'System Administrator';
-    return 'Customer Account';
+    if (user.role_id === 2) return 'Store Manager (Role 2)';
+    if (user.role_id === 3) return 'Administrator (Role 3)';
+    return 'Customer Account (Role 1)';
   };
 
   // Role-specific navigation links
@@ -197,6 +204,16 @@ export default function DashboardLayout() {
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent', }}>
                   <UserIcon className="btn-icon" />
                   <span>{user.username || user.full_name}</span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
+                    color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
+                  }}>
+                    {user.role_id === 1 ? 'Customer' : user.role_id === 2 ? 'Manager' : 'Admin'}
+                  </span>
                   <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{dropdownOpen ? '▲' : '▼'}</span>
                 </button>
 
@@ -223,36 +240,15 @@ export default function DashboardLayout() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{getRoleLabel()}</div>
                     </div>
 
-                    {/* Role-specific Dropdown Links */}
-                    {roleId === 1 && (
-                      <>
-                        <Link
-                          to="/customer-dashboard"
-                          className="btn-ghost"
-                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          <UserIcon className="btn-icon" />
-                          <span>My Dashboard</span>
-                        </Link>
-                        <Link
-                          to="/orders"
-                          className="btn-ghost"
-                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          <span>My Orders</span>
-                        </Link>
-                        <Link
-                          to="/auth-cart"
-                          className="btn-ghost"
-                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          <span>Active Cart</span>
-                        </Link>
-                      </>
-                    )}
+                    <Link
+                      to={getDashboardRoute()}
+                      className="btn-ghost"
+                      style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <UserIcon className="btn-icon" />
+                      {getDashboardName()}
+                    </Link>
 
                     {roleId === 2 && (
                       <>
@@ -409,7 +405,7 @@ export default function DashboardLayout() {
         <div className="footer-inner">
           <div className="footer-col-brand">
             <div className="footer-brand-title">
-              <ShoppingBagIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+              <ShoppingBagIcon style={{ width: '22px', height: '22px', minWidth: '22px', color: 'var(--primary)', flexShrink: 0 }} />
               <span>Bright Buy Retail Systems</span>
             </div>
             <p className="footer-brand-desc">

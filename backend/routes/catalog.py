@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request  # pyrefly: ignore
 from db import get_db_connection  # pyrefly: ignore
-from flask_jwt_extended import jwt_required, get_jwt, verify_jwt_in_request
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity, verify_jwt_in_request
 
 catalog_bp = Blueprint('catalog', __name__)
 
@@ -403,14 +403,38 @@ def update_inventory(variant_id):
     """
     Set or adjust the stock_quantity and/or low_stock_threshold for a variant.
     Accepts:
-      { "stock_quantity": <int>, "low_stock_threshold": <int> }   (absolute set)
+      { "stock_quantity": <int> }                                  (set exact stock count directly)
       { "adjust": <int> }                                          (relative delta, e.g. +50 or -5)
+      { "low_stock_threshold": <int> }                            (update threshold)
     """
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    if 'adjust' in data:
-        # Relative adjustment — use SQL arithmetic to avoid race conditions
-        delta = int(data['adjust'])
+    # Ensure an inventory record exists for this variant
+    inv_check = query("SELECT variant_id FROM inventory WHERE variant_id = %s", (variant_id,))
+    if not inv_check:
+        execute(
+            "INSERT INTO inventory (variant_id, stock_quantity, low_stock_threshold) VALUES (%s, 0, 10)",
+            (variant_id,)
+        )
+
+    if 'stock_quantity' in data:
+        # Set exact stock count directly
+        try:
+            exact_qty = max(0, int(data['stock_quantity']))
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid stock_quantity value"}), 400
+
+        execute(
+            "UPDATE inventory SET stock_quantity = %s WHERE variant_id = %s",
+            (exact_qty, variant_id)
+        )
+    elif 'adjust' in data:
+        # Relative adjustment (+/- delta)
+        try:
+            delta = int(data['adjust'])
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid adjust value"}), 400
+
         execute(
             """
             UPDATE inventory
@@ -419,16 +443,14 @@ def update_inventory(variant_id):
             """,
             (delta, variant_id)
         )
-    else:
-        fields = {k: v for k, v in data.items()
-                  if k in ('stock_quantity', 'low_stock_threshold')}
-        if not fields:
-            return jsonify({"error": "Provide stock_quantity, low_stock_threshold, or adjust"}), 400
-        set_clause = ", ".join(f"{k} = %s" for k in fields)
+    elif 'low_stock_threshold' in data:
+        threshold = max(0, int(data['low_stock_threshold']))
         execute(
-            f"UPDATE inventory SET {set_clause} WHERE variant_id = %s",
-            (*fields.values(), variant_id)
+            "UPDATE inventory SET low_stock_threshold = %s WHERE variant_id = %s",
+            (threshold, variant_id)
         )
+    else:
+        return jsonify({"error": "Provide stock_quantity, adjust, or low_stock_threshold"}), 400
 
     # Return the updated row
     rows = query(
@@ -566,6 +588,75 @@ def release_cart_stock():
         cursor.close()
         conn.close()
 
+
+
+# add item to database cart (carts + cart_items tables)
+@catalog_bp.route('/cart/add', methods=['POST'])
+@jwt_required()
+def add_to_cart():
+    """
+    Save an item to the user's database cart.
+    Creates a cart row if one doesn't exist yet,
+    then inserts or updates the cart_items row.
+    Body: { "variant_id": <int>, "quantity": <int> }
+    """
+    user_id = get_jwt_identity()
+    data = request.get_json() or {}
+    variant_id = data.get('variant_id')
+    try:
+        qty = int(data.get('quantity', 1))
+    except (ValueError, TypeError):
+        qty = 1
+
+    if not variant_id or qty <= 0:
+        return jsonify({"error": "variant_id and positive quantity are required"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # 1. Get or create a cart for this user
+        cursor.execute("SELECT cart_id FROM carts WHERE user_id = %s", (user_id,))
+        cart = cursor.fetchone()
+        if cart:
+            cart_id = cart['cart_id']
+        else:
+            cursor.execute("INSERT INTO carts (user_id) VALUES (%s)", (user_id,))
+            conn.commit()
+            cart_id = cursor.lastrowid
+
+        # 2. Check if this variant is already in the cart
+        cursor.execute(
+            "SELECT cart_item_id, quantity FROM cart_items WHERE cart_id = %s AND variant_id = %s",
+            (cart_id, variant_id)
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            # Already in cart → add to the existing quantity
+            new_qty = existing['quantity'] + qty
+            cursor.execute(
+                "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s",
+                (new_qty, existing['cart_item_id'])
+            )
+        else:
+            # New item → insert a fresh row
+            cursor.execute(
+                "INSERT INTO cart_items (cart_id, variant_id, quantity) VALUES (%s, %s, %s)",
+                (cart_id, variant_id, qty)
+            )
+
+        conn.commit()
+        return jsonify({
+            "success": True,
+            "message": "Item added to cart",
+            "cart_id": cart_id
+        })
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # create category — managers & admins only

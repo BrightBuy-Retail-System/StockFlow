@@ -59,40 +59,36 @@ export default function AuthCartPage() {
     }
   };
 
-  const loadGuestCart = () => {
+  const syncLocalStorage = (cartItems) => {
     try {
-      const raw = localStorage.getItem('cart');
-      const items = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(items) ? items : [];
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const formatted = (cartItems || []).map((it) => ({
+        product_id: it.product_id,
+        name: it.product_name || it.name,
+        variant_id: it.variant_id,
+        sku: it.sku,
+        attribute_name: it.attribute_name,
+        attribute_value: it.attribute_value,
+        price: it.unit_price,
+        quantity: it.quantity,
+      }));
+      if (user?.user_id) {
+        localStorage.setItem(`cart_${user.user_id}`, JSON.stringify(formatted));
+      }
+      localStorage.setItem('cart', JSON.stringify(formatted));
+    } catch {
+      // ignore
+    }
+  };
 
-      let subtotal = 0;
-      let count = 0;
-      const formatted = list.map((it, idx) => {
-        const qty = Number(it.quantity) || 1;
-        const price = Number(it.price) || 0;
-        const itemTotal = price * qty;
-        subtotal += itemTotal;
-        count += qty;
-        return {
-          cart_item_id: it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`,
-          product_id: it.product_id,
-          variant_id: it.variant_id,
-          product_name: it.name || it.product_name || 'Tech Product',
-          total_price: itemTotal,
-          price: price,
-          quantity: qty,
-          sku: it.sku || `SKU-${it.product_id || idx}`,
-          attribute_name: it.attribute_name,
-          attribute_value: it.attribute_value,
-          image: it.image,
-        };
-      });
-
-      setCart({
-        items: formatted,
-        subtotal: subtotal,
-        item_count: count,
-      });
+  const fetchCart = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get('/auth_cart/cart');
+      setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       console.error('Error reading guest cart:', err);
       setCart({ items: [], subtotal: 0, item_count: 0 });
@@ -138,6 +134,7 @@ export default function AuthCartPage() {
       }
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update item quantity.');
     } finally {
@@ -166,6 +163,7 @@ export default function AuthCartPage() {
       await api.delete(`/auth_cart/cart/items/${cartItemId}`);
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to remove item.');
     } finally {
@@ -187,6 +185,7 @@ export default function AuthCartPage() {
       await api.delete('/auth_cart/cart/clear');
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
+      syncLocalStorage(res.data.items);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to clear cart.');
     } finally {
