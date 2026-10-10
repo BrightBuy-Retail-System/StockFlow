@@ -2830,23 +2830,25 @@ body {
   font-size: 0.875rem;
   font-weight: 700;
   color: #64748b;
-  background: transparent;
-  border: 1.5px solid transparent;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .st-tab-btn:hover {
   color: #0f172a;
-  background: #f1f5f9;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
 
 .st-tab-btn.active {
-  background: #2563eb;
-  color: #ffffff;
+  background: #ffffff;
+  color: #0f172a;
   border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15), 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 /* ==========================================================================

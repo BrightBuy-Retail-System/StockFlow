@@ -22,34 +22,48 @@ export default function AuthCartPage() {
     setError(null);
 
     if (token) {
-      // 1. Sync any guest items in localStorage into the authenticated cart
+      // 1. Fetch authenticated cart from API first
+      let currentItems = [];
+      try {
+        const res = await api.get('/auth_cart/cart');
+        currentItems = res.data?.items || [];
+        setCart(res.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
+      }
+
+      // 2. Sync any genuine guest items in localStorage into the authenticated cart
       try {
         const rawLocal = localStorage.getItem('cart');
         if (rawLocal) {
           const localItems = JSON.parse(rawLocal);
           if (Array.isArray(localItems) && localItems.length > 0) {
+            const existingVariantIds = new Set(
+              currentItems.map((it) => it.variant_id || it.product_id)
+            );
+            let syncedAny = false;
             for (const item of localItems) {
-              const variantId = item.variant_id || item.product_id;
-              if (variantId) {
-                await api.post('/auth_cart/cart/add', {
-                  variant_id: variantId,
-                  quantity: item.quantity || 1,
-                }).catch(() => null);
+              const variantId = item.variant_id || null;
+              const productId = item.product_id || null;
+              const checkKey = variantId || productId;
+              // Only add if not already present in the user's database cart
+              if (checkKey && !existingVariantIds.has(checkKey)) {
+                const payload = { quantity: item.quantity || 1 };
+                if (variantId) payload.variant_id = variantId;
+                if (productId) payload.product_id = productId;
+                await api.post('/auth_cart/cart/add', payload).catch(() => null);
+                syncedAny = true;
               }
             }
             localStorage.removeItem('cart');
+            if (syncedAny) {
+              const updatedRes = await api.get('/auth_cart/cart');
+              setCart(updatedRes.data);
+            }
           }
         }
       } catch (err) {
         console.warn('Cart sync warning:', err);
-      }
-
-      // 2. Fetch authenticated cart from API
-      try {
-        const res = await api.get('/auth_cart/cart');
-        setCart(res.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
       } finally {
         setLoading(false);
       }
@@ -73,8 +87,9 @@ export default function AuthCartPage() {
         price: it.unit_price,
         quantity: it.quantity,
       }));
-      if (user?.user_id) {
-        localStorage.setItem(`cart_${user.user_id}`, JSON.stringify(formatted));
+      const uid = user?.id || user?.user_id;
+      if (uid) {
+        localStorage.setItem(`cart_${uid}`, JSON.stringify(formatted));
       }
       localStorage.setItem('cart', JSON.stringify(formatted));
     } catch {

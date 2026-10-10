@@ -305,37 +305,47 @@ export default function OverviewPage() {
     setWishlist((prev) => ({ ...prev, [p.product_id]: nowSaved }));
     showToast(nowSaved ? 'Saved to wishlist' : 'Removed from wishlist', p.name, nowSaved ? 'success' : 'info');
   };
-
   const addToCart = async (p, quantity = 1) => {
-    // 1. Always save to local cart (supports guests)
-    const raw = localStorage.getItem('cart');
-    const list = raw ? JSON.parse(raw) : [];
-    const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
-    if (matchIndex > -1) {
-      list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + quantity;
-    } else {
-      list.push({
-        product_id: p.product_id,
-        name: p.name,
-        price: Number(p.base_price) || 0,
-        quantity: quantity,
-        image: p.image,
-        sku: `SKU-${p.product_id}`,
-      });
-    }
-    localStorage.setItem('cart', JSON.stringify(list));
-
-    // 2. If logged in, also sync to database cart
     const token = localStorage.getItem('token');
+    const targetProductId = p.product_id;
+    const targetVariantId = p.variant_id || null;
+
     if (token) {
+      // Authenticated: save directly to database cart
       try {
         setAddingId(p.product_id);
-        await api.post('/auth_cart/cart/add', { variant_id: p.product_id, quantity });
+        const payload = {
+          product_id: targetProductId,
+          quantity,
+        };
+        if (targetVariantId) {
+          payload.variant_id = targetVariantId;
+        }
+        await api.post('/auth_cart/cart/add', payload);
       } catch (err) {
         console.warn('Backend cart sync note:', err);
       } finally {
         setAddingId(null);
       }
+      localStorage.removeItem('cart');
+    } else {
+      // Guest: save to local cart
+      const raw = localStorage.getItem('cart');
+      const list = raw ? JSON.parse(raw) : [];
+      const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + quantity;
+      } else {
+        list.push({
+          product_id: p.product_id,
+          name: p.name,
+          price: Number(p.base_price) || 0,
+          quantity: quantity,
+          image: p.image,
+          sku: `SKU-${p.product_id}`,
+        });
+      }
+      localStorage.setItem('cart', JSON.stringify(list));
     }
 
     showToast('Added to cart', `${p.name} (x${quantity})`, 'success', '/auth-cart');
