@@ -168,6 +168,8 @@ def get_order_by_id(order_id):
             SELECT 
                 o.order_id,
                 o.user_id,
+                u.full_name AS customer_name,
+                u.email AS customer_email,
                 o.shipment_id,
                 o.total_amount,
                 o.subtotal,
@@ -188,6 +190,7 @@ def get_order_by_id(order_id):
                 s.delivery_address,
                 s.recipient_phone
             FROM orders o
+            LEFT JOIN users u ON o.user_id = u.user_id
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
             WHERE o.order_id = %s
         """
@@ -288,6 +291,8 @@ def get_orders_by_user(user_id):
             SELECT 
                 o.order_id,
                 o.user_id,
+                u.full_name AS customer_name,
+                u.email AS customer_email,
                 o.shipment_id,
                 s.tracking_number,
                 s.shipping_status,
@@ -295,6 +300,7 @@ def get_orders_by_user(user_id):
                 o.status,
                 o.placed_at
             FROM orders o
+            LEFT JOIN users u ON o.user_id = u.user_id
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
             WHERE o.user_id = %s
             ORDER BY o.placed_at DESC
@@ -403,7 +409,13 @@ def checkout():
     phone = payload.get('phone', '').strip()
     shipping_address = payload.get('shipping_address', '').strip()
     billing_address = payload.get('billing_address', '').strip() or shipping_address
-    payment_method = payload.get('payment_method', 'CREDIT_CARD').strip().upper()
+    raw_method = payload.get('payment_method', 'CREDIT_CARD').strip().upper()
+    if raw_method in ('COD', 'CASH_ON_DELIVERY'):
+        payment_method = 'COD'
+    elif raw_method in ('MINTPAY', 'KOKO', 'PAYHERE', 'CREDIT_CARD'):
+        payment_method = raw_method
+    else:
+        payment_method = 'CREDIT_CARD'
     shipping_city_id = payload.get('shipping_city_id', 1)
 
     conn = None
@@ -567,10 +579,21 @@ def checkout():
             """, (it['quantity'], it['variant_id']))
 
         # 9. Insert Payment Record
-        # For COD: payment remains 'INITIATED' until courier delivers.
-        # For Cards/Wallets: payment is marked 'SUCCESS'.
-        payment_status = 'INITIATED' if payment_method in ('COD', 'CASH_ON_DELIVERY') else 'SUCCESS'
-        transaction_ref = f"TX-PAY-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
+        raw_method = payload.get('payment_method', 'CREDIT_CARD').strip().upper()
+        if raw_method in ('COD', 'CASH_ON_DELIVERY'):
+            payment_method = 'COD'
+            payment_status = 'INITIATED'      # Pending courier handover
+            prefix = 'TX-COD'
+        elif raw_method in ('KLARNA', 'AFTERPAY', 'AFFIRM', 'CREDIT_CARD', 'MINTPAY', 'KOKO', 'PAYHERE'):
+            payment_method = raw_method
+            payment_status = 'SUCCESS'        # Simulated instant settlement
+            prefix = f"TX-{raw_method[:4]}"
+        else:
+            payment_method = 'CREDIT_CARD'
+            payment_status = 'SUCCESS'
+            prefix = 'TX-PAY'
+
+        transaction_ref = f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M')}-{uuid.uuid4().hex[:6].upper()}"
 
         cursor.execute("""
             INSERT INTO payments (order_id, payment_method, transaction_ref, amount, payment_status, processed_at)
