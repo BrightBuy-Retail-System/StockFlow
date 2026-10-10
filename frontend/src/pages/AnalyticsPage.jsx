@@ -512,14 +512,6 @@ export default function AnalyticsPage() {
         {/* Manager Header */}
         <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <span style={{ padding: '4px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700, background: 'var(--accent-light)', color: 'var(--accent)' }}>
-                Role 2: Store Manager Analytics View
-              </span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Account: <code>{user.email || 'manager@stockflow.test'}</code>
-              </span>
-            </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
               Store Operations &amp; Inventory Analytics Hub
             </h1>
@@ -574,9 +566,6 @@ export default function AnalyticsPage() {
             <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '8px' }}>
               ${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Grand total rollup row from <code>v_category_order_totals</code>
-            </div>
           </div>
 
           <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
@@ -595,7 +584,7 @@ export default function AnalyticsPage() {
               {topSellingData[0]?.product_name || 'Apex Pro Terminal'}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', marginTop: '4px', fontWeight: 600 }}>
-              Rank #1 by DENSE_RANK() • ${Number(topSellingData[0]?.total_revenue || 0).toLocaleString()} rev
+              ${Number(topSellingData[0]?.total_revenue || 0).toLocaleString()} rev
             </div>
           </div>
 
@@ -603,9 +592,6 @@ export default function AnalyticsPage() {
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>DCL Granted Role</div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '8px' }}>
               analytics_viewer
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Lecture Note 8: <code>GRANT SELECT ON VIEWS</code>
             </div>
           </div>
         </div>
@@ -619,9 +605,6 @@ export default function AnalyticsPage() {
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
                   Top-Selling Products Leaderboard
                 </h2>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                  View: <code>v_top_selling_products</code> • DENSE_RANK() OVER (ORDER BY total_revenue DESC)
-                </p>
               </div>
               <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent-light)', color: 'var(--accent)', fontWeight: 700 }}>
                 Top 10
@@ -677,9 +660,6 @@ export default function AnalyticsPage() {
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
                   Category Revenue &amp; Rollup Totals
                 </h2>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                  View: <code>v_category_order_totals</code> • GROUP BY c.name WITH ROLLUP
-                </p>
               </div>
               <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 700 }}>
                 WITH ROLLUP
