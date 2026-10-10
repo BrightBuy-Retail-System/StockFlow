@@ -320,19 +320,38 @@ def add_to_cart():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # If variant_id is not directly supplied but product_id is, resolve first variant of that product
-        if not variant_id and product_id:
-            cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (product_id,))
-            v_match = cursor.fetchone()
-            if v_match:
-                variant_id = v_match['variant_id']
+        # 1. If product_id is provided, verify whether variant_id belongs to that product.
+        # If variant_id is missing or belongs to a different product, resolve the true default variant for this product!
+        if product_id:
+            resolved_variant = None
+            if variant_id:
+                cursor.execute(
+                    "SELECT variant_id FROM product_variants WHERE variant_id = %s AND product_id = %s",
+                    (variant_id, product_id)
+                )
+                if cursor.fetchone():
+                    resolved_variant = variant_id
 
-        # If variant_id is supplied, ensure it exists in product_variants.
-        # If it doesn't match a variant_id, check if caller passed product_id as variant_id.
+            if not resolved_variant:
+                cursor.execute(
+                    "SELECT variant_id FROM product_variants WHERE product_id = %s ORDER BY variant_id ASC LIMIT 1",
+                    (product_id,)
+                )
+                v_match = cursor.fetchone()
+                if v_match:
+                    resolved_variant = v_match['variant_id']
+
+            if resolved_variant:
+                variant_id = resolved_variant
+            elif not variant_id:
+                return jsonify({"message": f"No active product variants found for product ID {product_id}"}), 404
+
+        # 2. If only variant_id was provided (no product_id):
         if variant_id:
             cursor.execute("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
             if not cursor.fetchone():
-                cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s LIMIT 1", (variant_id,))
+                # Check if caller mistakenly passed product_id as variant_id
+                cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s ORDER BY variant_id ASC LIMIT 1", (variant_id,))
                 fallback_variant = cursor.fetchone()
                 if fallback_variant:
                     variant_id = fallback_variant['variant_id']
