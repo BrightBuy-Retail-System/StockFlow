@@ -1,1035 +1,784 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import macbookImg from '../assets/macbook.png'
-import headsetImg from '../assets/headset.png'
+import './OverviewPage.css';
+
+import macbookImg from '../assets/macbook.png';
+import headsetImg from '../assets/headset.png';
+import smartwatchImg from '../assets/smartwatch.jpg';
+import chargerImg from '../assets/charger.jpg';
+import keyboardImg from '../assets/keyboard.jpg';
+import cameraImg from '../assets/camera.jpg';
+import airpodsImg from '../assets/airpods.jpg';
+
 import {
   ShoppingBagIcon,
   TruckIcon,
   ShieldCheckIcon,
-  SparklesIcon,
+  CreditCardIcon,
   CheckCircleIcon,
   ArrowRightIcon,
   StarIcon,
-  FlameIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CreditCardIcon,
-  HeadphonesIcon,
-  LaptopIcon,
-  WatchIcon,
-  BatteryChargingIcon,
-  RefreshCwIcon,
-  BoxIcon,
+  HeartIcon,
+  SearchIcon,
+  XIcon,
 } from '../components/Icons';
 
-// Rich Curated Tech Gadget Catalog (SimplyTek curated items & fallbacks)
-const FEATURED_TECH_GADGETS = [
+/* -------------------------------------------------------------------------
+   Data
+   ------------------------------------------------------------------------- */
+
+// Shown only until the backend catalogue loads (or if it is empty / offline).
+const PRESET_PRODUCTS = [
   {
     product_id: 101,
-    name: 'Apple MacBook Pro 16" (M3 Max, 36GB / 1TB)',
+    name: 'Apple MacBook Pro 16" (M3 Max)',
     image: macbookImg,
     category: 'Laptops',
-    category_slug: 'computing',
-    base_price: 1499.00,
-    mrp: 1749.00,
-    discount: '-14%',
+    base_price: 1499,
+    mrp: 1749,
     rating: 5.0,
     reviews_count: 78,
-    is_active: 1,
-    badge: 'BESTSELLER',
-    badge_type: 'bestseller',
-    stock_sold: 8,
-    stock_left: 2,
-    specs: '36GB Unified RAM • 1TB SSD • Liquid Retina XDR',
-    description: 'Pro performance with 16-core CPU, 40-core GPU and up to 22 hours of battery life.',
-    image_accent: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-    icon_type: 'laptop',
+    badge: 'Best seller',
+    description: 'Pro performance with a 16-core CPU, 40-core GPU and up to 22 hours of battery life.',
+    details: ['Apple M3 Max, 36GB memory', '1TB SSD', '16.2-inch Liquid Retina XDR display', '1-year warranty'],
+    colors: ['Space Black', 'Silver'],
   },
   {
     product_id: 102,
-    name: 'Sony WH-1000XM5 Wireless Noise-Cancelling Headphones',
+    name: 'Sony WH-1000XM5 Headphones',
     image: headsetImg,
     category: 'Audio',
-    category_slug: 'audio',
-    base_price: 349.00,
-    mrp: 419.00,
-    discount: '-17%',
+    base_price: 349,
+    mrp: 419,
     rating: 4.9,
     reviews_count: 142,
-    is_active: 1,
-    badge: 'HOT DEAL',
-    badge_type: 'discount',
-    stock_sold: 19,
-    stock_left: 4,
-    specs: 'Auto NC Optimizer • 30h Battery • Hi-Res LDAC',
-    description: 'Two processors and 8 microphones for unprecedented noise cancellation and crystal clear calls.',
-    image_accent: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
-    icon_type: 'headphones',
+    badge: 'Best seller',
+    description: 'Wireless noise-cancelling headphones with 30 hours of battery and clear call quality.',
+    details: ['Auto noise-cancelling optimizer', 'Up to 30 hours playback', 'Multipoint Bluetooth pairing', '1-year warranty'],
+    colors: ['Midnight Black', 'Platinum Silver', 'Smoky Navy'],
   },
   {
     product_id: 103,
-    name: 'Samsung Galaxy Watch Ultra 47mm LTE (Titanium)',
-    category: 'Smartwatches',
-    category_slug: 'wearables',
-    base_price: 599.00,
-    mrp: 679.00,
-    discount: '-12%',
+    name: 'Samsung Galaxy Watch Ultra 47mm',
+    image: smartwatchImg,
+    category: 'Wearables',
+    base_price: 599,
+    mrp: 679,
     rating: 4.8,
     reviews_count: 53,
-    is_active: 1,
-    badge: 'NEW',
-    badge_type: 'new',
-    stock_sold: 11,
-    stock_left: 3,
-    specs: 'Grade-4 Titanium • 100m Water Resistant • Dual GPS',
-    description: 'Cushion design with Grade-4 titanium, Sapphire Crystal glass, and multi-day battery endurance.',
-    image_accent: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
-    icon_type: 'watch',
+    badge: 'New',
+    description: 'Titanium smartwatch with dual-frequency GPS and multi-day battery life.',
+    details: ['Grade-4 titanium frame', 'Dual-frequency GPS', '100m water resistance', '1-year warranty'],
+    colors: ['Titanium Orange', 'Titanium Gray', 'Titanium White'],
   },
   {
     product_id: 104,
-    name: 'Anker Prime 240W 4-Port GaN Desktop Fast Charger',
-    category: 'Chargers',
-    category_slug: 'accessories',
-    base_price: 139.00,
-    mrp: 169.00,
-    discount: '-18%',
+    name: 'Anker Prime 240W GaN Charger',
+    image: chargerImg,
+    category: 'Accessories',
+    base_price: 139,
+    mrp: 169,
     rating: 4.9,
     reviews_count: 96,
-    is_active: 1,
-    badge: 'TOP RATED',
-    badge_type: 'discount',
-    stock_sold: 24,
-    stock_left: 5,
-    specs: '240W Max Output • GaNPrime 2.0 • ActiveShield 2.0',
-    description: 'Ultra-fast simultaneous multi-device charging for laptops, tablets and smartphones.',
-    image_accent: 'linear-gradient(135deg, #09090b 0%, #1c1917 100%)',
-    icon_type: 'charger',
+    description: 'Charge two laptops and two phones at once from a single compact desktop charger.',
+    details: ['240W total output', '3 USB-C + 1 USB-A ports', 'Real-time thermal protection', '18-month warranty'],
+    colors: ['Space Gray'],
   },
   {
     product_id: 105,
-    name: 'Keychron Q1 Pro Wireless Custom Mechanical Keyboard',
-    category: 'Gaming',
-    category_slug: 'computing',
-    base_price: 199.00,
-    mrp: 239.00,
-    discount: '-16%',
+    name: 'Keychron Q1 Pro Mechanical Keyboard',
+    image: keyboardImg,
+    category: 'Accessories',
+    base_price: 199,
+    mrp: 239,
     rating: 4.9,
     reviews_count: 64,
-    is_active: 1,
-    badge: 'HOT',
-    badge_type: 'discount',
-    stock_sold: 14,
-    stock_left: 3,
-    specs: 'CNC Aluminum Body • QMK/VIA • Hot-swappable',
-    description: 'Full aluminum 75% layout custom wireless mechanical keyboard with double-gasket acoustic design.',
-    image_accent: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-    icon_type: 'laptop',
+    description: 'A wireless 75% aluminium keyboard with hot-swappable switches and a gasket-mounted design.',
+    details: ['CNC aluminium body', 'Hot-swappable switches', 'Bluetooth 5.1 and USB-C', 'Mac and Windows layouts'],
+    colors: ['Carbon Black', 'Retro Gray', 'Silver Navy'],
   },
   {
     product_id: 106,
-    name: 'DJI Osmo Pocket 3 Creator Combo 4K/120fps Vlog Gimbal',
+    name: 'DJI Osmo Pocket 3 Creator Combo',
+    image: cameraImg,
     category: 'Cameras',
-    category_slug: 'accessories',
-    base_price: 669.00,
-    mrp: 749.00,
-    discount: '-11%',
+    base_price: 669,
+    mrp: 749,
     rating: 5.0,
     reviews_count: 112,
-    is_active: 1,
-    badge: 'BESTSELLER',
-    badge_type: 'bestseller',
-    stock_sold: 21,
-    stock_left: 2,
-    specs: '1-Inch CMOS • 4K/120fps • 2-Inch Rotatable Screen',
-    description: 'High-power 1-inch CMOS sensor with mechanical 3-axis stabilization and stereo sound recording.',
-    image_accent: 'linear-gradient(135deg, #172554 0%, #1e40af 100%)',
-    icon_type: 'watch',
+    badge: 'Best seller',
+    description: 'A pocket gimbal camera with a 1-inch sensor, 4K/120fps video and a rotatable touchscreen.',
+    details: ['1-inch CMOS sensor', '4K at 120fps', '2-inch rotatable screen', 'Includes mic and tripod handle'],
+    colors: ['Matte Black'],
   },
   {
     product_id: 107,
-    name: 'Apple AirPods Pro 2nd Gen with USB-C MagSafe Case',
+    name: 'Apple AirPods Pro (2nd gen, USB-C)',
+    image: airpodsImg,
     category: 'Audio',
-    category_slug: 'audio',
-    base_price: 229.00,
-    mrp: 269.00,
-    discount: '-15%',
+    base_price: 229,
+    mrp: 269,
     rating: 4.9,
     reviews_count: 230,
-    is_active: 1,
-    badge: 'POPULAR',
-    badge_type: 'bestseller',
-    stock_sold: 38,
-    stock_left: 6,
-    specs: 'H2 Chip • Adaptive Audio • 30h Listening Time',
-    description: 'Up to 2x more Active Noise Cancellation, Adaptive Audio, and Personalized Spatial Audio with dynamic head tracking.',
-    image_accent: 'linear-gradient(135deg, #042f2e 0%, #0d9488 100%)',
-    icon_type: 'headphones',
+    badge: 'Popular',
+    description: 'Active noise cancellation, adaptive audio and spatial sound in a MagSafe charging case.',
+    details: ['Apple H2 chip', 'Adaptive and transparency modes', 'IP54 dust and water resistant', 'MagSafe case with speaker'],
+    colors: ['White'],
   },
   {
     product_id: 108,
-    name: 'Xiaomi Smart Air Purifier 4 Pro with True HEPA Filter',
-    category: 'Smart Home',
-    category_slug: 'accessories',
-    base_price: 249.00,
-    mrp: 299.00,
-    discount: '-17%',
+    name: 'Xiaomi Smart Air Purifier 4 Pro',
+    image: chargerImg,
+    category: 'Smart home',
+    base_price: 249,
+    mrp: 299,
     rating: 4.8,
     reviews_count: 45,
-    is_active: 1,
-    badge: 'GENUINE',
-    badge_type: 'new',
-    stock_sold: 9,
-    stock_left: 4,
-    specs: '500m³/h CADR • OLED Touch Display • App Control',
-    description: 'High-efficiency filtration capturing 99.97% of 0.3μm particles, allergen relief, and quiet night mode.',
-    image_accent: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)',
-    icon_type: 'charger',
+    badge: 'New',
+    description: 'True HEPA filtration with an OLED air-quality display and app control.',
+    details: ['500 m³/h clean air delivery', '3-in-1 True HEPA filter', 'OLED air-quality display', 'App and voice control'],
+    colors: ['White'],
   },
 ];
 
-// SimplyTek Carousel Slides
+// The hero only features a few products. Price and image come from the product itself.
 const HERO_SLIDES = [
+  { productId: 101, title: 'MacBook Pro 16" with M3 Max', text: 'Built for editing, coding and 3D work. Up to 22 hours of battery.' },
+  { productId: 102, title: 'Sony WH-1000XM5', text: 'Industry-leading noise cancellation with 30 hours of playback.' },
+  { productId: 103, title: 'Samsung Galaxy Watch Ultra', text: 'A titanium smartwatch with dual-frequency GPS and 100m water resistance.' },
+  { productId: 106, title: 'DJI Osmo Pocket 3', text: 'Smooth 4K/120fps video from a camera that fits in your pocket.' },
+];
+
+const PAGE_SIZE = 8;
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+
+/* -------------------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------------------- */
+const discountPct = (p) => (p.mrp > p.base_price ? Math.round(((p.mrp - p.base_price) / p.mrp) * 100) : 0);
+
+const FALLBACK_IMAGES = [macbookImg, headsetImg, smartwatchImg, chargerImg, keyboardImg, airpodsImg];
+
+// Map a row from /catalog/products to the shape this page renders.
+const mapBackendProduct = (p, idx) => ({
+  product_id: p.product_id,
+  name: p.name || p.title || 'Product',
+  image: p.image_url || FALLBACK_IMAGES[idx % FALLBACK_IMAGES.length],
+  category: p.category_name || 'Electronics',
+  base_price: Number(p.base_price) || 0,
+  priceFrom: true, // the final price depends on the chosen variant
+  description: p.description || 'Genuine product sold by BrightBuy.',
+  details: ['Verified brand authenticity', 'Delivery in 5 to 7 days', 'Pay by card or cash on delivery'],
+  colors: [],
+});
+
+const HOME_FAQS = [
   {
-    id: 1,
-    badge: '🔥 FLASH LAUNCH • SAVE 15%',
-    badge_class: 'st-badge-fire',
-    title: 'MacBook Pro M3 Max Series',
-    subtitle: 'Extreme performance with 16-core CPU, 40-core GPU, and Liquid Retina XDR display for pro creators.',
-    specs: ['36GB Unified RAM', '1TB PCIe Gen4 SSD', 'Up to 22h Battery', 'Wi-Fi 6E'],
-    price: 'Rs. 589,000',
-    mrp: 'Rs. 675,000',
-    saveText: 'Save Rs. 86,000',
-    ctaPrimary: 'Shop MacBook Pro',
-    ctaLink: '/catalog',
-    category: 'LAPTOPS & COMPUTING',
-    image: macbookImg,
-    icon: <LaptopIcon className="w-14 h-14" style={{ color: '#4963c5' }} />,
-    tag: 'Official Apple Warranty',
+    q: 'What is BrightBuy and how do I place an order?',
+    a: 'BrightBuy is an enterprise tech and retail store offering genuine products with live inventory tracking. You can browse categories, select item variants, and add them directly to your cart for fast and secure checkout.',
   },
   {
-    id: 2,
-    badge: '🎧 NEW ARRIVAL • HI-RES ANC',
-    badge_class: 'st-badge-new',
-    title: 'Sony WH-1000XM5 Wireless',
-    subtitle: 'Industry-leading noise cancelling with Auto NC Optimizer, 30hr endurance and LDAC lossless sound.',
-    specs: ['Auto NC Optimizer', 'Multipoint Bluetooth', '30-Hour Battery', 'Speak-to-Chat'],
-    price: 'Rs. 108,500',
-    mrp: 'Rs. 129,000',
-    saveText: 'Save Rs. 20,500',
-    ctaPrimary: 'Explore Audio Deals',
-    ctaLink: '/catalog',
-    category: 'PREMIUM AUDIO',
-    image: headsetImg,
-    icon: <HeadphonesIcon className="w-14 h-14" style={{ color: '#2563eb' }} />,
-    tag: '100% Genuine Import',
+    q: 'Can I browse and add products to my cart as a guest?',
+    a: 'Yes, absolutely! You can explore the entire catalog and add items to your cart without creating an account first. When you are ready to complete your purchase, you can sign in or quickly register during checkout.',
   },
   {
-    id: 3,
-    badge: '⚡ RUGGED TITANIUM • 100M WATER RESIST',
-    badge_class: 'st-badge-gold',
-    title: 'Samsung Galaxy Watch Ultra',
-    subtitle: 'Built for the toughest conditions with Aerospace Grade-4 Titanium, Dual-Frequency GPS and 100h battery.',
-    specs: ['Grade-4 Titanium', 'Dual GPS (L1+L5)', '100h Power Save', 'Emergency Siren'],
-    price: 'Rs. 175,000',
-    mrp: 'Rs. 195,000',
-    saveText: 'Save Rs. 20,000',
-    ctaPrimary: 'Discover Wearables',
-    ctaLink: '/catalog',
-    category: 'SMARTWATCHES & FITNESS',
-    icon: <WatchIcon className="w-14 h-14" style={{ color: '#f59e0b' }} />,
-    tag: 'Official Brand Warranty',
+    q: 'How long does islandwide delivery take and what are the fees?',
+    a: 'Standard islandwide delivery takes 2 to 4 business days. Priority express delivery is available in major metro areas within 24 hours. Delivery rates are calculated accurately based on your shipping address during checkout.',
   },
   {
-    id: 4,
-    badge: '⚡ 240W DESKTOP CHARGING HUB',
-    badge_class: 'st-badge-new',
-    title: 'Anker Prime GaN 240W Station',
-    subtitle: 'Power up 2 laptops and 2 smartphones simultaneously at maximum speed with advanced GaNPrime™ safety.',
-    specs: ['240W Total Power', '4 Fast Ports (3C + 1A)', 'ActiveShield™ 2.0', 'Ultra-Compact'],
-    price: 'Rs. 38,900',
-    mrp: 'Rs. 45,000',
-    saveText: 'Save Rs. 6,100',
-    ctaPrimary: 'Power Up Now',
-    ctaLink: '/catalog',
-    category: 'CHARGERS & POWER',
-    icon: <BatteryChargingIcon className="w-14 h-14" style={{ color: '#10b981' }} />,
-    tag: '18-Month Warranty',
+    q: 'What payment options are supported?',
+    a: 'We accept all major credit and debit cards (Visa, Mastercard) with secure encrypted processing, direct bank transfers, as well as Cash on Delivery (COD) for eligible delivery locations.',
+  },
+  {
+    q: 'What warranty and return policies apply to my purchase?',
+    a: 'All hardware products come with official manufacturer hardware warranties (up to 1 year). In addition, we offer a 7-day hassle-free return and exchange guarantee on all unopened original packaged items.',
+  },
+  {
+    q: 'How can I track my orders and delivery status?',
+    a: 'Once your order is confirmed, you can track real-time packaging, courier dispatch, and fulfillment progress directly from your Customer Dashboard under the "My Orders" tab.',
   },
 ];
 
-// Popular Tech Categories for Circular Hub
-const TECH_CATEGORIES = [
-  { id: 'all', name: 'All Gadgets', count: '120+ Items', icon: <SparklesIcon className="w-6 h-6" /> },
-  { id: 'computing', name: 'Laptops & Mac', count: '38 Models', icon: <LaptopIcon className="w-6 h-6" /> },
-  { id: 'audio', name: 'Audio & Earbuds', count: '45 Models', icon: <HeadphonesIcon className="w-6 h-6" /> },
-  { id: 'wearables', name: 'Smartwatches', count: '28 Models', icon: <WatchIcon className="w-6 h-6" /> },
-  { id: 'accessories', name: 'Fast Chargers', count: '32 Models', icon: <BatteryChargingIcon className="w-6 h-6" /> },
-  { id: 'gaming', name: 'Keyboards & Mice', count: '19 Models', icon: <LaptopIcon className="w-6 h-6" /> },
-  { id: 'camera', name: 'Vlogging & Action', count: '14 Models', icon: <BoxIcon className="w-6 h-6" /> },
-  { id: 'smarthome', name: 'Smart Living', count: '22 Models', icon: <ShieldCheckIcon className="w-6 h-6" /> },
-];
-
+/* -------------------------------------------------------------------------
+   Component
+   ------------------------------------------------------------------------- */
 export default function OverviewPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [sliderPaused, setSliderPaused] = useState(false);
-  const [countdown, setCountdown] = useState({ hours: 8, minutes: 42, seconds: 19 });
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeTab, setActiveTab] = useState('all');
-  const [products, setProducts] = useState(FEATURED_TECH_GADGETS);
-  const [addingId, setAddingId] = useState(null);
-  const [toast, setToast] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-  const timerRef = useRef(null);
   const navigate = useNavigate();
 
-  // Auto-advance hero carousel every 5.5s
-  useEffect(() => {
-    if (sliderPaused) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 5500);
-    return () => clearInterval(interval);
-  }, [sliderPaused]);
+  const [products, setProducts] = useState(PRESET_PRODUCTS);
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  // Flash Deals Countdown Timer
-  useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          return { hours: 12, minutes: 0, seconds: 0 };
-        }
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, []);
+  const [category, setCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('featured');
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
-  // Fetch real products from backend API if available, merge with tech gadgets
+  const [wishlist, setWishlist] = useState({});
+  const [addingId, setAddingId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const [quickView, setQuickView] = useState(null);
+  const [color, setColor] = useState('');
+  const [qty, setQty] = useState(1);
+  const [faqOpen, setFaqOpen] = useState({});
+
+  /* ---- data ---- */
   useEffect(() => {
     api
       .get('/catalog/products')
       .then((res) => {
         if (Array.isArray(res.data) && res.data.length > 0) {
-          // Format backend products to match SimplyTek card format
-          const formatted = res.data.map((p, idx) => {
-            const basePrice = Number(p.base_price) || 99.0;
-            const mrp = Math.round(basePrice * 1.18);
-            const discountPct = Math.round(((mrp - basePrice) / mrp) * 100);
-            return {
-              product_id: p.product_id,
-              name: p.name || p.title || 'Tech Product',
-              category: p.category_name || 'Gadgets',
-              category_slug: (p.category_name || '').toLowerCase().includes('audio')
-                ? 'audio'
-                : (p.category_name || '').toLowerCase().includes('laptop') || (p.category_name || '').toLowerCase().includes('comp')
-                  ? 'computing'
-                  : 'accessories',
-              base_price: basePrice,
-              mrp: mrp,
-              discount: `-${discountPct}%`,
-              rating: (4.7 + (idx % 4) * 0.1).toFixed(1),
-              reviews_count: 24 + idx * 7,
-              is_active: p.is_active ?? 1,
-              badge: idx % 3 === 0 ? 'BESTSELLER' : idx % 2 === 0 ? 'HOT DEAL' : 'NEW',
-              badge_type: idx % 3 === 0 ? 'bestseller' : 'discount',
-              stock_sold: 5 + (idx % 15),
-              stock_left: Math.max(2, 8 - (idx % 6)),
-              specs: p.description ? p.description.slice(0, 48) + '...' : '100% Genuine Sri Lankan Warranty',
-              description: p.description || 'Premium genuine gadget import with local warranty.',
-              icon_type: (p.category_name || '').toLowerCase().includes('audio') ? 'headphones' : 'laptop',
-            };
-          });
-          // Combine or replace
-          setProducts(formatted);
+          setProducts(res.data.map(mapBackendProduct));
         }
       })
-      .catch(() => {
-        // Graceful fallback to rich FEATURED_TECH_GADGETS
-        setProducts(FEATURED_TECH_GADGETS);
-      });
+      .catch(() => setProducts(PRESET_PRODUCTS));
   }, []);
 
-  // Handle Add to Cart
-  const handleAddToCart = async (product) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      showToast('Login Required', 'Please sign in to add gadgets to your cart.', 'info', '/login');
-      return;
-    }
+  /* ---- hero auto-advance (6s, paused on hover/focus, off for reduced motion) ---- */
+  useEffect(() => {
+    if (paused) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const id = setInterval(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), 6000);
+    return () => clearInterval(id);
+  }, [paused, slide]);
 
-    try {
-      setAddingId(product.product_id);
-      // Attempt backend cart add
-      await api.post('/auth_cart/cart/add', {
-        variant_id: product.product_id,
-        quantity: 1,
+  /* ---- close quick view with Escape ---- */
+  useEffect(() => {
+    if (!quickView) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setQuickView(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [quickView]);
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  /* ---- derived ---- */
+  const categories = useMemo(() => {
+    const counts = {};
+    products.forEach((p) => {
+      counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [products]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products
+      .filter((p) => (category === 'All' ? true : p.category === category))
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (sortBy === 'price-low') return a.base_price - b.base_price;
+        if (sortBy === 'price-high') return b.base_price - a.base_price;
+        if (sortBy === 'rating') return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+        return 0;
       });
-      showToast('Added to Cart! 🛒', `"${product.name}" has been added to your shopping cart.`, 'success', '/auth-cart');
-    } catch {
-      // If variant lookup fails or other error, still confirm user feedback nicely
-      showToast('Added to Cart! 🛒', `"${product.name}" is now in your active cart.`, 'success', '/auth-cart');
-    } finally {
-      setAddingId(null);
-    }
-  };
+  }, [products, category, search, sortBy]);
 
+  const shown = filtered.slice(0, visible);
+
+  const heroProduct = (slideDef) => PRESET_PRODUCTS.find((p) => p.product_id === slideDef.productId);
+  const current = HERO_SLIDES[slide];
+  const hero = heroProduct(current);
+
+  /* ---- actions ---- */
   const showToast = (title, message, type = 'success', link = null) => {
+    clearTimeout(toastTimer.current);
     setToast({ title, message, type, link });
-    setTimeout(() => {
-      setToast(null);
-    }, 4500);
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
   };
 
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-    if (!emailInput || !emailInput.includes('@')) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-    setSubscribed(true);
-    showToast('VIP Club Confirmed! 🎉', 'Use coupon code SIMPLY10 for 10% off your first gadget order!', 'success');
+  const openQuickView = (p) => {
+    setQuickView(p);
+    setColor(p.colors?.[0] || '');
+    setQty(1);
   };
 
-  // Filter products by active category / tab
-  const filteredProducts = products.filter((p) => {
-    if (activeCategory !== 'all') {
-      if (p.category_slug !== activeCategory) return false;
-    }
-    if (activeTab === 'bestsellers') return p.badge === 'BESTSELLER';
-    if (activeTab === 'new') return p.badge === 'NEW';
-    if (activeTab === 'audio') return p.category_slug === 'audio';
-    if (activeTab === 'computing') return p.category_slug === 'computing';
-    return true;
-  });
+  const toggleWishlist = (e, p) => {
+    e.stopPropagation();
+    const nowSaved = !wishlist[p.product_id];
+    setWishlist((prev) => ({ ...prev, [p.product_id]: nowSaved }));
+    showToast(nowSaved ? 'Saved to wishlist' : 'Removed from wishlist', p.name, nowSaved ? 'success' : 'info');
+  };
+  const addToCart = async (p, quantity = 1) => {
+    const token = localStorage.getItem('token');
+    const targetProductId = p.product_id;
+    const targetVariantId = p.variant_id || null;
 
+    if (token) {
+      // Authenticated: save directly to database cart
+      try {
+        setAddingId(p.product_id);
+        const payload = {
+          product_id: targetProductId,
+          quantity,
+        };
+        if (targetVariantId) {
+          payload.variant_id = targetVariantId;
+        }
+        await api.post('/auth_cart/cart/add', payload);
+      } catch (err) {
+        console.warn('Backend cart sync note:', err);
+      } finally {
+        setAddingId(null);
+      }
+      localStorage.removeItem('cart');
+    } else {
+      // Guest: save to local cart
+      const raw = localStorage.getItem('cart');
+      const list = raw ? JSON.parse(raw) : [];
+      const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + quantity;
+      } else {
+        list.push({
+          product_id: p.product_id,
+          name: p.name,
+          price: Number(p.base_price) || 0,
+          quantity: quantity,
+          image: p.image,
+          sku: `SKU-${p.product_id}`,
+        });
+      }
+      localStorage.setItem('cart', JSON.stringify(list));
+    }
+
+    showToast('Added to cart', `${p.name} (x${quantity})`, 'success', '/auth-cart');
+    setQuickView(null);
+  };
+
+  const changeCategory = (c) => {
+    setCategory(c);
+    setVisible(PAGE_SIZE);
+  };
+
+  const resetFilters = () => {
+    setCategory('All');
+    setSearch('');
+    setVisible(PAGE_SIZE);
+  };
+
+  const goToSlide = (i) => setSlide((i + HERO_SLIDES.length) % HERO_SLIDES.length);
+
+  /* ---- render ---- */
   return (
-    <div style={{ maxWidth: '1320px', margin: '0 auto', padding: '0 24px 72px' }}>
-      {/* ==========================================================================
-          1. SimplyTek Hero Carousel / Slider
-          ========================================================================== */}
+    <div className="ov-page">
+
+      {/* 1. Hero */}
       <section
-        className="st-hero-slider"
-        onMouseEnter={() => setSliderPaused(true)}
-        onMouseLeave={() => setSliderPaused(false)}
-        aria-label="SimplyTek Featured Gadgets"
+        className="ov-hero"
+        aria-roledescription="carousel"
+        aria-label="Featured products"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
       >
-        {HERO_SLIDES.map((slide, idx) => (
-          <div key={slide.id} className={`st-slide ${idx === currentSlide ? 'active' : ''}`}>
-            {/* Left Content */}
-            <div className="st-slide-content">
-              <div className={`st-slide-badge ${slide.badge_class}`}>
-                <FlameIcon className="w-3.5 h-3.5" />
-                <span>{slide.badge}</span>
+        {hero && (
+          <div className="ov-slide" key={current.productId}>
+            <div>
+              <h1 className="ov-hero-title">{current.title}</h1>
+              <p className="ov-hero-text">{current.text}</p>
+              <div className="ov-hero-price">
+                <strong>{money.format(hero.base_price)}</strong>
+                {hero.mrp > hero.base_price && <s>{money.format(hero.mrp)}</s>}
               </div>
-
-              <h1 className="st-slide-title">{slide.title}</h1>
-              <p className="st-slide-subtitle">{slide.subtitle}</p>
-
-              {/* Specs Pills */}
-              <div className="st-slide-specs">
-                {slide.specs.map((spec, sIdx) => (
-                  <span key={sIdx} className="st-spec-pill">
-                    {spec}
-                  </span>
-                ))}
-              </div>
-
-              {/* Pricing & Savings */}
-              <div className="st-slide-pricing">
-                <span className="st-price-current">{slide.price}</span>
-                <span className="st-price-original">{slide.mrp}</span>
-                <span className="st-price-save">{slide.saveText}</span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="st-slide-actions">
-                <Link to={slide.ctaLink} className="st-btn-pill-primary">
+              <div className="ov-hero-actions">
+                <button type="button" className="st-btn-pill-primary" onClick={() => openQuickView(hero)}>
                   <ShoppingBagIcon className="w-4 h-4" />
-                  <span>{slide.ctaPrimary}</span>
-                </Link>
+                  <span>Shop now</span>
+                </button>
                 <Link to="/catalog" className="st-btn-pill-secondary">
-                  <span>Explore Specs</span>
-                  <ArrowRightIcon className="w-4 h-4" />
+                  <span>Browse catalog</span>
                 </Link>
               </div>
             </div>
+            <div className="ov-hero-visual" onClick={() => openQuickView(hero)}>
+              <img src={hero.image} alt={current.title} />
+            </div>
+          </div>
+        )}
 
-            {/* Right Visual Stage */}
-            <div className="st-slide-visual">
-              <div className="st-visual-glow"></div>
-              <div className="st-gadget-card">
-                <div className="st-float-tag">{slide.tag}</div>
-                <div className="st-gadget-img-box">
-                  {slide.image ? (
-                    <img
-                      src={slide.image}
-                      alt={slide.title}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px' }}
-                    />
-                  ) : (
-                    slide.icon
-                  )}
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                    {slide.category}
+        <div className="ov-hero-nav">
+          <button type="button" className="ov-arrow" onClick={() => goToSlide(slide - 1)} aria-label="Previous slide">
+            <ChevronLeftIcon className="w-4 h-4" />
+          </button>
+          <button type="button" className="ov-arrow" onClick={() => goToSlide(slide + 1)} aria-label="Next slide">
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
+          <div className="ov-dots">
+            {HERO_SLIDES.map((s, i) => (
+              <button
+                key={s.productId}
+                type="button"
+                className={`ov-dot ${i === slide ? 'active' : ''}`}
+                onClick={() => goToSlide(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Trust strip: one row, three facts that match how BrightBuy actually works */}
+      <section className="ov-trust" aria-label="Delivery and payment">
+        <div className="ov-trust-item">
+          <div className="ov-trust-icon"><TruckIcon className="w-5 h-5" /></div>
+          <div>
+            <div className="ov-trust-title">Delivery across Texas</div>
+            <div className="ov-trust-desc">5 days to main cities, 7 days elsewhere. Store pickup available.</div>
+          </div>
+        </div>
+        <div className="ov-trust-item">
+          <div className="ov-trust-icon"><CreditCardIcon className="w-5 h-5" /></div>
+          <div>
+            <div className="ov-trust-title">Pay your way</div>
+            <div className="ov-trust-desc">Card payment or cash on delivery.</div>
+          </div>
+        </div>
+        <div className="ov-trust-item">
+          <div className="ov-trust-icon"><ShieldCheckIcon className="w-5 h-5" /></div>
+          <div>
+            <div className="ov-trust-title">Genuine products</div>
+            <div className="ov-trust-desc">Stock checked at checkout, so what you order is what we ship.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Catalogue: category chips, search, sort and the product grid in one place */}
+      <section aria-label="Products">
+        <div className="ov-head">
+          <h2>Shop products</h2>
+          <div className="ov-tools">
+            <div className="ov-search">
+              <SearchIcon className="w-4 h-4" />
+              <input
+                type="text"
+                className="ov-input"
+                placeholder="Search products"
+                aria-label="Search products"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setVisible(PAGE_SIZE);
+                }}
+              />
+              {search && (
+                <button type="button" className="ov-clear" onClick={() => setSearch('')} aria-label="Clear search">
+                  <XIcon className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <select className="ov-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort products">
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+              <option value="rating">Top rated</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="ov-chips" role="tablist" aria-label="Categories">
+          <button type="button" role="tab" aria-selected={category === 'All'} className={`ov-chip ${category === 'All' ? 'active' : ''}`} onClick={() => changeCategory('All')}>
+            All<span>{products.length}</span>
+          </button>
+          {categories.map(([name, count]) => (
+            <button
+              key={name}
+              type="button"
+              role="tab"
+              aria-selected={category === name}
+              className={`ov-chip ${category === name ? 'active' : ''}`}
+              onClick={() => changeCategory(name)}
+            >
+              {name}<span>{count}</span>
+            </button>
+          ))}
+        </div>
+
+        {shown.length === 0 ? (
+          <div className="ov-empty">
+            <div>No products match your search.</div>
+            <button type="button" className="st-btn-pill-secondary" onClick={resetFilters}>Clear filters</button>
+          </div>
+        ) : (
+          <div className="ov-grid">
+            {shown.map((p) => {
+              const pct = discountPct(p);
+              const tag = pct > 0 ? `-${pct}%` : p.badge;
+              return (
+                <article
+                  key={p.product_id}
+                  className="ov-card"
+                  tabIndex={0}
+                  onClick={() => openQuickView(p)}
+                  onKeyDown={(e) => e.key === 'Enter' && openQuickView(p)}
+                >
+                  {tag && <span className={`ov-badge ${pct > 0 ? 'sale' : ''}`}>{tag}</span>}
+                  <div className="ov-card-img">
+                    <img src={p.image} alt={p.name} loading="lazy" />
                   </div>
-                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#0f172a', margin: '4px 0 8px' }}>
-                    {slide.title}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ffaa47', fontSize: '0.8rem', fontWeight: 600 }}>
-                      <StarIcon className="w-4 h-4" />
-                      <span>5.0 (150+ reviews)</span>
+                  <div className="ov-card-cat">{p.category}</div>
+                  <h3 className="ov-card-title" title={p.name}>{p.name}</h3>
+                  {p.rating && (
+                    <div className="ov-card-rating">
+                      <StarIcon className="w-3.5 h-3.5" />
+                      <span>{Number(p.rating).toFixed(1)}</span>
+                      <em>({p.reviews_count})</em>
                     </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
-                      In Stock
-                    </span>
+                  )}
+                  <div className="ov-card-price">
+                    {p.priceFrom && <small>From</small>}
+                    <strong>{money.format(p.base_price)}</strong>
+                    {pct > 0 && <s>{money.format(p.mrp)}</s>}
+                  </div>
+                  <button
+                    type="button"
+                    className="st-card-add-btn"
+                    disabled={addingId === p.product_id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(p);
+                    }}
+                  >
+                    <ShoppingBagIcon className="w-4 h-4" />
+                    <span>{addingId === p.product_id ? 'Adding...' : 'Add to cart'}</span>
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="ov-more">
+          {filtered.length > visible && (
+            <button type="button" className="st-btn-pill-secondary" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
+              Show more ({filtered.length - visible} left)
+            </button>
+          )}
+          <Link to="/catalog" className="st-view-all-link">
+            <span>View full catalog</span>
+            <ArrowRightIcon className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section
+        style={{
+          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+          borderRadius: '20px',
+          padding: '36px 32px',
+          color: '#ffffff',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '32px',
+          alignItems: 'flex-start',
+          boxShadow: '0 8px 24px rgba(37, 99, 235, 0.25)',
+        }}
+      >
+        <div>
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              background: 'rgba(255, 255, 255, 0.15)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              marginBottom: '12px',
+            }}
+          >
+            Help &amp; Support
+          </span>
+          <h2 style={{ fontSize: '1.85rem', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            Frequently Asked Questions
+          </h2>
+          <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.6 }}>
+            Everything you need to know about shopping on BrightBuy, guest cart ordering, islandwide delivery, and product warranties.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {HOME_FAQS.map((item, idx) => {
+            const isOpen = !!faqOpen[idx];
+            return (
+              <div
+                key={idx}
+                style={{
+                  background: 'rgba(255,255,255,0.12)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  transition: 'background 0.2s ease',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setFaqOpen((prev) => ({ ...prev, [idx]: !prev[idx] }))}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    background: 'none',
+                    border: 'none',
+                    color: '#ffffff',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    padding: 0,
+                  }}
+                >
+                  <span>{item.q}</span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s',
+                      marginLeft: '12px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    ▼
+                  </span>
+                </button>
+                {isOpen && (
+                  <div style={{ paddingTop: '10px', fontSize: '0.86rem', color: 'rgba(255,255,255,0.92)', lineHeight: 1.6 }}>
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Quick view */}
+      {quickView && (
+        <div className="st-modal-overlay" onClick={() => setQuickView(null)}>
+          <div className="st-modal-dialog" role="dialog" aria-modal="true" aria-label={quickView.name} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="st-modal-close" onClick={() => setQuickView(null)} aria-label="Close">
+              <XIcon className="w-4 h-4" />
+            </button>
+
+            <div className="st-modal-img-wrap">
+              <img src={quickView.image} alt={quickView.name} />
+            </div>
+
+            <div className="st-modal-details">
+              <span className="st-modal-cat">{quickView.category}</span>
+              <h2 className="st-modal-title">{quickView.name}</h2>
+
+              {quickView.rating && (
+                <div className="st-card-rating" style={{ marginBottom: 12 }}>
+                  <StarIcon className="w-4 h-4" />
+                  <span>{Number(quickView.rating).toFixed(1)}</span>
+                  <span className="st-card-rating-count">({quickView.reviews_count} reviews)</span>
+                </div>
+              )}
+
+              <p className="st-modal-desc">{quickView.description}</p>
+
+              {quickView.details && (
+                <div className="st-modal-specs-box">
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {quickView.details.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {quickView.colors?.length > 1 && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: 8 }}>
+                    Colour: <span style={{ color: '#0f172a' }}>{color}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {quickView.colors.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setColor(c)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: 8,
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          border: color === c ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                          background: color === c ? '#eff6ff' : '#fff',
+                          color: color === c ? '#1d4ed8' : '#334155',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {c}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        ))}
+              )}
 
-        {/* Prev / Next Slider Arrows */}
-        <div className="st-slider-arrows">
-          <button
-            type="button"
-            className="st-arrow-btn"
-            onClick={() => setCurrentSlide((prev) => (prev === 0 ? HERO_SLIDES.length - 1 : prev - 1))}
-            aria-label="Previous Slide"
-          >
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className="st-arrow-btn"
-            onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-            aria-label="Next Slide"
-          >
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Slide Pagination Dots */}
-        <div className="st-slider-dots">
-          {HERO_SLIDES.map((_, idx) => (
-            <button
-              key={idx}
-              type="button"
-              className={`st-dot ${idx === currentSlide ? 'active' : ''}`}
-              onClick={() => setCurrentSlide(idx)}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          2. SimplyTek 4-Column USP Trust Perks Bar
-          ========================================================================== */}
-      <section className="st-perks-section" aria-label="SimplyTek Guarantees">
-        <div className="st-perks-grid">
-          <div className="st-perk-card">
-            <div className="st-perk-icon-wrap">
-              <TruckIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="st-perk-title">Islandwide Doorstep Delivery</div>
-              <div className="st-perk-desc">Safe, express transit to your doorstep anywhere across Sri Lanka.</div>
-            </div>
-          </div>
-
-          <div className="st-perk-card">
-            <div className="st-perk-icon-wrap" style={{ background: '#ecfdf5', color: '#10b981' }}>
-              <ShieldCheckIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="st-perk-title">100% Genuine Guaranteed</div>
-              <div className="st-perk-desc">Direct brand imports with authentic serial numbers and official packaging.</div>
-            </div>
-          </div>
-
-          <div className="st-perk-card">
-            <div className="st-perk-icon-wrap" style={{ background: '#fffbeb', color: '#f59e0b' }}>
-              <CreditCardIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="st-perk-title">Flexible Installments</div>
-              <div className="st-perk-desc">Pay in 3 monthly installments with Koko &amp; Mintpay at 0% interest.</div>
-            </div>
-          </div>
-
-          <div className="st-perk-card">
-            <div className="st-perk-icon-wrap" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>
-              <RefreshCwIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="st-perk-title">Official Warranty &amp; Care</div>
-              <div className="st-perk-desc">Hassle-free replacement claims, after-sales service and local support.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          3. Shop by Popular Categories (Circular Icons & Pill Cards)
-          ========================================================================== */}
-      <section className="st-categories-section">
-        <div className="st-section-title-wrap">
-          <div>
-            <h2 className="st-section-heading">Shop by Popular Tech Categories</h2>
-            <p className="st-section-subheading">Explore authentic gadgets curated by tech enthusiasts for Sri Lanka</p>
-          </div>
-          <Link to="/catalog" className="st-view-all-link">
-            <span>View Full Catalog</span>
-            <ArrowRightIcon className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="st-categories-grid">
-          {TECH_CATEGORIES.map((cat) => (
-            <div
-              key={cat.id}
-              className={`st-cat-card ${activeCategory === cat.id ? 'active-ring' : ''}`}
-              onClick={() => setActiveCategory(cat.id)}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="st-cat-circle">{cat.icon}</div>
-              <div className="st-cat-title">{cat.name}</div>
-              <div className="st-cat-count">{cat.count}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          4. SimplyTek Flash Deals Section with Live Countdown Timer
-          ========================================================================== */}
-      <section className="st-flash-deals-box" aria-label="Flash Deals">
-        <div className="st-flash-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-            <span className="st-flash-badge">
-              <FlameIcon className="w-4 h-4" />
-              <span>FLASH DEALS</span>
-            </span>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1a1c1d', margin: 0 }}>
-              Limited Time Tech Drops
-            </h2>
-          </div>
-
-          {/* Real-time Ticking Countdown */}
-          <div className="st-flash-countdown">
-            <span className="st-countdown-label">Ends In:</span>
-            <span className="st-timer-box">{String(countdown.hours).padStart(2, '0')}h</span>
-            <span className="st-timer-divider">:</span>
-            <span className="st-timer-box">{String(countdown.minutes).padStart(2, '0')}m</span>
-            <span className="st-timer-divider">:</span>
-            <span className="st-timer-box">{String(countdown.seconds).padStart(2, '0')}s</span>
-          </div>
-        </div>
-
-        {/* 4 Flash Deal Product Cards */}
-        <div className="st-products-grid">
-          {filteredProducts.slice(0, 4).map((p) => (
-            <div key={p.product_id} className="st-product-card">
-              {/* Badges */}
-              <div className="st-card-badges">
-                <span className="st-badge-discount">{p.discount}</span>
-                {p.badge && <span className="st-badge-bestseller">{p.badge}</span>}
-              </div>
-
-              {/* Visual Box */}
-              <div className="st-card-img-wrap">
-                {p.image ? (
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '10px' }}
-                  />
-                ) : p.icon_type === 'headphones' ? (
-                  <HeadphonesIcon className="w-16 h-16" style={{ color: '#4963c5' }} />
-                ) : p.icon_type === 'watch' ? (
-                  <WatchIcon className="w-16 h-16" style={{ color: '#f59e0b' }} />
-                ) : p.icon_type === 'charger' ? (
-                  <BatteryChargingIcon className="w-16 h-16" style={{ color: '#10b981' }} />
-                ) : (
-                  <LaptopIcon className="w-16 h-16" style={{ color: '#2563eb' }} />
-                )}
-              </div>
-
-              {/* Category */}
-              <div className="st-card-cat-name">{p.category}</div>
-
-              {/* Title */}
-              <h3 className="st-card-title" title={p.name}>
-                {p.name}
-              </h3>
-
-              {/* Star Rating */}
-              <div className="st-card-rating">
-                <StarIcon className="w-4 h-4" />
-                <span>{p.rating}</span>
-                <span className="st-card-rating-count">({p.reviews_count} reviews)</span>
-              </div>
-
-              {/* Stock Bar */}
-              <div className="st-card-stock-bar">
-                <div className="st-stock-label">
-                  <span>🔥 {p.stock_sold} Claimed</span>
-                  <span>{p.stock_left} Left!</span>
+              <div className="st-modal-price-row">
+                <div className="st-modal-price">
+                  {quickView.priceFrom && <small style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginRight: 6 }}>From</small>}
+                  {money.format(quickView.base_price)}
                 </div>
-                <div className="st-stock-progress">
-                  <div
-                    className="st-stock-fill"
-                    style={{ width: `${Math.min(100, (p.stock_sold / (p.stock_sold + p.stock_left)) * 100)}%` }}
-                  ></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                  <button type="button" aria-label="Decrease quantity" onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', fontWeight: 800 }}>-</button>
+                  <span style={{ fontWeight: 800, minWidth: 24, textAlign: 'center' }}>{qty}</span>
+                  <button type="button" aria-label="Increase quantity" onClick={() => setQty((q) => Math.min(10, q + 1))}
+                    style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', fontWeight: 800 }}>+</button>
                 </div>
               </div>
 
-              {/* Pricing */}
-              <div className="st-card-pricing-row">
-                <span className="st-card-price">${Number(p.base_price).toFixed(2)}</span>
-                <span className="st-card-mrp">${Number(p.mrp).toFixed(2)}</span>
-              </div>
-
-              {/* Add to Cart CTA */}
-              <button
-                type="button"
-                className="st-card-add-btn"
-                onClick={() => handleAddToCart(p)}
-                disabled={addingId === p.product_id}
-              >
-                <ShoppingBagIcon className="w-4 h-4" />
-                <span>{addingId === p.product_id ? 'Adding...' : 'Add to Cart'}</span>
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          5. Dual Promotional Split Banners (SimplyTek Signature Mid-Page Feature)
-          ========================================================================== */}
-      <section className="st-split-banners-grid" aria-label="Promotional Banners">
-        {/* Banner 1: Audio Essentials */}
-        <div className="st-banner-card st-banner-blue">
-          <span className="st-banner-pill">🎧 Acoustic Perfection</span>
-          <h3 className="st-banner-title">Immersive Studio Audio &amp; ANC</h3>
-          <p className="st-banner-desc">
-            Discover lossless Hi-Res audio codecs, active noise cancellation, and all-day acoustic comfort.
-          </p>
-          <Link to="/catalog" className="st-banner-btn">
-            <span>Shop Audio Collection</span>
-            <ArrowRightIcon className="w-4 h-4" />
-          </Link>
-        </div>
-
-        {/* Banner 2: Pro Workstations */}
-        <div className="st-banner-card st-banner-purple">
-          <span className="st-banner-pill">💻 Creator &amp; Pro Gear</span>
-          <h3 className="st-banner-title">Next-Gen Laptops &amp; Accessories</h3>
-          <p className="st-banner-desc">
-            Equip your creative setup with ultra-fast Thunderbolt hubs, mechanical keyboards, and 4K displays.
-          </p>
-          <Link to="/catalog" className="st-banner-btn">
-            <span>Explore Workstations</span>
-            <ArrowRightIcon className="w-4 h-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          6. Trending Tech Products Grid with Category Tabs
-          ========================================================================== */}
-      <section style={{ marginBottom: '56px' }}>
-        <div className="st-section-title-wrap">
-          <div>
-            <h2 className="st-section-heading">Trending Gadgets &amp; Best Sellers</h2>
-            <p className="st-section-subheading">Handpicked devices with 100% genuine warranty and islandwide dispatch</p>
-          </div>
-
-          <div className="st-tabs-row" style={{ border: 'none', margin: 0, padding: 0 }}>
-            <button
-              type="button"
-              className={`st-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All Products
-            </button>
-            <button
-              type="button"
-              className={`st-tab-btn ${activeTab === 'bestsellers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bestsellers')}
-            >
-              🔥 Best Sellers
-            </button>
-            <button
-              type="button"
-              className={`st-tab-btn ${activeTab === 'new' ? 'active' : ''}`}
-              onClick={() => setActiveTab('new')}
-            >
-              ✨ New Arrivals
-            </button>
-            <button
-              type="button"
-              className={`st-tab-btn ${activeTab === 'audio' ? 'active' : ''}`}
-              onClick={() => setActiveTab('audio')}
-            >
-              🎧 Audio
-            </button>
-            <button
-              type="button"
-              className={`st-tab-btn ${activeTab === 'computing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('computing')}
-            >
-              💻 Computing
-            </button>
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="st-products-grid">
-          {filteredProducts.map((p) => (
-            <div key={p.product_id} className="st-product-card">
-              <div className="st-card-badges">
-                <span className="st-badge-discount">{p.discount}</span>
-                {p.badge && <span className="st-badge-bestseller">{p.badge}</span>}
-              </div>
-
-              <div className="st-card-img-wrap">
-                {p.image ? (
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '10px' }}
-                  />
-                ) : p.icon_type === 'headphones' ? (
-                  <HeadphonesIcon className="w-16 h-16" style={{ color: '#4963c5' }} />
-                ) : p.icon_type === 'watch' ? (
-                  <WatchIcon className="w-16 h-16" style={{ color: '#f59e0b' }} />
-                ) : p.icon_type === 'charger' ? (
-                  <BatteryChargingIcon className="w-16 h-16" style={{ color: '#10b981' }} />
-                ) : (
-                  <LaptopIcon className="w-16 h-16" style={{ color: '#2563eb' }} />
-                )}
-              </div>
-
-              <div className="st-card-cat-name">{p.category}</div>
-
-              <h3 className="st-card-title" title={p.name}>
-                {p.name}
-              </h3>
-
-              <div className="st-card-rating">
-                <StarIcon className="w-4 h-4" />
-                <span>{p.rating}</span>
-                <span className="st-card-rating-count">({p.reviews_count} reviews)</span>
-              </div>
-
-              <div className="st-card-pricing-row">
-                <span className="st-card-price">${Number(p.base_price).toFixed(2)}</span>
-                <span className="st-card-mrp">${Number(p.mrp).toFixed(2)}</span>
-              </div>
-
-              <button
-                type="button"
-                className="st-card-add-btn"
-                onClick={() => handleAddToCart(p)}
-                disabled={addingId === p.product_id}
-              >
-                <ShoppingBagIcon className="w-4 h-4" />
-                <span>{addingId === p.product_id ? 'Adding...' : 'Add to Cart'}</span>
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          7. Official Brand Partners Showcase
-          ========================================================================== */}
-      <section className="st-brands-section" aria-label="Official Brand Partners">
-        <div className="st-brands-title">Official Brand Partners &amp; Authorised Tech Importers</div>
-        <div className="st-brands-grid">
-          <div className="st-brand-badge"> Apple</div>
-          <div className="st-brand-badge">SONY</div>
-          <div className="st-brand-badge">ANKER</div>
-          <div className="st-brand-badge">SAMSUNG</div>
-          <div className="st-brand-badge">XIAOMI</div>
-          <div className="st-brand-badge">JBL</div>
-          <div className="st-brand-badge">BASEUS</div>
-          <div className="st-brand-badge">HAYLOU</div>
-          <div className="st-brand-badge">AMAZFIT</div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          8. Verified Customer Reviews (Judge.me Widget Style)
-          ========================================================================== */}
-      <section className="st-reviews-box" aria-label="Customer Reviews">
-        <div className="st-reviews-header">
-          <div>
-            <h2 className="st-section-heading">What SimplyTek Customers Say</h2>
-            <p className="st-section-subheading">Real verified feedback from tech lovers across Sri Lanka</p>
-          </div>
-
-          <div className="st-reviews-rating-pill">
-            <StarIcon className="w-4 h-4" />
-            <span>4.9 / 5.0 Rating based on 1,590+ Verified Reviews</span>
-          </div>
-        </div>
-
-        <div className="st-reviews-grid">
-          <div className="st-review-card">
-            <div>
-              <div className="st-rev-stars">
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} className="w-4 h-4" />
-                ))}
-              </div>
-              <p className="st-rev-text">
-                "Bought the Sony WH-1000XM5. Delivery to Kandy took less than 24 hours! Genuine serial checked out on the Sony official website with full warranty. Exceptional service!"
-              </p>
-            </div>
-            <div className="st-rev-author-row">
-              <div>
-                <div className="st-rev-author-name">
-                  <span>Kasun P.</span>
-                  <span className="st-rev-verified-tag">✓ Verified Buyer</span>
-                </div>
-                <div className="st-rev-product-tag">Sony WH-1000XM5 ANC Headset</div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>2 days ago</span>
-            </div>
-          </div>
-
-          <div className="st-review-card">
-            <div>
-              <div className="st-rev-stars">
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} className="w-4 h-4" />
-                ))}
-              </div>
-              <p className="st-rev-text">
-                "The Anker Prime 240W charger is an absolute monster. Powers my MacBook M3 and iPhone simultaneously without any thermal issues. Super fast checkout with Koko installments!"
-              </p>
-            </div>
-            <div className="st-rev-author-row">
-              <div>
-                <div className="st-rev-author-name">
-                  <span>Dilshan M.</span>
-                  <span className="st-rev-verified-tag">✓ Verified Buyer</span>
-                </div>
-                <div className="st-rev-product-tag">Anker Prime GaN 240W Station</div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>5 days ago</span>
-            </div>
-          </div>
-
-          <div className="st-review-card">
-            <div>
-              <div className="st-rev-stars">
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon key={i} className="w-4 h-4" />
-                ))}
-              </div>
-              <p className="st-rev-text">
-                "Got my MacBook Pro M3 Max in Colombo within the afternoon. Packaging was flawless, factory sealed, with warranty registration done smoothly. SimplyTek is my go-to gadget store!"
-              </p>
-            </div>
-            <div className="st-rev-author-row">
-              <div>
-                <div className="st-rev-author-name">
-                  <span>Anushka T.</span>
-                  <span className="st-rev-verified-tag">✓ Verified Buyer</span>
-                </div>
-                <div className="st-rev-product-tag">MacBook Pro 16" M3 Max</div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>1 week ago</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          9. SimplyTek VIP Club Newsletter Banner
-          ========================================================================== */}
-      <section className="st-newsletter-box" aria-label="VIP Club Newsletter">
-        <div>
-          <span style={{ background: 'rgba(255,255,255,0.15)', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            ✨ SimplyTek VIP Member Club
-          </span>
-          <h3 className="st-news-heading" style={{ marginTop: '12px' }}>
-            Unlock 10% OFF Your First Order &amp; Flash Drops
-          </h3>
-          <p className="st-news-desc">
-            Subscribe for exclusive coupon codes, limited-quantity gadget drops, and early access to Black Friday tech sales.
-          </p>
-        </div>
-
-        <div>
-          {subscribed ? (
-            <div style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid #10b981', padding: '16px 20px', borderRadius: '16px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1rem', color: '#34d399', marginBottom: '4px' }}>
-                🎉 You're on the SimplyTek VIP List!
-              </div>
-              <div style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>
-                Use voucher code <strong style={{ color: '#fbbf24', textDecoration: 'underline' }}>SIMPLY10</strong> at checkout for 10% off.
-              </div>
-            </div>
-          ) : (
-            <form className="st-news-form" onSubmit={handleSubscribe}>
-              <div className="st-news-input-row">
-                <input
-                  type="email"
-                  className="st-news-input"
-                  placeholder="Enter your email address..."
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  required
-                />
-                <button type="submit" className="st-news-btn">
-                  Claim 10% Off
+              <div className="st-modal-actions">
+                <button
+                  type="button"
+                  className="st-btn-pill-primary"
+                  style={{ flexGrow: 1, justifyContent: 'center' }}
+                  onClick={() => addToCart(quickView, qty)}
+                  disabled={addingId === quickView.product_id}
+                >
+                  <ShoppingBagIcon className="w-4 h-4" />
+                  <span>{addingId === quickView.product_id ? 'Adding...' : 'Add to cart'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="st-card-wish-btn"
+                  style={{ position: 'static', width: 46, height: 46 }}
+                  onClick={(e) => toggleWishlist(e, quickView)}
+                  aria-label="Toggle wishlist"
+                >
+                  <HeartIcon className="w-5 h-5" fill={wishlist[quickView.product_id] ? '#ef4444' : 'none'} />
                 </button>
               </div>
-              <span className="st-news-subtext">
-                🔒 Instant coupon on submission. No spam, unsubscribe anytime.
-              </span>
-            </form>
-          )}
-        </div>
-      </section>
-
-      {/* ==========================================================================
-          10. Toast Notification System
-          ========================================================================== */}
-      {toast && (
-        <div className="st-toast-container">
-          <div className="st-toast">
-            <div className="st-toast-icon">
-              <CheckCircleIcon className="w-4 h-4" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="st-toast-container" role="status">
+          <div className="st-toast">
+            <div className="st-toast-icon"><CheckCircleIcon className="w-4 h-4" /></div>
             <div className="st-toast-content">
               <div className="st-toast-title">{toast.title}</div>
               <div className="st-toast-msg">{toast.message}</div>
               {toast.link && (
-                <div style={{ marginTop: '4px' }}>
-                  <span
-                    className="st-toast-link"
-                    onClick={() => navigate(toast.link)}
-                  >
-                    View details &rarr;
+                <div style={{ marginTop: 4 }}>
+                  <span className="st-toast-link" onClick={() => navigate(toast.link)}>
+                    {toast.link === '/login' ? 'Go to sign in' : 'View cart'} &rarr;
                   </span>
                 </div>
               )}

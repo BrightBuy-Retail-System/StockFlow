@@ -150,7 +150,7 @@ def get_staff_members():
     """Retrieve all internal staff accounts (Managers and System Administrators)."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Managers and Administrators only."}), 403
 
     conn = get_db_connection()
@@ -159,7 +159,7 @@ def get_staff_members():
         query = """
             SELECT user_id, full_name, email, role_id
             FROM users
-            WHERE role_id IN (2, 3)
+            WHERE role_id IN (2, 3, 4)
             ORDER BY role_id DESC, user_id ASC
         """
         cursor.execute(query)
@@ -178,7 +178,7 @@ def register_staff_member():
     """Allow Managers (role 2) and System Administrators (role 3) to onboard new staff."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
-    if caller_role not in (2, 3):
+    if caller_role not in (2, 3, 4):
         return jsonify({"message": "Access denied. Only Managers and Administrators can register staff."}), 403
 
     data = request.get_json() or {}
@@ -195,8 +195,8 @@ def register_staff_member():
     except (ValueError, TypeError):
         return jsonify({"message": "Invalid role ID"}), 400
 
-    if role_id not in (2, 3):
-        return jsonify({"message": "Staff role must be either Store Manager (2) or System Administrator (3)"}), 400
+    if role_id not in (2, 3, 4):
+        return jsonify({"message": "Staff role must be Store Manager (2) or System Administrator (3/4)"}), 400
 
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
@@ -310,15 +310,56 @@ def add_to_cart():
     user_id = get_jwt_identity()
     data = request.get_json() or {}
     variant_id = data.get('variant_id')
+    product_id = data.get('product_id')
     quantity = int(data.get('quantity', 1))
 
-    if not variant_id or quantity <= 0:
-        return jsonify({"message": "Valid variant_id and positive quantity are required"}), 400
+    if quantity <= 0:
+        return jsonify({"message": "Valid positive quantity is required"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
+        # 1. If product_id is provided, verify whether variant_id belongs to that product.
+        # If variant_id is missing or belongs to a different product, resolve the true default variant for this product!
+        if product_id:
+            resolved_variant = None
+            if variant_id:
+                cursor.execute(
+                    "SELECT variant_id FROM product_variants WHERE variant_id = %s AND product_id = %s",
+                    (variant_id, product_id)
+                )
+                if cursor.fetchone():
+                    resolved_variant = variant_id
+
+            if not resolved_variant:
+                cursor.execute(
+                    "SELECT variant_id FROM product_variants WHERE product_id = %s ORDER BY variant_id ASC LIMIT 1",
+                    (product_id,)
+                )
+                v_match = cursor.fetchone()
+                if v_match:
+                    resolved_variant = v_match['variant_id']
+
+            if resolved_variant:
+                variant_id = resolved_variant
+            elif not variant_id:
+                return jsonify({"message": f"No active product variants found for product ID {product_id}"}), 404
+
+        # 2. If only variant_id was provided (no product_id):
+        if variant_id:
+            cursor.execute("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
+            if not cursor.fetchone():
+                # Check if caller mistakenly passed product_id as variant_id
+                cursor.execute("SELECT variant_id FROM product_variants WHERE product_id = %s ORDER BY variant_id ASC LIMIT 1", (variant_id,))
+                fallback_variant = cursor.fetchone()
+                if fallback_variant:
+                    variant_id = fallback_variant['variant_id']
+                else:
+                    return jsonify({"message": f"No active product variant found for ID {variant_id}"}), 404
+        else:
+            return jsonify({"message": "Valid variant_id or product_id is required"}), 400
+
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
         # Check if this variant is already in the cart
@@ -341,7 +382,12 @@ def add_to_cart():
             )
 
         conn.commit()
-        return jsonify({"message": "Item added to cart successfully"}), 200
+        return jsonify({
+            "message": "Item added to cart successfully",
+            "cart_id": cart_id,
+            "variant_id": variant_id,
+            "quantity": quantity
+        }), 200
 
     except Exception as e:
         return jsonify({"message": f"Server error: {str(e)}"}), 500
@@ -363,9 +409,46 @@ def update_cart_item(cart_item_id):
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
+        # Get existing cart item
+        cursor.execute(
+            "SELECT variant_id, quantity FROM cart_items WHERE cart_item_id = %s AND cart_id = %s",
+            (cart_item_id, cart_id)
+        )
+        existing = cursor.fetchone()
+        if not existing:
+            return jsonify({"message": "Cart item not found"}), 404
+
+        old_qty = int(existing['quantity'])
+        variant_id = existing['variant_id']
+        diff = quantity - old_qty
+
         if quantity <= 0:
+            # Restore all stock to inventory and delete item
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (old_qty, variant_id)
+            )
             cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
         else:
+            if diff > 0:
+                # Need more items: check stock
+                cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s FOR UPDATE", (variant_id,))
+                inv_row = cursor.fetchone()
+                curr_stock = int(inv_row['stock_quantity']) if inv_row else 0
+                if curr_stock < diff:
+                    return jsonify({"message": f"Insufficient stock. Only {curr_stock} additional unit(s) available."}), 400
+
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE variant_id = %s",
+                    (diff, variant_id)
+                )
+            elif diff < 0:
+                # Reduce items: restore surplus back to inventory
+                cursor.execute(
+                    "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                    (-diff, variant_id)
+                )
+
             cursor.execute(
                 "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s AND cart_id = %s",
                 (quantity, cart_item_id, cart_id)
@@ -375,6 +458,7 @@ def update_cart_item(cart_item_id):
         return jsonify({"message": "Cart item updated successfully"}), 200
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
@@ -390,11 +474,28 @@ def delete_cart_item(cart_item_id):
 
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
-        cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
-        conn.commit()
-        return jsonify({"message": "Item removed from cart"}), 200
+
+        # Get existing cart item to restore inventory
+        cursor.execute(
+            "SELECT variant_id, quantity FROM cart_items WHERE cart_item_id = %s AND cart_id = %s",
+            (cart_item_id, cart_id)
+        )
+        item = cursor.fetchone()
+
+        if item:
+            # Restore stock to inventory table
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (item['quantity'], item['variant_id'])
+            )
+            cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
+            conn.commit()
+            return jsonify({"message": "Item removed from cart and stock restored"}), 200
+        else:
+            return jsonify({"message": "Cart item not found"}), 404
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
@@ -410,13 +511,25 @@ def clear_cart():
 
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
+
+        # Fetch all items to restore stock to inventory table
+        cursor.execute("SELECT variant_id, quantity FROM cart_items WHERE cart_id = %s", (cart_id,))
+        items = cursor.fetchall()
+        for item in items:
+            cursor.execute(
+                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
+                (item['quantity'], item['variant_id'])
+            )
+
         cursor.execute("DELETE FROM cart_items WHERE cart_id = %s", (cart_id,))
         conn.commit()
-        return jsonify({"message": "Cart cleared successfully"}), 200
+        return jsonify({"message": "Cart cleared and stock restored successfully"}), 200
 
     except Exception as e:
+        conn.rollback()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
     finally:
         cursor.close()
         conn.close()
+
 

@@ -59,18 +59,81 @@ export default function DashboardLayout() {
     navigate('/login');
   }
 
+  const roleId = Number(user?.role_id) || 0;
+
   const getDashboardRoute = () => {
     if (!user) return '/login';
-    if (user.role_id === 2) return '/manager-dashboard';
-    if (user.role_id === 3) return '/system-administrator';
+    if (roleId === 2) return '/manager-dashboard';
+    if (roleId === 3) return '/system-administrator';
     return '/customer-dashboard';
+  };
+
+  const getDashboardName = () => {
+    if (!user) return 'My Dashboard';
+    if (user.role_id === 2) return 'Manager Operations Hub';
+    if (user.role_id === 3) return 'Administrator Console';
+    return 'Customer Dashboard';
   };
 
   const getRoleLabel = () => {
     if (!user) return '';
-    if (user.role_id === 2) return 'Store Executive & Manager';
-    if (user.role_id === 3) return 'System Administrator';
+    if (roleId === 2) return 'Store Executive & Manager';
+    if (roleId === 3) return 'System Administrator';
     return 'Customer Account';
+  };
+
+  // Role-specific navigation links
+  const getNavLinks = () => {
+    // 1. Guest (Not Logged In)
+    if (!user) {
+      return [
+        { label: 'Home', to: '/', end: true },
+        { label: 'Products', to: '/catalog' },
+        { label: 'Cart', to: '/auth-cart' },
+        { label: 'Track Order', to: '/orders' },
+      ];
+    }
+
+    // 2. Customer (Role 1)
+    if (roleId === 1) {
+      return [
+        { label: 'Home', to: '/', end: true },
+        { label: 'Products', to: '/catalog' },
+        { label: 'Cart', to: '/auth-cart' },
+        { label: 'My Orders', to: '/orders' },
+        { label: 'Dashboard', to: '/customer-dashboard' },
+      ];
+    }
+
+    // 3. Store Manager (Role 2)
+    if (roleId === 2) {
+      return [
+        { label: 'Dashboard', to: '/manager-dashboard' },
+        { label: 'Orders & Fulfillment', to: '/orders' },
+        { label: 'Inventory Stock', to: '/catalog' },
+        { label: 'Logistics Hubs', to: '/logistics' },
+        { label: 'Analytics & BI', to: '/analytics' },
+        { label: 'Storefront', to: '/', end: true },
+      ];
+    }
+
+    // 4. System Administrator (Roles 3 & 4)
+    if (roleId === 3 || roleId === 4) {
+      return [
+        { label: 'Admin Console', to: '/system-administrator' },
+        { label: 'Orders & Fulfillment', to: '/orders' },
+        { label: 'Manager Pipeline', to: '/manager-dashboard' },
+        { label: 'Inventory Stock', to: '/catalog' },
+        { label: 'Logistics', to: '/logistics' },
+        { label: 'Analytics', to: '/analytics' },
+        { label: 'Storefront', to: '/', end: true },
+      ];
+    }
+
+    return [
+      { label: 'Home', to: '/', end: true },
+      { label: 'Products', to: '/catalog' },
+    ];
   };
 
   useEffect(() => {
@@ -80,18 +143,44 @@ export default function DashboardLayout() {
 
   return (
     <div className="storefront-app">
-      {/* SimplyTek Top Announcement Bar */}
-      <div className="simplytek-announcement-bar">
-        <div className="announcement-inner">
-          <span className="announcement-pill">🚚 Islandwide Delivery</span>
-          <span className="announcement-text">
-            Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
-          </span>
-          <Link to="/catalog" className="announcement-link">
-            Shop Tech Deals &rarr;
-          </Link>
+      {/* Dynamic Announcement Bar */}
+      {roleId === 2 ? (
+        <div className="simplytek-announcement-bar" style={{ background: '#78350f', color: '#fef3c7' }}>
+          <div className="announcement-inner">
+            <span className="announcement-pill" style={{ background: '#f59e0b', color: '#78350f' }}>👔 Store Management</span>
+            <span className="announcement-text">
+              Store Executive &amp; Manager Console — Orders Fulfillment Pipeline, Inventory, and Texas Logistics
+            </span>
+            <Link to="/manager-dashboard" className="announcement-link">
+              Management Dashboard &rarr;
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : roleId === 3 ? (
+        <div className="simplytek-announcement-bar" style={{ background: '#14532d', color: '#dcfce7' }}>
+          <div className="announcement-inner">
+            <span className="announcement-pill" style={{ background: '#22c55e', color: '#14532d' }}>⚡ System Administrator</span>
+            <span className="announcement-text">
+              System Admin Console — Database Inventory, Security Grants, and Analytics Operations
+            </span>
+            <Link to="/system-administrator" className="announcement-link">
+              Admin Console &rarr;
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="simplytek-announcement-bar">
+          <div className="announcement-inner">
+            <span className="announcement-pill">🚚 Islandwide Delivery</span>
+            <span className="announcement-text">
+              Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
+            </span>
+            <Link to="/catalog" className="announcement-link">
+              Shop Tech Deals &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
@@ -106,38 +195,18 @@ export default function DashboardLayout() {
             </span>
           </Link>
 
-          {/* Center: Navigation Links */}
+          {/* Center: Dynamic Role-Based Navigation Links */}
           <nav className={`navbar-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Home
-            </NavLink>
-            <NavLink to="/catalog" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Products
-            </NavLink>
-            <NavLink
-              to="/auth-cart"
-              onClick={(e) => {
-                if (!user) {
-                  e.preventDefault();
-                  navigate('/login');
-                }
-              }}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              Cart
-            </NavLink>
-            <NavLink to="/orders" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Orders
-            </NavLink>
-            <NavLink to="/payment" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Payment
-            </NavLink>
-            <NavLink to="/logistics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Logistics
-            </NavLink>
-            <NavLink to="/analytics" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Analytics
-            </NavLink>
+            {getNavLinks().map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                {link.label}
+              </NavLink>
+            ))}
           </nav>
 
           {/* Right: Actions & Connectivity Status */}
@@ -161,6 +230,16 @@ export default function DashboardLayout() {
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent', }}>
                   <UserIcon className="btn-icon" />
                   <span>{user.username || user.full_name}</span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
+                    color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
+                  }}>
+                    {user.role_id === 1 ? 'Customer' : user.role_id === 2 ? 'Manager' : 'Admin'}
+                  </span>
                   <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{dropdownOpen ? '▲' : '▼'}</span>
                 </button>
 
@@ -170,7 +249,7 @@ export default function DashboardLayout() {
                       position: 'absolute',
                       right: 0,
                       top: 'calc(100% + 8px)',
-                      minWidth: '200px',
+                      minWidth: '220px',
                       background: 'var(--bg-card, #1e222d)',
                       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
                       borderRadius: '10px',
@@ -187,25 +266,136 @@ export default function DashboardLayout() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{getRoleLabel()}</div>
                     </div>
 
-                    <Link
-                      to={getDashboardRoute()}
-                      className="btn-ghost"
-                      style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      <UserIcon className="btn-icon" />
-                      My Dashboard
-                    </Link>
+                    {/* Role-specific Dropdown Links */}
+                    {roleId === 1 && (
+                      <>
+                        <Link
+                          to="/customer-dashboard"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <UserIcon className="btn-icon" />
+                          <span>My Dashboard</span>
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>My Orders</span>
+                        </Link>
+                        <Link
+                          to="/auth-cart"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Active Cart</span>
+                        </Link>
+                      </>
+                    )}
 
-                    <Link
-                      to="/orders"
-                      className="btn-ghost"
-                      style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      {/*<PackageIcon className="btn-icon" />*/}
-                      My Orders
-                    </Link>
+                    {roleId === 2 && (
+                      <>
+                        <Link
+                          to="/manager-dashboard"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <UserIcon className="btn-icon" />
+                          <span>Manager Dashboard</span>
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Orders &amp; Fulfillment</span>
+                        </Link>
+                        <Link
+                          to="/catalog"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Inventory Stock</span>
+                        </Link>
+                        <Link
+                          to="/logistics"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Logistics Hubs</span>
+                        </Link>
+                        <Link
+                          to="/analytics"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Executive Analytics</span>
+                        </Link>
+                      </>
+                    )}
+
+                    {(roleId === 3 || roleId === 4) && (
+                      <>
+                        <Link
+                          to="/system-administrator"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <UserIcon className="btn-icon" />
+                          <span>System Administration</span>
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Orders &amp; Fulfillment</span>
+                        </Link>
+                        <Link
+                          to="/manager-dashboard"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Manager Pipeline</span>
+                        </Link>
+                        <Link
+                          to="/catalog"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Product Catalog</span>
+                        </Link>
+                        <Link
+                          to="/analytics"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Analytics &amp; BI</span>
+                        </Link>
+                        <Link
+                          to="/logistics"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Texas Logistics</span>
+                        </Link>
+                      </>
+                    )}
 
                     <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
 
@@ -278,7 +468,7 @@ export default function DashboardLayout() {
         <div className="footer-inner">
           <div className="footer-col-brand">
             <div className="footer-brand-title">
-              <ShoppingBagIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+              <ShoppingBagIcon style={{ width: '22px', height: '22px', minWidth: '22px', color: 'var(--primary)', flexShrink: 0 }} />
               <span>Bright Buy Retail Systems</span>
             </div>
             <p className="footer-brand-desc">

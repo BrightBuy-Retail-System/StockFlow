@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import {
   ShoppingBagIcon,
@@ -11,33 +11,69 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectUrl = searchParams.get('redirect');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  const testAccounts = [
+    {
+      role: 'Role 1: Customer',
+      email: 'customer@stockflow.test',
+      password: 'password123',
+      badge: 'Customer View',
+      badgeColor: 'var(--primary)',
+      bgColor: 'rgba(37, 99, 235, 0.08)',
+      description: 'Personal orders, lifetime spending, and payment checkout settlement.'
+    },
+    {
+      role: 'Role 2: Store Manager',
+      email: 'manager@stockflow.test',
+      password: 'password123',
+      badge: 'Manager View',
+      badgeColor: '#d97706',
+      bgColor: 'rgba(217, 119, 6, 0.08)',
+      description: 'Top-selling products ranking and category totals.'
+    },
+    {
+      role: 'Role 3: Administrator',
+      email: 'admin@stockflow.test',
+      password: 'password123',
+      badge: 'Admin View',
+      badgeColor: '#16a34a',
+      bgColor: 'rgba(22, 163, 74, 0.08)',
+      description: 'Executive quarterly moving averages, corporate leaderboard, and DCL security grants.'
+    }
+  ];
+
+  async function doLogin(emailOrUser, pwdToUse) {
     setLoading(true);
     setMessage('');
     setIsSuccess(false);
 
     try {
-      // Use api client (handles proxy + base url) with fallback
       let data;
       try {
-        const res = await api.post('/auth_cart/login', { email: usernameOrEmail, username: usernameOrEmail, password });
+        const res = await api.post('/auth_cart/login', {
+          email: emailOrUser,
+          username: emailOrUser,
+          password: pwdToUse,
+        });
         data = res.data;
       } catch (axiosErr) {
-        if (axiosErr.response?.data) {
-          throw new Error(axiosErr.response.data.message || 'Invalid email or password.');
+        if (axiosErr.response?.data?.message) {
+          throw new Error(axiosErr.response.data.message);
         }
         // Fallback to direct fetch if network/proxy issue
-        const response = await fetch('http://localhost:5000/api/auth_cart/login', {
+        const response = await fetch(`${baseUrl}/api/auth_cart/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: usernameOrEmail, username: usernameOrEmail, password }),
+          body: JSON.stringify({ email: emailOrUser, username: emailOrUser, password: pwdToUse }),
         });
         data = await response.json();
         if (!response.ok) {
@@ -51,20 +87,22 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(data.user));
 
       setIsSuccess(true);
-      setMessage('Login successful! Redirecting to your dashboard...');
+      setMessage('Login successful! Redirecting...');
 
       setTimeout(() => {
         const roleId = Number(data.user?.role_id);
-        if (roleId === 1) {
+        if (redirectUrl && roleId === 1) {
+          navigate(redirectUrl);
+        } else if (roleId === 1) {
           navigate('/customer-dashboard');
         } else if (roleId === 2) {
           navigate('/manager-dashboard');
         } else if (roleId === 3) {
           navigate('/system-administrator');
         } else {
-          navigate('/');
+          navigate('/analytics');
         }
-      }, 600);
+      }, 500);
     } catch (error) {
       console.error('Login error:', error);
       setMessage(error.message || 'Invalid email or password. Please try again.');
@@ -73,17 +111,28 @@ export default function LoginPage() {
     }
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault();
+    await doLogin(usernameOrEmail, password);
+  }
+
+  function handleQuickFill(acc) {
+    setUsernameOrEmail(acc.email);
+    setPassword(acc.password);
+    doLogin(acc.email, acc.password);
+  }
+
   return (
     <div className="st-auth-page-wrapper">
       <div className="st-auth-card">
         {/* Header Branding */}
         <div className="st-auth-header">
           <div className="st-auth-logo-badge">
-            <ShoppingBagIcon className="w-6 h-6" />
+            <ShoppingBagIcon style={{ width: '24px', height: '24px', color: '#ffffff' }} />
           </div>
           <h1 className="st-auth-title">Welcome Back</h1>
           <p className="st-auth-subtitle">
-            Sign in to track orders, manage your cart, and access genuine tech warranties.
+            Sign in to track orders, manage analytics, and access role-specific dashboards.
           </p>
         </div>
 
@@ -144,13 +193,84 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {/* Quick 1-Click Role Accounts */}
+        <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--border-light, #f1f5f9)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)' }}>
+              1-Click Demo Accounts
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Password: <code>password123</code>
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {testAccounts.map((acc, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleQuickFill(acc)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  background: 'var(--bg-subtle, #f8fafc)',
+                  border: '1px solid var(--border-color, #e2e8f0)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = acc.badgeColor;
+                  e.currentTarget.style.background = acc.bgColor;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-color, #e2e8f0)';
+                  e.currentTarget.style.background = 'var(--bg-subtle, #f8fafc)';
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                      {acc.role}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: acc.bgColor, color: acc.badgeColor }}>
+                      {acc.badge}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    <code>{acc.email}</code>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  style={{
+                    padding: '4px 9px',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    border: `1px solid ${acc.badgeColor}`,
+                    color: acc.badgeColor,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Log In →
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Divider */}
         <div className="st-auth-divider">Or</div>
 
         {/* Switch to Register */}
         <div className="st-auth-switch-box">
           <span>Don't have an account yet?</span>
-          <Link to="/register" className="st-auth-switch-link">
+          <Link to={`/register${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="st-auth-switch-link">
             Create an Account
           </Link>
         </div>

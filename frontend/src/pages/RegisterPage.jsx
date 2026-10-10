@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import {
   ShoppingBagIcon,
@@ -11,12 +11,16 @@ import {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectUrl = searchParams.get('redirect');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const baseUrl = import.meta.env.VITE_API_URL || '';
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -38,7 +42,7 @@ export default function RegisterPage() {
           throw new Error(axiosErr.response.data.message || 'Registration failed.');
         }
         // Fallback to direct fetch
-        const response = await fetch('http://localhost:5000/api/auth_cart/register', {
+        const response = await fetch(`${baseUrl}/api/auth_cart/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: name, email: email, password: password }),
@@ -58,7 +62,11 @@ export default function RegisterPage() {
       setMessage('Registration successful! Redirecting to your dashboard...');
 
       setTimeout(() => {
-        navigate('/customer-dashboard');
+        if (redirectUrl) {
+          navigate(redirectUrl);
+        } else {
+          navigate('/customer-dashboard');
+        }
       }, 600);
     } catch (error) {
       console.error('Registration error:', error);
@@ -163,7 +171,7 @@ export default function RegisterPage() {
         {/* Switch to Login */}
         <div className="st-auth-switch-box">
           <span>Already have an account?</span>
-          <Link to="/login" className="st-auth-switch-link">
+          <Link to={`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="st-auth-switch-link">
             Sign In Here
           </Link>
         </div>
