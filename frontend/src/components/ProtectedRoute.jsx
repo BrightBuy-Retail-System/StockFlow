@@ -19,7 +19,7 @@ export default function ProtectedRoute({ allowedRoles }) {
 
   // If specific roles are required, verify user's role_id
   if (allowedRoles && allowedRoles.length > 0) {
-    const userRole = Number(user.role_id);
+    const userRole = Number(user.role_id ?? user.role ?? 1);
     if (!allowedRoles.includes(userRole)) {
       // Redirect to their default dashboard based on role
       if (userRole === 1) return <Navigate to="/customer-dashboard" replace />;
