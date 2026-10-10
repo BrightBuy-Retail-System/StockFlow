@@ -26,9 +26,10 @@ import re
 cors_origins_env = os.getenv('CORS_ORIGIN', 'http://localhost:5173')
 env_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip() and o.strip() != '*']
 
-# Allow localhost and all Cloudflare Pages domains (*.pages.dev)
+# Allow localhost, Cloudflare Pages (*.pages.dev), and Vercel (*.vercel.app)
 allowed_origins = [
     re.compile(r"^https://.*\.pages\.dev$"),
+    re.compile(r"^https://.*\.vercel\.app$"),
     "http://localhost:5173",
     "http://localhost:3000"
 ] + env_origins
