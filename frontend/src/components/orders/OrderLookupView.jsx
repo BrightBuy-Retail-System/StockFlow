@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import headsetImg from '../../assets/headset.png';
 
-export default function OrderLookupView({ initialOrderId = 1, onBackToHistory }) {
-  const [orderIdInput, setOrderIdInput] = useState(String(initialOrderId || 1));
+export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, isStaff = false }) {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const [filterCustomerId, setFilterCustomerId] = useState('');
+  const [searchOrderId, setSearchOrderId] = useState(initialOrderId || '');
+  const [customerOrdersList, setCustomerOrdersList] = useState(null);
+  const [customerInfo, setCustomerInfo] = useState(null);
+  const [lookupMessage, setLookupMessage] = useState(null);
+  const [fetchingCustomer, setFetchingCustomer] = useState(false);
 
   const fetchOrderDetails = async (id) => {
     if (!id) return;
@@ -37,32 +44,58 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
 
   useEffect(() => {
     if (initialOrderId) {
-      setOrderIdInput(String(initialOrderId));
+      setSearchOrderId(initialOrderId);
       fetchOrderDetails(initialOrderId);
     }
   }, [initialOrderId]);
 
-  const handleLookupSubmit = (e) => {
-    e.preventDefault();
-    const cleanId = orderIdInput.trim();
-    if (cleanId) {
-      fetchOrderDetails(cleanId);
+  const handleFilterCustomer = async () => {
+    if (!filterCustomerId) return;
+    setFetchingCustomer(true);
+    setLookupMessage(null);
+    try {
+      const res = await api.get(`/orders/user/${filterCustomerId}`);
+      const orders = res.data?.status === 'success' && Array.isArray(res.data.data)
+        ? res.data.data
+        : (Array.isArray(res.data) ? res.data : []);
+
+      setCustomerOrdersList(orders);
+      if (orders.length > 0) {
+        const custName = orders[0].customer_name || null;
+        setCustomerInfo({ id: filterCustomerId, name: custName });
+        // Automatically inspect the latest order
+        fetchOrderDetails(orders[0].order_id);
+        setSearchOrderId(orders[0].order_id);
+      } else {
+        setCustomerInfo({ id: filterCustomerId, name: null });
+        setLookupMessage(`No orders recorded for Customer #${filterCustomerId}.`);
+      }
+    } catch (err) {
+      setCustomerOrdersList([]);
+      setCustomerInfo(null);
+      const resMsg = err.response?.data?.message;
+      setLookupMessage(resMsg || `Error loading orders for Customer #${filterCustomerId}.`);
+    } finally {
+      setFetchingCustomer(false);
     }
   };
 
-  // Timeline Steps Determination
+  const handleLookupOrder = () => {
+    if (!searchOrderId) return;
+    fetchOrderDetails(searchOrderId);
+  };
+
+  // Commercial Order Lifecycle Progress
   const getTimelineProgress = (status) => {
     const steps = [
-      { key: 'PLACED', label: 'Order Placed', desc: 'Order received & queued' },
-      { key: 'CONFIRMED', label: 'Confirmed', desc: 'Inventory verified under ACID lock' },
-      { key: 'SHIPPED', label: 'Dispatched', desc: 'With Texas / regional courier' },
-      { key: 'DELIVERED', label: 'Delivered', desc: 'Handed over to recipient' },
+      { key: 'PLACED', label: 'Order Placed', desc: 'Order received & confirmed' },
+      { key: 'CONFIRMED', label: 'Processing', desc: 'Preparing for fulfillment' },
+      { key: 'FULFILLED', label: 'Fulfilled', desc: 'Delivered & completed' },
     ];
 
     let activeIndex = 0;
     if (status === 'CONFIRMED') activeIndex = 1;
-    else if (status === 'SHIPPED') activeIndex = 2;
-    else if (status === 'DELIVERED') activeIndex = 3;
+    else if (status === 'SHIPPED' || status === 'DELIVERED') activeIndex = 2;
     else if (status === 'CANCELLED') activeIndex = -1;
 
     return { steps, activeIndex };
@@ -85,43 +118,179 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
                 &lt; Back to Orders
               </button>
             )}
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-              Live Order Tracking & Inspection
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+              Order Details &amp; Receipt
             </h1>
           </div>
           <p style={{ color: '#64748b', fontSize: '0.875rem', margin: '4px 0 0' }}>
-            Inspect shipment routing, lifecycle progression, and verified financial ledger receipts.
+            Itemized order summary, shipping address, and tracking status for Order #{orderData?.order_id || searchOrderId || initialOrderId}
+            {orderData?.customer_name ? ` • Customer: ${orderData.customer_name} (ID: #${orderData.user_id})` : orderData?.user_id ? ` • Customer #${orderData.user_id}` : ''}.
           </p>
         </div>
 
-        {/* Quick Lookup Form */}
-        <form onSubmit={handleLookupSubmit} style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="number"
-            min="1"
-            placeholder="Order ID #"
-            value={orderIdInput}
-            onChange={(e) => setOrderIdInput(e.target.value)}
-            style={{ width: '140px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
-          />
+        {onBackToHistory && (
           <button
-            type="submit"
+            type="button"
+            onClick={onBackToHistory}
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              background: '#0264d6',
-              color: '#ffffff',
-              border: 'none',
-              fontWeight: 700,
-              fontSize: '0.875rem',
+              background: '#f1f5f9',
+              color: '#334155',
+              border: '1px solid #cbd5e1',
+              fontWeight: 600,
+              fontSize: '0.8125rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 6px rgba(2, 100, 214, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            Inspect
+            <span>&larr;</span>
+            <span>Back to Orders</span>
           </button>
-        </form>
+        )}
       </div>
+
+      {/* Staff / Manager Inspection Toolbar */}
+      {isStaff && (
+        <div
+          style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                  Staff Order Search
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  Look up by Customer ID or Order ID
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              {/* Filter Customer ID (exact UI moved from My Orders) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600 }}>Filter Customer ID:</span>
+                <input
+                  type="number"
+                  placeholder="e.g. 150003"
+                  value={filterCustomerId}
+                  onChange={(e) => setFilterCustomerId(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleFilterCustomer()}
+                  style={{ width: '90px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleFilterCustomer}
+                  disabled={fetchingCustomer}
+                  style={{
+                    padding: '6px 14px',
+                    background: '#0264d6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {fetchingCustomer ? 'Fetching...' : 'Fetch'}
+                </button>
+              </div>
+
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
+
+              {/* Direct Order ID Inspector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600 }}>Order ID:</span>
+                <input
+                  type="number"
+                  placeholder="e.g. 1"
+                  value={searchOrderId}
+                  onChange={(e) => setSearchOrderId(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLookupOrder()}
+                  style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleLookupOrder}
+                  style={{
+                    padding: '6px 14px',
+                    background: '#0f172a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Inspect
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Order Selection Chips if filtered customer has orders */}
+          {customerOrdersList && customerOrdersList.length > 0 && (
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                {customerInfo?.name ? `${customerInfo.name} ` : ''}(ID: #{customerInfo?.id || filterCustomerId}) Orders ({customerOrdersList.length}):
+              </span>
+              {customerOrdersList.map((ord) => {
+                const isSelected = orderData?.order_id === ord.order_id;
+                return (
+                  <button
+                    key={ord.order_id}
+                    type="button"
+                    onClick={() => {
+                      setSearchOrderId(ord.order_id);
+                      fetchOrderDetails(ord.order_id);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      border: '1px solid',
+                      borderColor: isSelected ? '#0264d6' : '#cbd5e1',
+                      background: isSelected ? '#eff6ff' : '#ffffff',
+                      color: isSelected ? '#0264d6' : '#334155',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    #{ord.order_id} • {ord.status}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {lookupMessage && (
+            <div style={{ fontSize: '0.8rem', color: '#b91c1c', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+              {lookupMessage}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error / Data Isolation Alert */}
       {error && (
@@ -136,13 +305,35 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
             marginBottom: '24px',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
             gap: '12px',
           }}
         >
-          <span style={{ fontSize: '1.25rem' }}>🛡️</span>
-          <div>
-            <strong>Access Alert:</strong> {error}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+            <div>
+              <strong>Access Alert:</strong> {error}
+            </div>
           </div>
+          {onBackToHistory && (
+            <button
+              type="button"
+              onClick={onBackToHistory}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                background: '#ffffff',
+                border: '1px solid #fecdd3',
+                color: '#9f1239',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Return to My Orders
+            </button>
+          )}
         </div>
       )}
 
@@ -174,7 +365,7 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
                   </span>
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                  Placed on {orderData.placed_at ? new Date(orderData.placed_at).toLocaleString() : 'N/A'} • Customer #{orderData.user_id}
+                  Placed on {orderData.placed_at ? new Date(orderData.placed_at).toLocaleString() : 'N/A'} • {orderData.customer_name ? `${orderData.customer_name} (ID: #${orderData.user_id})` : `Customer #${orderData.user_id}`}
                 </div>
               </div>
 
@@ -186,10 +377,10 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
               </div>
             </div>
 
-            {/* Visual Order Timeline */}
+            {/* Visual Commercial Order Timeline */}
             {orderData.status !== 'CANCELLED' ? (
               <div style={{ margin: '32px 0 16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', position: 'relative' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, 1fr)`, position: 'relative' }}>
                   {/* Background Progress Line */}
                   <div
                     style={{
@@ -257,49 +448,62 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
             )}
           </div>
 
-          {/* Details Grid (Carrier + Shipping & Recipient) */}
+          {/* Details Grid: Commercial Overview & Recipient Snapshot */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-            {/* Carrier & Shipment Tracking Card */}
+            {/* Commercial Order Summary Card */}
             <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🚚</span>
-                <span>Carrier & Shipment Tracking</span>
+                <span>📋</span>
+                <span>Commercial Order Overview</span>
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Tracking Number:</span>
+                  <span style={{ color: '#64748b' }}>Order Reference:</span>
                   <span style={{ fontWeight: 700, color: '#0264d6', fontFamily: 'monospace' }}>
-                    {orderData.tracking_number || 'N/A (Pending dispatch)'}
+                    #{orderData.order_id}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Logistics Status:</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                    {orderData.shipping_status || 'PENDING'}
+                  <span style={{ color: '#64748b' }}>Order Status:</span>
+                  <span
+                    style={{
+                      background: orderData.status === 'CANCELLED' ? '#fee2e2' : orderData.status === 'CONFIRMED' ? '#fef3c7' : '#e0f2fe',
+                      color: orderData.status === 'CANCELLED' ? '#b91c1c' : orderData.status === 'CONFIRMED' ? '#b45309' : '#0369a1',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {orderData.status}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Estimated Arrival:</span>
+                  <span style={{ color: '#64748b' }}>Customer Account:</span>
                   <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                    {orderData.estimated_arrival ? new Date(orderData.estimated_arrival).toLocaleDateString() : '3 - 5 business days'}
+                    {orderData.customer_name ? `${orderData.customer_name} (ID: #${orderData.user_id})` : `Customer #${orderData.user_id}`}
                   </span>
                 </div>
-                {orderData.dispatched_at && (
+                {orderData.customer_email && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Dispatched At:</span>
-                    <span style={{ fontWeight: 500, color: '#0f172a' }}>
-                      {new Date(orderData.dispatched_at).toLocaleString()}
+                    <span style={{ color: '#64748b' }}>Customer Email:</span>
+                    <span style={{ fontWeight: 500, color: '#475569' }}>
+                      {orderData.customer_email}
                     </span>
                   </div>
                 )}
-                {orderData.delivered_at && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Delivered At:</span>
-                    <span style={{ fontWeight: 600, color: '#16a34a' }}>
-                      {new Date(orderData.delivered_at).toLocaleString()}
-                    </span>
-                  </div>
-                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Placed Date:</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                    {orderData.placed_at ? new Date(orderData.placed_at).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#64748b' }}>Fulfillment Method:</span>
+                  <span style={{ fontWeight: 600, color: '#0264d6' }}>
+                    {orderData.delivery_type === 'PICKUP' ? 'Store Pickup' : 'Doorstep Delivery'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -313,7 +517,7 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
                 <div>
                   <div style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>Recipient Name</div>
                   <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                    {orderData.recipient_name || `Customer #${orderData.user_id}`}
+                    {orderData.recipient_name || orderData.customer_name || `Customer #${orderData.user_id}`}
                   </div>
                 </div>
                 {orderData.phone && (
@@ -336,6 +540,42 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory })
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Logistics Domain Separation Info Notice */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              fontSize: '0.8125rem',
+              color: '#475569',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🚚</span>
+              <span>Looking for physical courier tracking, package dispatch, or delivery waypoints?</span>
+            </div>
+            <Link
+              to="/logistics"
+              style={{
+                color: '#0264d6',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span>View in Logistics</span>
+              <span>&rarr;</span>
+            </Link>
           </div>
 
           {/* Itemized Line Items & Financial Matrix */}
