@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/client';
 
 export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
@@ -83,10 +84,27 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
       !q ||
       String(o.order_id).includes(q) ||
       String(o.user_id).includes(q) ||
-      (o.tracking_number && o.tracking_number.toLowerCase().includes(q)) ||
+      (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
       (o.shipping_address && o.shipping_address.toLowerCase().includes(q));
     return matchesStatus && matchesSearch;
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, pageSize]);
+
+  // Derived Pagination Data
+  const totalItems = filteredOrders.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   return (
     <div style={{ padding: '32px 0', maxWidth: '1180px', margin: '0 auto', width: '100%' }}>
@@ -94,13 +112,15 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Warehouse Fulfillment Queue</h1>
-            <span style={{ background: '#eff6ff', color: '#1e40af', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700 }}>
-              STAFF PORTAL
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+              Order Fulfillment Queue
+            </h1>
+            <span style={{ background: '#eff6ff', color: '#1e40af', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>
+              Staff Portal
             </span>
           </div>
           <p style={{ color: '#64748b', fontSize: '0.875rem', margin: '4px 0 0' }}>
-            System-wide order lifecycle execution, inventory restock on cancellation, and courier dispatch.
+            Review customer orders, confirm processing, and manage order status.
           </p>
         </div>
 
@@ -117,12 +137,57 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
           }}
         >
-          <span>🔄</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" /><path d="M16 21h5v-5" />
+          </svg>
           <span>Refresh Queue</span>
         </button>
+      </div>
+
+      {/* Domain Separation Notice */}
+      <div
+        style={{
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '10px',
+          padding: '12px 18px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          fontSize: '0.8125rem',
+          color: '#475569',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div>
+            <strong style={{ color: '#0f172a' }}>Order Operations:</strong> Confirm incoming orders or handle cancellations. For courier dispatch and delivery tracking, visit the <strong>Logistics</strong> portal.
+          </div>
+        </div>
+        <Link
+          to="/logistics"
+          style={{
+            color: '#0264d6',
+            fontWeight: 700,
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '0.8125rem',
+            padding: '4px 10px',
+            background: '#ffffff',
+            borderRadius: '6px',
+            border: '1px solid #cbd5e1',
+          }}
+        >
+          <span>Open Logistics</span>
+          <span>&rarr;</span>
+        </Link>
       </div>
 
       {/* Feedback Alerts */}
@@ -176,8 +241,33 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
           </div>
         </div>
 
-        <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-          Showing <strong>{filteredOrders.length}</strong> of {orders.length} orders
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+            Showing <strong>{totalItems === 0 ? 0 : startIndex + 1}–{endIndex}</strong> of {totalItems} orders
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                fontSize: '0.75rem',
+                color: '#334155',
+                cursor: 'pointer',
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -201,13 +291,12 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                   <th style={{ padding: '14px 16px' }}>Customer</th>
                   <th style={{ padding: '14px 16px' }}>Placed Date</th>
                   <th style={{ padding: '14px 16px' }}>Status</th>
-                  <th style={{ padding: '14px 16px' }}>Carrier Tracking</th>
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Total</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'center' }}>Fulfillment Lifecycle Actions</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((ord) => {
+                {paginatedOrders.map((ord) => {
                   const isUpdating = updatingOrderId === ord.order_id;
                   return (
                     <tr key={ord.order_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -215,7 +304,9 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                         #{ord.order_id}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 600, color: '#0f172a' }}>Customer #{ord.user_id}</div>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                          {ord.customer_name ? `${ord.customer_name} (ID: #${ord.user_id})` : `Customer #${ord.user_id}`}
+                        </div>
                       </td>
                       <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '0.8125rem' }}>
                         {ord.placed_at ? new Date(ord.placed_at).toLocaleDateString() : 'N/A'}
@@ -234,9 +325,6 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                           {ord.status}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontSize: '0.8125rem', color: '#334155' }}>
-                        {ord.tracking_number || <span style={{ color: '#94a3b8' }}>Unassigned</span>}
-                      </td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
                         Rs {parseFloat(ord.total_amount).toFixed(2)}
                       </td>
@@ -248,7 +336,7 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                             onClick={() => onInspectOrder(ord.order_id)}
                             style={{ padding: '5px 10px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
                           >
-                            Inspect
+                            View
                           </button>
 
                           {/* Confirm */}
@@ -263,28 +351,87 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                             </button>
                           )}
 
-                          {/* Ship */}
-                          {(ord.status === 'PENDING' || ord.status === 'CONFIRMED') && (
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => handleTransitionStatus(ord.order_id, 'SHIPPED')}
-                              style={{ padding: '5px 10px', background: '#0264d6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                            >
-                              Ship / Dispatch
-                            </button>
+                          {/* Logistics Handoff Indication for CONFIRMED */}
+                          {ord.status === 'CONFIRMED' && (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  padding: '4px 9px',
+                                  background: '#fef3c7',
+                                  color: '#92400e',
+                                  border: '1px solid #fde68a',
+                                  borderRadius: '4px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                Ready for Dispatch
+                              </span>
+                              <Link
+                                to="/logistics"
+                                style={{
+                                  padding: '4px 8px',
+                                  background: '#f8fafc',
+                                  color: '#0264d6',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '4px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                }}
+                                title="Open Logistics portal to dispatch"
+                              >
+                                Logistics &rarr;
+                              </Link>
+                            </div>
                           )}
 
-                          {/* Mark Delivered */}
+                          {/* Read-only status tag for SHIPPED */}
                           {ord.status === 'SHIPPED' && (
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => handleTransitionStatus(ord.order_id, 'DELIVERED')}
-                              style={{ padding: '5px 10px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                            <span
+                              style={{
+                                padding: '4px 9px',
+                                background: '#e0f2fe',
+                                color: '#0369a1',
+                                border: '1px solid #bae6fd',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
                             >
-                              Mark Delivered
-                            </button>
+                              <span>🚚</span>
+                              <span>Dispatched via Logistics</span>
+                            </span>
+                          )}
+
+                          {/* Read-only status tag for DELIVERED */}
+                          {ord.status === 'DELIVERED' && (
+                            <span
+                              style={{
+                                padding: '4px 9px',
+                                background: '#dcfce7',
+                                color: '#15803d',
+                                border: '1px solid #bbf7d0',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <span>✓</span>
+                              <span>Delivered</span>
+                            </span>
                           )}
 
                           {/* Cancel */}
@@ -310,6 +457,122 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div
+              style={{
+                padding: '14px 20px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#f8fafc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                fontSize: '0.8125rem',
+              }}
+            >
+              <div style={{ color: '#64748b' }}>
+                Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {/* Previous Button */}
+                <button
+                  type="button"
+                  disabled={safePage <= 1}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: safePage <= 1 ? '#f1f5f9' : '#ffffff',
+                    color: safePage <= 1 ? '#94a3b8' : '#334155',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                    cursor: safePage <= 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  &larr; Previous
+                </button>
+
+                {/* Page Number Buttons */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((item, idx) => {
+                    if (item === '...') {
+                      return (
+                        <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#94a3b8' }}>
+                          …
+                        </span>
+                      );
+                    }
+                    const isCurrent = item === safePage;
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setCurrentPage(item)}
+                        style={{
+                          minWidth: '32px',
+                          height: '32px',
+                          padding: '0 8px',
+                          borderRadius: '6px',
+                          border: isCurrent ? '1px solid #0264d6' : '1px solid #e2e8f0',
+                          background: isCurrent ? '#0264d6' : '#ffffff',
+                          color: isCurrent ? '#ffffff' : '#334155',
+                          fontWeight: isCurrent ? 700 : 500,
+                          fontSize: '0.8125rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {item}
+                      </button>
+                    );
+                  })}
+
+                {/* Next Button */}
+                <button
+                  type="button"
+                  disabled={safePage >= totalPages}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: safePage >= totalPages ? '#f1f5f9' : '#ffffff',
+                    color: safePage >= totalPages ? '#94a3b8' : '#334155',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                    cursor: safePage >= totalPages ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
