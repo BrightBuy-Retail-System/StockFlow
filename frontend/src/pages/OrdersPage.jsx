@@ -15,7 +15,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
   const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
   const activeRoleId = parsedUser?.role_id || 1; // 1 = Customer, 2 = Manager, 3 = Admin
-  const isStaff = activeRoleId === 2 || activeRoleId === 3;
+  const isStaff = activeRoleId === 2 || activeRoleId === 3 || activeRoleId === 4;
   const userName = parsedUser?.full_name || parsedUser?.username || `Customer #${activeUserId}`;
 
   // Read URL query parameters (?tab=checkout | history | lookup | fulfillment, ?id=...)
@@ -29,22 +29,36 @@ export default function OrdersPage({ defaultTab = 'history' }) {
 
   // Active Cart Items Count Check
   const [cartItemCount, setCartItemCount] = useState(0);
-  const [isCheckingCart, setIsCheckingCart] = useState(!tabFromQuery && !savedTab && location.pathname !== '/checkout');
+  const [isCheckingCart, setIsCheckingCart] = useState(!isStaff && !tabFromQuery && !savedTab && location.pathname !== '/checkout');
 
-  // Active Tab State (Priority: URL query param -> location /checkout -> saved tab -> default history)
-  const [activeTab, setActiveTab] = useState(
-    tabFromQuery || (location.pathname === '/checkout' ? 'checkout' : (savedTab || 'history'))
-  );
+  // Active Tab State (Staff defaults to 'fulfillment'; Customer defaults to URL param -> savedTab -> 'history')
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isStaff) {
+      if (tabFromQuery === 'lookup' || (tabFromQuery && tabFromQuery !== 'checkout' && tabFromQuery !== 'history')) {
+        return tabFromQuery;
+      }
+      if (savedTab && savedTab !== 'checkout' && savedTab !== 'history') {
+        return savedTab;
+      }
+      return 'fulfillment';
+    }
+    return tabFromQuery || (location.pathname === '/checkout' ? 'checkout' : (savedTab || 'history'));
+  });
 
   // Selected Order for Inspection
   const [inspectedOrderId, setInspectedOrderId] = useState(
     idFromQuery ? parseInt(idFromQuery, 10) : (savedInspectedId ? parseInt(savedInspectedId, 10) : 1)
   );
 
-  // Fetch cart to determine default routing if no tab is specified and no previous tab saved
+  // Fetch cart to determine default routing if no tab is specified and no previous tab saved (Customers only)
   useEffect(() => {
     const isOrdersPath = location.pathname === '/orders' || location.pathname === '/checkout';
     if (!isOrdersPath) return;
+
+    if (isStaff) {
+      setIsCheckingCart(false);
+      return;
+    }
 
     let isMounted = true;
     api.get('/auth_cart/cart')
@@ -81,7 +95,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
         }
       });
     return () => { isMounted = false; };
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, isStaff]);
 
   // Sync state if URL changes or user switches page
   useEffect(() => {
@@ -93,7 +107,33 @@ export default function OrdersPage({ defaultTab = 'history' }) {
     const orderIdParam = qp.get('id');
     const storedTab = sessionStorage.getItem('stockflow_orders_active_tab');
 
-    // If customer navigates to inspect directly without choosing an order, route to history
+    if (isStaff) {
+      if (t === 'checkout' || t === 'history') {
+        setActiveTab('fulfillment');
+        sessionStorage.setItem('stockflow_orders_active_tab', 'fulfillment');
+        qp.set('tab', 'fulfillment');
+        navigate({ pathname: location.pathname, search: qp.toString() }, { replace: true });
+        return;
+      }
+      if (t) {
+        setActiveTab(t);
+        sessionStorage.setItem('stockflow_orders_active_tab', t);
+      } else if (storedTab && storedTab !== 'checkout' && storedTab !== 'history') {
+        setActiveTab(storedTab);
+      } else {
+        setActiveTab('fulfillment');
+        sessionStorage.setItem('stockflow_orders_active_tab', 'fulfillment');
+      }
+
+      if (orderIdParam) {
+        const parsedId = parseInt(orderIdParam, 10);
+        setInspectedOrderId(parsedId);
+        sessionStorage.setItem('stockflow_orders_inspected_id', String(parsedId));
+      }
+      return;
+    }
+
+    // Customer navigation safeguards
     if (t === 'lookup' && !isStaff && !orderIdParam) {
       setActiveTab('history');
       sessionStorage.setItem('stockflow_orders_active_tab', 'history');
@@ -129,6 +169,9 @@ export default function OrdersPage({ defaultTab = 'history' }) {
   }, [location.search, location.pathname, isStaff, navigate, cartItemCount, isCheckingCart]);
 
   const handleTabChange = (tabKey) => {
+    if (isStaff && (tabKey === 'checkout' || tabKey === 'history')) {
+      tabKey = 'fulfillment';
+    }
     // If a customer clicks inspect tab directly, route them to My Orders to choose an order
     if (tabKey === 'lookup' && !isStaff && activeTab !== 'lookup') {
       tabKey = 'history';
@@ -213,74 +256,79 @@ export default function OrdersPage({ defaultTab = 'history' }) {
               gap: '4px',
             }}
           >
-            {/* Tab 1: Checkout */}
-            <button
-              type="button"
-              onClick={() => handleTabChange('checkout')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
-                color: activeTab === 'checkout' ? '#0264d6' : '#64748b',
-                fontWeight: activeTab === 'checkout' ? 700 : 500,
-                fontSize: '0.8125rem',
-                cursor: 'pointer',
-                boxShadow: activeTab === 'checkout' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" />
-                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-              </svg>
-              <span>Checkout</span>
-              {cartItemCount > 0 && (
-                <span
+            {/* Customer Only: Tab 1 Checkout & Tab 2 Order History */}
+            {!isStaff && (
+              <>
+                {/* Tab 1: Checkout */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('checkout')}
                   style={{
-                    background: activeTab === 'checkout' ? '#0264d6' : '#cbd5e1',
-                    color: activeTab === 'checkout' ? '#ffffff' : '#334155',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '1px 6px',
-                    borderRadius: '9999px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
+                    color: activeTab === 'checkout' ? '#0264d6' : '#64748b',
+                    fontWeight: activeTab === 'checkout' ? 700 : 500,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    boxShadow: activeTab === 'checkout' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  {cartItemCount}
-                </span>
-              )}
-            </button>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" />
+                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                  </svg>
+                  <span>Checkout</span>
+                  {cartItemCount > 0 && (
+                    <span
+                      style={{
+                        background: activeTab === 'checkout' ? '#0264d6' : '#cbd5e1',
+                        color: activeTab === 'checkout' ? '#ffffff' : '#334155',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: '9999px',
+                      }}
+                    >
+                      {cartItemCount}
+                    </span>
+                  )}
+                </button>
 
-            {/* Tab 2: History */}
-            <button
-              type="button"
-              onClick={() => handleTabChange('history')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'history' ? '#ffffff' : 'transparent',
-                color: activeTab === 'history' ? '#0264d6' : '#64748b',
-                fontWeight: activeTab === 'history' ? 700 : 500,
-                fontSize: '0.8125rem',
-                cursor: 'pointer',
-                boxShadow: activeTab === 'history' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m7.5 4.27 9 5.15" />
-                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                <path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
-              </svg>
-              <span>Order History</span>
-            </button>
+                {/* Tab 2: History */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('history')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activeTab === 'history' ? '#ffffff' : 'transparent',
+                    color: activeTab === 'history' ? '#0264d6' : '#64748b',
+                    fontWeight: activeTab === 'history' ? 700 : 500,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    boxShadow: activeTab === 'history' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m7.5 4.27 9 5.15" />
+                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                    <path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+                  </svg>
+                  <span>Order History</span>
+                </button>
+              </>
+            )}
 
             {/* Tab 3: Inspect Order / Receipt */}
             {(isStaff || activeTab === 'lookup') && (
@@ -362,7 +410,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
           </div>
         ) : (
           <>
-            {activeTab === 'checkout' && (
+            {!isStaff && activeTab === 'checkout' && (
               <CheckoutSplitView
                 onOrderPlaced={(order) => {
                   api.get('/auth_cart/cart')
@@ -380,7 +428,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
               />
             )}
 
-        {activeTab === 'history' && (
+        {!isStaff && activeTab === 'history' && (
           <div style={{ padding: '0 24px' }}>
             <OrderHistoryView
               activeUserId={activeUserId}
@@ -394,7 +442,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
           <div style={{ padding: '0 24px' }}>
             <OrderLookupView
               initialOrderId={inspectedOrderId}
-              onBackToHistory={() => handleTabChange('history')}
+              onBackToHistory={() => handleTabChange(isStaff ? 'fulfillment' : 'history')}
               isStaff={isStaff}
             />
           </div>
