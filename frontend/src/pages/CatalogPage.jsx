@@ -213,7 +213,8 @@ export default function CatalogPage() {
   const getVariantInCart = useCallback((vId) => {
     if (!productDetail) return 0;
     try {
-      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
       const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const list = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(list)) return 0;
@@ -224,7 +225,7 @@ export default function CatalogPage() {
     } catch {
       return 0;
     }
-  }, [productDetail, currentUser?.user_id, cartVersion]);
+  }, [productDetail, currentUser?.id, currentUser?.user_id, cartVersion]);
 
   // In-cart quantity for current variant
   const inCartQuantity = useMemo(() => {
@@ -344,6 +345,30 @@ export default function CatalogPage() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // Sync authenticated user cart from backend on mount so in-cart badges are 100% accurate
+  useEffect(() => {
+    if (isLoggedIn) {
+      api.get('/auth_cart/cart')
+        .then((res) => {
+          const items = res.data?.items || [];
+          const currentUid = currentUser?.id || currentUser?.user_id;
+          const formatted = items.map((it) => ({
+            product_id: it.product_id,
+            name: it.product_name || it.name,
+            variant_id: it.variant_id,
+            sku: it.sku,
+            quantity: it.quantity,
+            price: it.unit_price,
+          }));
+          if (currentUid) {
+            localStorage.setItem(`cart_${currentUid}`, JSON.stringify(formatted));
+          }
+          setCartVersion((v) => v + 1);
+        })
+        .catch(() => null);
+    }
+  }, [isLoggedIn, currentUser?.id, currentUser?.user_id]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -632,8 +657,9 @@ export default function CatalogPage() {
         image: getProductPhoto(productDetail),
       };
 
-      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
-      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
+      const raw = localStorage.getItem(userCartKey) || (!isLoggedIn ? localStorage.getItem('cart') : null);
       const existing = raw ? JSON.parse(raw) : [];
       const list = Array.isArray(existing) ? existing : [];
       const matchIndex = list.findIndex(
@@ -646,7 +672,11 @@ export default function CatalogPage() {
         list.push(cartItem);
       }
       localStorage.setItem(userCartKey, JSON.stringify(list));
-      localStorage.setItem('cart', JSON.stringify(list));
+      if (!isLoggedIn) {
+        localStorage.setItem('cart', JSON.stringify(list));
+      } else {
+        localStorage.removeItem('cart');
+      }
       setCartVersion((v) => v + 1);
       setQuantity(1);
 
@@ -798,7 +828,7 @@ export default function CatalogPage() {
   const renderFilterAccordions = () => (
     <>
       {/* Availability Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('availability')}
           style={{
@@ -810,34 +840,34 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Availability</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.availability && (
           <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
               <input
                 type="checkbox"
                 checked={availabilityFilter.inStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
-                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span>In stock</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
               <input
                 type="checkbox"
                 checked={availabilityFilter.outOfStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
-                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span>Out of stock</span>
             </label>
@@ -846,7 +876,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Price Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('price')}
           style={{
@@ -858,15 +888,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Price</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.price && (
@@ -881,13 +911,13 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid rgba(0,0,0,0.12)',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '0.82rem',
                   outline: 'none',
                 }}
               />
-              <span style={{ color: '#a8a29e' }}>–</span>
+              <span style={{ color: '#94a3b8' }}>–</span>
               <input
                 type="number"
                 placeholder="Rs Max"
@@ -897,7 +927,7 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid rgba(0,0,0,0.12)',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '0.82rem',
                   outline: 'none',
@@ -910,7 +940,7 @@ export default function CatalogPage() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#1a1917',
+                  color: '#2563eb',
                   fontSize: '0.78rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -926,7 +956,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Color Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('color')}
           style={{
@@ -938,15 +968,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Color</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.color && (
@@ -973,12 +1003,13 @@ export default function CatalogPage() {
                     gap: '6px',
                     padding: '5px 10px',
                     borderRadius: '9999px',
-                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
-                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     fontSize: '0.8rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 400,
+                    fontWeight: isSel ? 600 : 500,
                   }}
                 >
                   <span
@@ -1011,15 +1042,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Storage</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.storage && (
@@ -1037,12 +1068,13 @@ export default function CatalogPage() {
                   style={{
                     padding: '5px 10px',
                     borderRadius: '8px',
-                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
-                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     fontSize: '0.78rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 400,
+                    fontWeight: isSel ? 600 : 500,
                   }}
                 >
                   {cap}
@@ -2417,10 +2449,10 @@ export default function CatalogPage() {
               className="catalog-page-title"
               style={{
                 fontSize: '2.6rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 letterSpacing: '-0.025em',
                 margin: '0 0 16px 0',
-                color: '#1a1917',
+                color: '#0f172a',
                 lineHeight: 1.1,
               }}
             >
@@ -2450,16 +2482,16 @@ export default function CatalogPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#1a1917' : '#ffffff',
-                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#1c1917',
-                  border: '1px solid rgba(0,0,0,0.08)',
+                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2563eb' : '#ffffff',
+                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#334155',
+                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                   borderRadius: '9999px',
                   padding: '7px 16px 7px 12px',
                   fontSize: '0.86rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
                 }}
@@ -2469,7 +2501,7 @@ export default function CatalogPage() {
                     width: '24px',
                     height: '24px',
                     borderRadius: '8px',
-                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2506,16 +2538,16 @@ export default function CatalogPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '10px',
-                      backgroundColor: isSelected ? '#1a1917' : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#1c1917',
-                      border: '1px solid rgba(0,0,0,0.08)',
+                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#334155',
+                      border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                       borderRadius: '9999px',
                       padding: '7px 16px 7px 10px',
                       fontSize: '0.86rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
                       transition: 'all 0.2s ease',
                       flexShrink: 0,
                     }}
@@ -2526,7 +2558,7 @@ export default function CatalogPage() {
                         height: '26px',
                         borderRadius: '8px',
                         overflow: 'hidden',
-                        background: 'rgba(0,0,0,0.04)',
+                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2624,15 +2656,16 @@ export default function CatalogPage() {
                     style={{
                       padding: '8px 16px',
                       borderRadius: '9999px',
-                      border: '1px solid rgba(0,0,0,0.14)',
-                      background: mobileFiltersOpen ? '#1a1917' : '#ffffff',
-                      color: mobileFiltersOpen ? '#ffffff' : '#1a1917',
+                      border: mobileFiltersOpen ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: mobileFiltersOpen ? '#2563eb' : '#ffffff',
+                      color: mobileFiltersOpen ? '#ffffff' : '#2563eb',
                       fontSize: '0.84rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       alignItems: 'center',
                       gap: '6px',
                       whiteSpace: 'nowrap',
+                      boxShadow: mobileFiltersOpen ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     }}
                   >
                     <span>⚙️ Filters</span>
