@@ -33,10 +33,10 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={[1]} />}>
             <Route path="/customer-dashboard" element={<CustomerDashboard />} />
           </Route>
-          <Route element={<ProtectedRoute allowedRoles={[2]} />}>
+          <Route element={<ProtectedRoute allowedRoles={[2, 3, 4]} />}>
             <Route path="/manager-dashboard" element={<ManagerDashboard />} />
           </Route>
-          <Route element={<ProtectedRoute allowedRoles={[3]} />}>
+          <Route element={<ProtectedRoute allowedRoles={[3, 4]} />}>
             <Route path="/system-administrator" element={<SystemAdministrator />} />
           </Route>
 
