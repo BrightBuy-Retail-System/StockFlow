@@ -1,2811 +1,464 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import CheckoutSplitView from '../components/orders/CheckoutSplitView';
+import OrderHistoryView from '../components/orders/OrderHistoryView';
+import OrderLookupView from '../components/orders/OrderLookupView';
+import FulfillmentQueueView from '../components/orders/FulfillmentQueueView';
 
-export default function OrdersPage() {
-  // User Identity & Role Detection Contract
+export default function OrdersPage({ defaultTab = 'history' }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // User Identity & Role Context
   const storedUser = localStorage.getItem('user');
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
   const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
-  const activeRoleId = parsedUser?.role_id || 1; // 1 = Customer, 2 = Manager, 3 = System Admin
+  const activeRoleId = parsedUser?.role_id || 1; // 1 = Customer, 2 = Manager, 3 = Admin
+  const isStaff = activeRoleId === 2 || activeRoleId === 3 || activeRoleId === 4;
   const userName = parsedUser?.full_name || parsedUser?.username || `Customer #${activeUserId}`;
-  const isStaff = activeRoleId === 2 || activeRoleId === 3;
 
-  // Active Navigation Tab: 'checkout' | 'all_orders' (staff only) | 'history' | 'lookup'
-  const [activeTab, setActiveTab] = useState('checkout');
+  // Read URL query parameters (?tab=checkout | history | lookup | fulfillment, ?id=...)
+  const queryParams = new URLSearchParams(location.search);
+  const tabFromQuery = queryParams.get('tab');
+  const idFromQuery = queryParams.get('id');
 
-  // ---------------------------------------------------------
-  // 1. Customer Order History States (GET /orders/user/:id)
-  // ---------------------------------------------------------
-  const [historyTargetUserId, setHistoryTargetUserId] = useState(activeUserId);
-  const [orders, setOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  const [ordersError, setOrdersError] = useState(null);
+  // Read saved tab & inspected order ID from sessionStorage to maintain user context across page switches
+  const savedTab = sessionStorage.getItem('stockflow_orders_active_tab');
+  const savedInspectedId = sessionStorage.getItem('stockflow_orders_inspected_id');
 
-  // ---------------------------------------------------------
-  // 2. Staff: All Platform Orders States (GET /orders/)
-  // ---------------------------------------------------------
-  const [allOrders, setAllOrders] = useState([]);
-  const [loadingAllOrders, setLoadingAllOrders] = useState(false);
-  const [allOrdersError, setAllOrdersError] = useState(null);
-  const [allOrdersSearch, setAllOrdersSearch] = useState('');
-  const [allOrdersStatusFilter, setAllOrdersStatusFilter] = useState('ALL');
+  // Active Cart Items Count Check
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [isCheckingCart, setIsCheckingCart] = useState(!isStaff && !tabFromQuery && !savedTab && location.pathname !== '/checkout');
 
-  // ---------------------------------------------------------
-  // 3. Single Order Inspection States (GET /orders/:id)
-  // ---------------------------------------------------------
-  const [selectedOrderId, setSelectedOrderId] = useState(1);
-  const [lookupInput, setLookupInput] = useState('1');
-  const [orderDetails, setOrderDetails] = useState(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [detailsError, setDetailsError] = useState(null);
-
-  // ---------------------------------------------------------
-  // 4. Order Lifecycle & Status Transition States (PATCH /orders/:id/status)
-  // ---------------------------------------------------------
-  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState(null);
-  const [statusUpdateMessage, setStatusUpdateMessage] = useState(null);
-
-  // ---------------------------------------------------------
-  // 5. Checkout Pre-Flight & Live Placement States
-  // ---------------------------------------------------------
-  const [checkoutUserId, setCheckoutUserId] = useState(activeUserId);
-  const [shippingCityId, setShippingCityId] = useState(1);
-  const [variantId, setVariantId] = useState(1);
-  const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState('CREDIT_CARD');
-
-  const [validating, setValidating] = useState(false);
-  const [validationSuccess, setValidationSuccess] = useState(null);
-  const [calculationData, setCalculationData] = useState(null);
-  const [validationError, setValidationError] = useState(null);
-  const [stockConflict, setStockConflict] = useState(null);
-
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const [placementSuccess, setPlacementSuccess] = useState(null);
-  const [placementError, setPlacementError] = useState(null);
-
-  // Keep customer ID synced to their account
-  useEffect(() => {
-    if (!isStaff) {
-      setCheckoutUserId(activeUserId);
-      setHistoryTargetUserId(activeUserId);
-    }
-  }, [activeUserId, isStaff]);
-
-  // ---------------------------------------------------------
-  // API Call: Fetch Customer Orders (GET /orders/user/:id)
-  // ---------------------------------------------------------
-  const fetchCustomerOrders = async (targetId = historyTargetUserId) => {
-    setLoadingOrders(true);
-    setOrdersError(null);
-    try {
-      const response = await api.get(`/orders/user/${targetId}`);
-      if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
-        const fetchedOrders = response.data.data;
-        setOrders(fetchedOrders);
-        if (fetchedOrders.length > 0 && !selectedOrderId) {
-          setSelectedOrderId(fetchedOrders[0].order_id);
-          setLookupInput(String(fetchedOrders[0].order_id));
-        }
-      } else if (Array.isArray(response.data)) {
-        setOrders(response.data);
-        if (response.data.length > 0 && !selectedOrderId) {
-          setSelectedOrderId(response.data[0].order_id);
-          setLookupInput(String(response.data[0].order_id));
-        }
-      } else {
-        setOrders([]);
-      }
-    } catch (err) {
-      const status = err.response?.status;
-      const resMsg = err.response?.data?.message;
-      if (status === 403) {
-        setOrdersError(resMsg || 'Access forbidden: You cannot view order histories of other users.');
-      } else if (status === 404) {
-        setOrdersError(`No orders found for customer #${targetId} (404).`);
-      } else {
-        setOrdersError(resMsg || err.message || 'Failed to fetch customer orders.');
-      }
-      setOrders([]);
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomerOrders(historyTargetUserId);
-  }, [historyTargetUserId]);
-
-  // ---------------------------------------------------------
-  // API Call: Fetch All Platform Orders for Staff (GET /orders/)
-  // ---------------------------------------------------------
-  const fetchAllOrders = async () => {
-    if (!isStaff) return;
-    setLoadingAllOrders(true);
-    setAllOrdersError(null);
-    try {
-      const response = await api.get('/orders/');
-      if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
-        setAllOrders(response.data.data);
-      } else if (Array.isArray(response.data)) {
-        setAllOrders(response.data);
-      } else {
-        setAllOrders([]);
-      }
-    } catch (err) {
-      const status = err.response?.status;
-      const resMsg = err.response?.data?.message;
-      if (status === 403) {
-        setAllOrdersError(resMsg || 'Access forbidden: Staff permissions required.');
-      } else {
-        setAllOrdersError(resMsg || err.message || 'Failed to fetch platform orders.');
-      }
-    } finally {
-      setLoadingAllOrders(false);
-    }
-  };
-
-  useEffect(() => {
+  // Active Tab State (Staff defaults to 'fulfillment'; Customer defaults to URL param -> savedTab -> 'history')
+  const [activeTab, setActiveTab] = useState(() => {
     if (isStaff) {
-      fetchAllOrders();
-    }
-  }, [isStaff]);
-
-  // ---------------------------------------------------------
-  // API Call: Fetch Single Order Details (GET /orders/:id)
-  // ---------------------------------------------------------
-  useEffect(() => {
-    if (!selectedOrderId) return;
-    let isMounted = true;
-
-    async function fetchDetails() {
-      setLoadingDetails(true);
-      setDetailsError(null);
-      try {
-        const response = await api.get(`/orders/${selectedOrderId}`);
-        if (isMounted) {
-          if (response.data && response.data.status === 'success') {
-            setOrderDetails(response.data.data);
-          } else {
-            setOrderDetails(response.data);
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          const status = err.response?.status;
-          const resMsg = err.response?.data?.message;
-          if (status === 403) {
-            setDetailsError(resMsg || 'Access forbidden: You cannot view orders belonging to another customer.');
-          } else if (status === 404) {
-            setDetailsError(`Order #${selectedOrderId} does not exist in the database (404).`);
-          } else {
-            setDetailsError(resMsg || err.message || `Failed to fetch Order #${selectedOrderId}.`);
-          }
-          setOrderDetails(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingDetails(false);
-        }
+      if (tabFromQuery === 'lookup' || (tabFromQuery && tabFromQuery !== 'checkout' && tabFromQuery !== 'history')) {
+        return tabFromQuery;
       }
-    }
-
-    fetchDetails();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedOrderId]);
-
-  // ---------------------------------------------------------
-  // API Call: Update Order Status (PATCH /orders/:id/status)
-  // ---------------------------------------------------------
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    if (!isStaff) return;
-    setUpdatingStatusOrderId(orderId);
-    setStatusUpdateMessage(null);
-
-    try {
-      const response = await api.patch(`/orders/${orderId}/status`, {
-        status: newStatus,
-      });
-
-      if (response.data && response.data.status === 'success') {
-        const msg = response.data.message || `Order #${orderId} transitioned to ${newStatus}.`;
-        setStatusUpdateMessage({
-          type: 'success',
-          text: msg,
-          orderId,
-        });
-
-        // 1. Update in inspected orderDetails
-        if (orderDetails && orderDetails.order_id === orderId) {
-          setOrderDetails((prev) => ({
-            ...prev,
-            status: newStatus,
-            shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : prev.shipping_status,
-            dispatched_at: newStatus === 'SHIPPED' ? new Date().toISOString() : prev.dispatched_at,
-          }));
-        }
-
-        // 2. Update in allOrders list
-        setAllOrders((prev) =>
-          prev.map((ord) =>
-            ord.order_id === orderId
-              ? {
-                  ...ord,
-                  status: newStatus,
-                  shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : ord.shipping_status,
-                }
-              : ord
-          )
-        );
-
-        // 3. Update in customer orders list if present
-        setOrders((prev) =>
-          prev.map((ord) =>
-            ord.order_id === orderId
-              ? {
-                  ...ord,
-                  status: newStatus,
-                  shipping_status: newStatus === 'SHIPPED' ? 'DISPATCHED' : newStatus === 'CANCELLED' ? 'PENDING' : ord.shipping_status,
-                }
-              : ord
-          )
-        );
-
-        // 4. Background refresh to sync DB state (like restocked quantities)
-        fetchCustomerOrders(historyTargetUserId);
-        fetchAllOrders();
+      if (savedTab && savedTab !== 'checkout' && savedTab !== 'history') {
+        return savedTab;
       }
-    } catch (err) {
-      const errMsg =
-        err.response?.data?.message ||
-        (err.response?.status === 403
-          ? 'Access forbidden: Only Warehouse Managers or Administrators can update order status.'
-          : err.response?.status === 400
-          ? 'Invalid status update or prohibited lifecycle transition.'
-          : err.message || 'Failed to update order status.');
-
-      setStatusUpdateMessage({
-        type: 'error',
-        text: errMsg,
-        orderId,
-      });
-    } finally {
-      setUpdatingStatusOrderId(null);
+      return 'fulfillment';
     }
-  };
-
-  // ---------------------------------------------------------
-  // Pre-Flight Checkout Estimation (validate_only: true)
-  // ---------------------------------------------------------
-  const handleValidateCheckout = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setValidating(true);
-    setValidationSuccess(null);
-    setCalculationData(null);
-    setValidationError(null);
-    setStockConflict(null);
-    setPlacementSuccess(null);
-    setPlacementError(null);
-
-    const payload = {
-      user_id: parseInt(checkoutUserId, 10),
-      shipping_city_id: parseInt(shippingCityId, 10),
-      validate_only: true,
-      payment_method: paymentMethod,
-      items: [
-        {
-          variant_id: parseInt(variantId, 10),
-          quantity: parseInt(quantity, 10),
-        },
-      ],
-    };
-
-    try {
-      const response = await api.post('/orders/checkout', payload);
-      if (response.data && (response.data.status === 'verified' || response.data.status === 'validated')) {
-        setValidationSuccess(response.data);
-        if (response.data.calculation) {
-          setCalculationData(response.data.calculation);
-        }
-      } else {
-        setValidationSuccess(response.data);
-      }
-    } catch (err) {
-      setCalculationData(null);
-      const resData = err.response?.data;
-      const status = err.response?.status;
-
-      if (status === 409 || resData?.code === 'OUT_OF_STOCK') {
-        setStockConflict(
-          resData?.message || 'Insufficient stock for requested items. Quantity exceeds available warehouse inventory.'
-        );
-      } else if (status === 403) {
-        setValidationError(resData?.message || 'Access forbidden: Customers cannot submit orders on behalf of other accounts.');
-      } else {
-        const msg =
-          resData?.message ||
-          (status === 404
-            ? 'Referenced entity not found (User, Texas City, or Product Variant 404).'
-            : status === 400
-            ? 'Validation failed: Invalid checkout payload.'
-            : err.message || 'Error occurred while validating payload.');
-        setValidationError(msg);
-      }
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  // ---------------------------------------------------------
-  // Live ACID Order Placement (validate_only: false)
-  // ---------------------------------------------------------
-  const handlePlaceOrder = async () => {
-    setPlacingOrder(true);
-    setPlacementSuccess(null);
-    setPlacementError(null);
-    setStockConflict(null);
-
-    const payload = {
-      user_id: parseInt(checkoutUserId, 10),
-      shipping_city_id: parseInt(shippingCityId, 10),
-      validate_only: false,
-      payment_method: paymentMethod,
-      items: [
-        {
-          variant_id: parseInt(variantId, 10),
-          quantity: parseInt(quantity, 10),
-        },
-      ],
-    };
-
-    try {
-      const response = await api.post('/orders/checkout', payload);
-      if (response.data && (response.status === 201 || response.data.status === 'success')) {
-        const orderData = response.data.data;
-        setPlacementSuccess(orderData);
-        // Refresh customer orders and all platform orders immediately
-        fetchCustomerOrders(checkoutUserId);
-        if (isStaff) {
-          fetchAllOrders();
-        }
-        // Update selected order ID for inspection
-        if (orderData?.order_id) {
-          setSelectedOrderId(orderData.order_id);
-          setLookupInput(String(orderData.order_id));
-        }
-      } else {
-        setPlacementSuccess(response.data);
-      }
-    } catch (err) {
-      const resData = err.response?.data;
-      const status = err.response?.status;
-
-      if (status === 409 || resData?.code === 'OUT_OF_STOCK') {
-        setStockConflict(
-          resData?.message || 'Insufficient stock to complete purchase under pessimistic transactional lock.'
-        );
-      } else if (status === 403) {
-        setPlacementError(resData?.message || 'Access forbidden: Customers cannot submit orders on behalf of other accounts.');
-      } else {
-        const msg =
-          resData?.message ||
-          (status === 404
-            ? 'Referenced entity not found (404).'
-            : status === 400
-            ? 'Order execution failed: Invalid payload.'
-            : err.message || 'Error occurred while placing live order.');
-        setPlacementError(msg);
-      }
-    } finally {
-      setPlacingOrder(false);
-    }
-  };
-
-  // Lookup Order by ID Form Submit
-  const handleLookupSubmit = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    const id = parseInt(lookupInput, 10);
-    if (id && id > 0) {
-      setSelectedOrderId(id);
-    }
-  };
-
-  // Role Badge and Details
-  const getRoleBadge = (roleId) => {
-    switch (roleId) {
-      case 2:
-        return {
-          title: 'Store Manager',
-          tag: 'Manager (Role 2)',
-          bg: '#eef2ff',
-          color: '#4f46e5',
-          border: '#c7d2fe',
-          desc: 'Staff elevated privileges: Full platform order visibility, lifecycle status transitions, and restock authority.',
-        };
-      case 3:
-        return {
-          title: 'System Administrator',
-          tag: 'Admin (Role 3)',
-          bg: '#f5f3ff',
-          color: '#7c3aed',
-          border: '#ddd6fe',
-          desc: 'System Administrator: Complete platform lifecycle control and database transactional authority.',
-        };
-      default:
-        return {
-          title: 'Customer',
-          tag: 'Customer (Role 1)',
-          bg: '#eff6ff',
-          color: '#2563eb',
-          border: '#bfdbfe',
-          desc: 'Customer account: Customer data isolation strictly enforced by cryptographic JWT token.',
-        };
-    }
-  };
-  const roleBadge = getRoleBadge(activeRoleId);
-
-  // Status Badge Styling Helper
-  const getStatusBadgeStyle = (status) => {
-    const s = (status || '').toUpperCase();
-    switch (s) {
-      case 'CONFIRMED':
-        return {
-          backgroundColor: '#eff6ff',
-          color: '#1d4ed8',
-          border: '1px solid #bfdbfe',
-        };
-      case 'SHIPPED':
-      case 'DISPATCHED':
-        return {
-          backgroundColor: '#f5f3ff',
-          color: '#6d28d9',
-          border: '1px solid #ddd6fe',
-        };
-      case 'DELIVERED':
-      case 'COMPLETED':
-        return {
-          backgroundColor: 'var(--success-bg, #ecfdf5)',
-          color: 'var(--success-text, #047857)',
-          border: '1px solid var(--success-border, #a7f3d0)',
-        };
-      case 'PENDING':
-      case 'PROCESSING':
-        return {
-          backgroundColor: 'var(--warning-bg, #fffbeb)',
-          color: 'var(--warning-text, #b45309)',
-          border: '1px solid var(--warning-border, #fde68a)',
-        };
-      case 'CANCELLED':
-      case 'FAILED':
-        return {
-          backgroundColor: 'var(--danger-bg, #fef2f2)',
-          color: 'var(--danger-text, #b91c1c)',
-          border: '1px solid var(--danger-border, #fecaca)',
-        };
-      default:
-        return {
-          backgroundColor: 'var(--info-bg, #f0f9ff)',
-          color: 'var(--info-text, #0369a1)',
-          border: '1px solid var(--info-border, #bae6fd)',
-        };
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    const val = Number(amount);
-    return isNaN(val) ? '$0.00' : `$${val.toFixed(2)}`;
-  };
-
-  // Filtered Platform Orders for Staff
-  const filteredPlatformOrders = allOrders.filter((ord) => {
-    const matchesStatus =
-      allOrdersStatusFilter === 'ALL' ||
-      (ord.status || '').toUpperCase() === allOrdersStatusFilter.toUpperCase();
-    const q = allOrdersSearch.toLowerCase().trim();
-    if (!q) return matchesStatus;
-    const matchesSearch =
-      String(ord.order_id).includes(q) ||
-      String(ord.user_id).includes(q) ||
-      (ord.customer_name || '').toLowerCase().includes(q) ||
-      (ord.tracking_number || '').toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+    return tabFromQuery || (location.pathname === '/checkout' ? 'checkout' : (savedTab || 'history'));
   });
 
+  // Selected Order for Inspection
+  const [inspectedOrderId, setInspectedOrderId] = useState(
+    idFromQuery ? parseInt(idFromQuery, 10) : (savedInspectedId ? parseInt(savedInspectedId, 10) : 1)
+  );
+
+  // Fetch cart to determine default routing if no tab is specified and no previous tab saved (Customers only)
+  useEffect(() => {
+    const isOrdersPath = location.pathname === '/orders' || location.pathname === '/checkout';
+    if (!isOrdersPath) return;
+
+    if (isStaff) {
+      setIsCheckingCart(false);
+      return;
+    }
+
+    let isMounted = true;
+    api.get('/auth_cart/cart')
+      .then((res) => {
+        if (!isMounted) return;
+        const count = res.data?.item_count ?? (Array.isArray(res.data?.items) ? res.data.items.length : (Array.isArray(res.data) ? res.data.length : 0));
+        setCartItemCount(count);
+
+        // If user navigated to orders page without an explicit tab and no saved tab, direct based on cart items
+        const qp = new URLSearchParams(location.search);
+        const explicitTab = qp.get('tab');
+        const storedTab = sessionStorage.getItem('stockflow_orders_active_tab');
+        if (!explicitTab && !storedTab && location.pathname !== '/checkout') {
+          const defaultTab = count > 0 ? 'checkout' : 'history';
+          setActiveTab(defaultTab);
+          sessionStorage.setItem('stockflow_orders_active_tab', defaultTab);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setCartItemCount(0);
+          const qp = new URLSearchParams(location.search);
+          const explicitTab = qp.get('tab');
+          const storedTab = sessionStorage.getItem('stockflow_orders_active_tab');
+          if (!explicitTab && !storedTab && location.pathname !== '/checkout') {
+            setActiveTab('history');
+            sessionStorage.setItem('stockflow_orders_active_tab', 'history');
+          }
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsCheckingCart(false);
+        }
+      });
+    return () => { isMounted = false; };
+  }, [location.pathname, location.search, isStaff]);
+
+  // Sync state if URL changes or user switches page
+  useEffect(() => {
+    const isOrdersPath = location.pathname === '/orders' || location.pathname === '/checkout';
+    if (!isOrdersPath) return;
+
+    const qp = new URLSearchParams(location.search);
+    const t = qp.get('tab');
+    const orderIdParam = qp.get('id');
+    const storedTab = sessionStorage.getItem('stockflow_orders_active_tab');
+
+    if (isStaff) {
+      if (t === 'checkout' || t === 'history') {
+        setActiveTab('fulfillment');
+        sessionStorage.setItem('stockflow_orders_active_tab', 'fulfillment');
+        qp.set('tab', 'fulfillment');
+        navigate({ pathname: location.pathname, search: qp.toString() }, { replace: true });
+        return;
+      }
+      if (t) {
+        setActiveTab(t);
+        sessionStorage.setItem('stockflow_orders_active_tab', t);
+      } else if (storedTab && storedTab !== 'checkout' && storedTab !== 'history') {
+        setActiveTab(storedTab);
+      } else {
+        setActiveTab('fulfillment');
+        sessionStorage.setItem('stockflow_orders_active_tab', 'fulfillment');
+      }
+
+      if (orderIdParam) {
+        const parsedId = parseInt(orderIdParam, 10);
+        setInspectedOrderId(parsedId);
+        sessionStorage.setItem('stockflow_orders_inspected_id', String(parsedId));
+      }
+      return;
+    }
+
+    // Customer navigation safeguards
+    if (t === 'lookup' && !isStaff && !orderIdParam) {
+      setActiveTab('history');
+      sessionStorage.setItem('stockflow_orders_active_tab', 'history');
+      qp.set('tab', 'history');
+      navigate({ pathname: location.pathname, search: qp.toString() }, { replace: true });
+      return;
+    }
+
+    if (t) {
+      setActiveTab(t);
+      sessionStorage.setItem('stockflow_orders_active_tab', t);
+    } else if (location.pathname === '/checkout') {
+      setActiveTab('checkout');
+      sessionStorage.setItem('stockflow_orders_active_tab', 'checkout');
+    } else if (storedTab) {
+      setActiveTab(storedTab);
+    } else if (!isCheckingCart) {
+      const fallbackTab = cartItemCount > 0 ? 'checkout' : 'history';
+      setActiveTab(fallbackTab);
+      sessionStorage.setItem('stockflow_orders_active_tab', fallbackTab);
+    }
+
+    if (orderIdParam) {
+      const parsedId = parseInt(orderIdParam, 10);
+      setInspectedOrderId(parsedId);
+      sessionStorage.setItem('stockflow_orders_inspected_id', String(parsedId));
+    } else {
+      const storedId = sessionStorage.getItem('stockflow_orders_inspected_id');
+      if (storedId) {
+        setInspectedOrderId(parseInt(storedId, 10));
+      }
+    }
+  }, [location.search, location.pathname, isStaff, navigate, cartItemCount, isCheckingCart]);
+
+  const handleTabChange = (tabKey) => {
+    if (isStaff && (tabKey === 'checkout' || tabKey === 'history')) {
+      tabKey = 'fulfillment';
+    }
+    // If a customer clicks inspect tab directly, route them to My Orders to choose an order
+    if (tabKey === 'lookup' && !isStaff && activeTab !== 'lookup') {
+      tabKey = 'history';
+    }
+    setActiveTab(tabKey);
+    sessionStorage.setItem('stockflow_orders_active_tab', tabKey);
+    const qp = new URLSearchParams(location.search);
+    qp.set('tab', tabKey);
+    if (tabKey !== 'lookup') {
+      qp.delete('id');
+    }
+    navigate({ pathname: location.pathname, search: qp.toString() }, { replace: true });
+  };
+
+  const handleInspectOrder = (orderId) => {
+    setInspectedOrderId(orderId);
+    setActiveTab('lookup');
+    sessionStorage.setItem('stockflow_orders_active_tab', 'lookup');
+    sessionStorage.setItem('stockflow_orders_inspected_id', String(orderId));
+    const qp = new URLSearchParams(location.search);
+    qp.set('tab', 'lookup');
+    qp.set('id', String(orderId));
+    navigate({ pathname: location.pathname, search: qp.toString() }, { replace: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '48px' }}>
-      
-      {/* Top Header & Identity Card with RBAC Badge */}
+    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+      {/* Top Storefront Orders Hub Bar */}
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          padding: '24px 28px',
-          background: 'var(--bg-card, #ffffff)',
-          borderRadius: '16px',
-          border: '1px solid var(--border-color, #e2e8f0)',
-          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         }}
       >
-        <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: roleBadge.color,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              marginBottom: '6px',
-            }}
-          >
-            <span>StockFlow Enterprise Orders Center</span>
-            <span>•</span>
-            <span
-              style={{
-                background: roleBadge.bg,
-                color: roleBadge.color,
-                border: `1px solid ${roleBadge.border}`,
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontSize: '0.7rem',
-              }}
-            >
-              {roleBadge.tag}
-            </span>
-          </div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-            {isStaff ? 'Operations & Orders Management' : 'My Orders & Checkout'}
-          </h1>
-          <p style={{ color: 'var(--text-muted, #64748b)', margin: '4px 0 0 0', fontSize: '0.9rem' }}>
-            {roleBadge.desc}
-          </p>
-        </div>
-
-        {/* User Identity Chip */}
         <div
           style={{
+            maxWidth: '1280px',
+            margin: '0 auto',
+            padding: '12px 24px',
             display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            background: 'var(--bg-subtle, #f8fafc)',
-            padding: '10px 18px',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color, #e2e8f0)',
-          }}
-        >
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: roleBadge.bg,
-              color: roleBadge.color,
-              border: `1px solid ${roleBadge.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '0.95rem',
-            }}
-          >
-            {activeUserId}
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
-              {roleBadge.title}
-            </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-              {userName}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Role-Adaptive Tab Navigation */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          background: 'var(--bg-subtle, #f1f5f9)',
-          padding: '6px',
-          borderRadius: '12px',
-          border: '1px solid var(--border-color, #e2e8f0)',
-          flexWrap: 'wrap',
-        }}
-      >
-        {/* Tab 1: Checkout & New Order */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('checkout')}
-          style={{
-            flex: '1 1 180px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '11px 16px',
-            borderRadius: '9px',
-            fontSize: '0.9rem',
-            fontWeight: activeTab === 'checkout' ? 700 : 500,
-            border: 'none',
-            background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
-            color: activeTab === 'checkout' ? 'var(--primary, #2563eb)' : 'var(--text-secondary, #475569)',
-            boxShadow: activeTab === 'checkout' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-          </svg>
-          <span>{isStaff ? 'New Order & Checkout' : 'Checkout & Place Order'}</span>
-        </button>
-
-        {/* Tab 2 (Staff Only): All Platform Orders (GET /orders/) */}
-        {isStaff && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('all_orders')}
-            style={{
-              flex: '1 1 180px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '11px 16px',
-              borderRadius: '9px',
-              fontSize: '0.9rem',
-              fontWeight: activeTab === 'all_orders' ? 700 : 500,
-              border: 'none',
-              background: activeTab === 'all_orders' ? '#ffffff' : 'transparent',
-              color: activeTab === 'all_orders' ? roleBadge.color : 'var(--text-secondary, #475569)',
-              boxShadow: activeTab === 'all_orders' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            <span>All Platform Orders ({allOrders.length})</span>
-          </button>
-        )}
-
-        {/* Tab 3: Customer History (GET /orders/user/:id) */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('history')}
-          style={{
-            flex: '1 1 180px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '11px 16px',
-            borderRadius: '9px',
-            fontSize: '0.9rem',
-            fontWeight: activeTab === 'history' ? 700 : 500,
-            border: 'none',
-            background: activeTab === 'history' ? '#ffffff' : 'transparent',
-            color: activeTab === 'history' ? 'var(--primary, #2563eb)' : 'var(--text-secondary, #475569)',
-            boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{isStaff ? 'Customer History' : `My Order History (${orders.length})`}</span>
-        </button>
-
-        {/* Tab 4: Track / Single Order Inspection (GET /orders/:id) */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('lookup')}
-          style={{
-            flex: '1 1 180px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '11px 16px',
-            borderRadius: '9px',
-            fontSize: '0.9rem',
-            fontWeight: activeTab === 'lookup' ? 700 : 500,
-            border: 'none',
-            background: activeTab === 'lookup' ? '#ffffff' : 'transparent',
-            color: activeTab === 'lookup' ? 'var(--primary, #2563eb)' : 'var(--text-secondary, #475569)',
-            boxShadow: activeTab === 'lookup' ? '0 2px 8px rgba(0, 0, 0, 0.06)' : 'none',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <span>Track / Inspect Order #{selectedOrderId || ''}</span>
-        </button>
-      </div>
-
-      {/* Global Status Transition Notification */}
-      {statusUpdateMessage && (
-        <div
-          style={{
-            padding: '14px 20px',
-            borderRadius: '12px',
-            backgroundColor: statusUpdateMessage.type === 'success' ? 'var(--success-bg, #ecfdf5)' : 'var(--danger-bg, #fef2f2)',
-            border: `1px solid ${statusUpdateMessage.type === 'success' ? 'var(--success-border, #a7f3d0)' : 'var(--danger-border, #fecaca)'}`,
-            color: statusUpdateMessage.type === 'success' ? 'var(--success-text, #047857)' : 'var(--danger-text, #b91c1c)',
-            display: 'flex',
-            alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', fontWeight: 600 }}>
-            {statusUpdateMessage.type === 'success' ? (
-              <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            ) : (
-              <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            )}
-            <span>{statusUpdateMessage.text}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setStatusUpdateMessage(null)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'inherit',
-              padding: '4px',
-              display: 'flex',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 1: CHECKOUT & PLACE ORDER (PRE-FLIGHT + LIVE ACID TRANSACTION)         */}
-      {/* ========================================================================= */}
-      {activeTab === 'checkout' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div
-            style={{
-              background: 'var(--bg-card, #ffffff)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color, #e2e8f0)',
-              boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
-              padding: '26px 30px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                  Order Checkout & Pre-Flight Verification
-                </h2>
-                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748b)', margin: '3px 0 0 0' }}>
-                  Execute real-time entity checks under pessimistic database lock, then commit real ACID transactions.
-                </p>
-              </div>
+          {/* Page Title & User Context */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
+              Orders &amp; Checkout
+            </h1>
+            <span style={{ color: '#cbd5e1' }}>•</span>
+            <div style={{ fontSize: '0.8125rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#334155', fontWeight: 600 }}>{userName}</span>
               <span
                 style={{
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  padding: '4px 12px',
+                  background: isStaff ? '#eff6ff' : '#f1f5f9',
+                  color: isStaff ? '#1e40af' : '#475569',
+                  padding: '2px 8px',
                   borderRadius: '9999px',
-                  background: 'var(--primary-light, #eff6ff)',
-                  color: 'var(--primary, #2563eb)',
-                  border: '1px solid var(--primary-border, #bfdbfe)',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
                 }}
               >
-                TiDB Pessimistic Lock Protected
+                {activeRoleId === 3 ? 'Admin' : activeRoleId === 2 ? 'Store Manager' : 'Customer'}
               </span>
             </div>
+          </div>
 
-            {/* Checkout Form */}
-            <form onSubmit={handleValidateCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                {/* User ID (Locked if Customer, Editable if Staff) */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>
-                      Customer User ID
-                    </label>
-                    {!isStaff && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--primary, #2563eb)', fontWeight: 600 }}>
-                        Locked (JWT Identity)
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="number"
-                    value={checkoutUserId}
-                    disabled={!isStaff}
-                    onChange={(e) => setCheckoutUserId(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      background: !isStaff ? 'var(--bg-subtle, #f8fafc)' : '#ffffff',
-                      cursor: !isStaff ? 'not-allowed' : 'text',
-                      color: !isStaff ? 'var(--text-muted, #64748b)' : 'var(--text-main, #0f172a)',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    {isStaff ? 'Staff may place on behalf of any customer' : `Strictly scoped to your authenticated account (#${activeUserId})`}
-                  </span>
-                </div>
-
-                {/* Shipping City ID */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
-                    Texas City ID (Shipping)
-                  </label>
-                  <input
-                    type="number"
-                    value={shippingCityId}
-                    onChange={(e) => setShippingCityId(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      background: '#ffffff',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    1: Dallas, 2: Houston, 3: Austin
-                  </span>
-                </div>
-
-                {/* Variant ID */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
-                    Product Variant ID
-                  </label>
-                  <input
-                    type="number"
-                    value={variantId}
-                    onChange={(e) => setVariantId(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      background: '#ffffff',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    Product catalog SKU variant
-                  </span>
-                </div>
-
-                {/* Quantity */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
-                    Purchase Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      background: '#ffffff',
-                    }}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    Must be at least 1 unit
-                  </span>
-                </div>
-
-                {/* Payment Method Selector */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary, #475569)', marginBottom: '6px' }}>
-                    Payment Method
-                  </label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.9rem',
-                      outline: 'none',
-                      background: '#ffffff',
-                      color: 'var(--text-main, #0f172a)',
-                    }}
-                  >
-                    <option value="CREDIT_CARD">Credit Card (Visa / Mastercard)</option>
-                    <option value="DEBIT_CARD">Debit Card</option>
-                    <option value="PAYPAL">PayPal Express</option>
-                    <option value="BANK_TRANSFER">Bank Wire / Transfer</option>
-                    <option value="CASH_ON_DELIVERY">Cash on Delivery (COD)</option>
-                  </select>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', marginTop: '3px', display: 'block' }}>
-                    Settled to transactional ledger
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons Row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
-                <button
-                  type="submit"
-                  disabled={validating}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '11px 20px',
-                    borderRadius: '8px',
-                    background: 'var(--primary, #2563eb)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    border: 'none',
-                    cursor: validating ? 'not-allowed' : 'pointer',
-                    opacity: validating ? 0.75 : 1,
-                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-                  }}
-                >
-                  {validating ? (
-                    <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-                    </svg>
-                  ) : (
-                    <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                  <span>{validating ? 'Verifying & Reserving...' : '1. Run Pre-Flight Price & Stock Check'}</span>
-                </button>
-
+          {/* Navigation Tabs */}
+          <div
+            style={{
+              display: 'flex',
+              background: '#f1f5f9',
+              padding: '4px',
+              borderRadius: '10px',
+              gap: '4px',
+            }}
+          >
+            {/* Customer Only: Tab 1 Checkout & Tab 2 Order History */}
+            {!isStaff && (
+              <>
+                {/* Tab 1: Checkout */}
                 <button
                   type="button"
-                  onClick={handlePlaceOrder}
-                  disabled={placingOrder}
+                  onClick={() => handleTabChange('checkout')}
                   style={{
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    padding: '11px 22px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
-                    background: 'var(--success, #10b981)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
                     border: 'none',
-                    cursor: placingOrder ? 'not-allowed' : 'pointer',
-                    opacity: placingOrder ? 0.75 : 1,
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                    background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
+                    color: activeTab === 'checkout' ? '#0264d6' : '#64748b',
+                    fontWeight: activeTab === 'checkout' ? 700 : 500,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    boxShadow: activeTab === 'checkout' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  {placingOrder ? (
-                    <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-                    </svg>
-                  ) : (
-                    <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  )}
-                  <span>{placingOrder ? 'Executing ACID Transaction...' : '2. Place Order (Live Transaction) 🚀'}</span>
-                </button>
-              </div>
-            </form>
-
-            {/* Validation Success Banner */}
-            {validationSuccess && (
-              <div
-                style={{
-                  marginTop: '18px',
-                  padding: '14px 18px',
-                  borderRadius: '10px',
-                  background: 'var(--success-bg, #ecfdf5)',
-                  border: '1px solid var(--success-border, #a7f3d0)',
-                  color: 'var(--success-text, #047857)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.92rem' }}>
-                  <svg style={{ width: '18px', height: '18px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" />
+                    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
                   </svg>
-                  <span>{validationSuccess.message || 'Payload passed verification and lock checks.'}</span>
-                </div>
-                {validationSuccess.order_summary && (
-                  <div style={{ fontSize: '0.82rem', opacity: 0.95 }}>
-                    Order Summary: User #{validationSuccess.order_summary.user_id} · Destination City #{validationSuccess.order_summary.shipping_city_id} · Items: {validationSuccess.order_summary.total_items}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Stock Conflict Warning Banner (HTTP 409 OUT_OF_STOCK) */}
-            {stockConflict && (
-              <div
-                style={{
-                  marginTop: '18px',
-                  padding: '16px 20px',
-                  borderRadius: '10px',
-                  background: 'var(--warning-bg, #fffbeb)',
-                  border: '1px solid var(--warning-border, #fde68a)',
-                  color: 'var(--warning-text, #b45309)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.1)',
-                }}
-              >
-                <svg
-                  style={{ width: '22px', height: '22px', flexShrink: 0, marginTop: '2px' }}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '2px' }}>
-                    Inventory Conflict (Out of Stock - HTTP 409)
-                  </div>
-                  <div style={{ fontSize: '0.88rem', lineHeight: 1.45 }}>
-                    {stockConflict}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', marginTop: '6px', opacity: 0.9 }}>
-                    The requested quantity exceeds live TiDB database stock under transactional lock. Reduce quantity to proceed.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Validation / Execution Errors */}
-            {(validationError || placementError) && (
-              <div
-                style={{
-                  marginTop: '18px',
-                  padding: '14px 18px',
-                  borderRadius: '10px',
-                  background: 'var(--danger-bg, #fef2f2)',
-                  border: '1px solid var(--danger-border, #fecaca)',
-                  color: 'var(--danger-text, #b91c1c)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  fontSize: '0.88rem',
-                }}
-              >
-                <svg style={{ width: '18px', height: '18px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <div>
-                  <strong>Checkout Error:</strong> {validationError || placementError}
-                </div>
-              </div>
-            )}
-
-            {/* Live Order Placement Success Banner */}
-            {placementSuccess && (
-              <div
-                style={{
-                  marginTop: '20px',
-                  padding: '20px 24px',
-                  borderRadius: '12px',
-                  background: 'var(--success-bg, #ecfdf5)',
-                  border: '1px solid var(--success-border, #a7f3d0)',
-                  color: 'var(--success-text, #047857)',
-                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.15)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '1.1rem' }}>
-                    <svg style={{ width: '22px', height: '22px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span>Order #{placementSuccess.order_id} Placed & ACID Committed!</span>
-                  </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '3px 10px', borderRadius: '9999px', background: '#ffffff', color: 'var(--success-text, #047857)', border: '1px solid var(--success-border, #a7f3d0)' }}>
-                    Inventory Decremented
-                  </span>
-                </div>
-
-                <p style={{ margin: '0 0 12px 0', fontSize: '0.88rem', opacity: 0.95 }}>
-                  The transaction was atomically committed: shipment tracking created, stock decremented, and order items persisted.
-                </p>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                    gap: '12px',
-                    padding: '14px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--success-border, #a7f3d0)',
-                    color: 'var(--text-main, #0f172a)',
-                    fontSize: '0.85rem',
-                    marginBottom: '14px',
-                  }}
-                >
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Order ID</span>
-                    <strong style={{ fontSize: '1.05rem', color: 'var(--primary, #2563eb)' }}>#{placementSuccess.order_id}</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Shipment ID</span>
-                    <strong>#{placementSuccess.shipment_id}</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Tracking Number</span>
-                    <strong style={{ fontFamily: 'monospace', color: 'var(--text-main, #0f172a)' }}>{placementSuccess.tracking_number}</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Total Charged</span>
-                    <strong style={{ fontSize: '1.05rem', color: 'var(--success-text, #047857)' }}>{formatCurrency(placementSuccess.total_amount)}</strong>
-                  </div>
-                </div>
-
-                {/* Payment Transaction Ledger */}
-                {(placementSuccess.payment_id || placementSuccess.transaction_ref) && (
-                  <div
-                    style={{
-                      padding: '14px 16px',
-                      background: 'rgba(255, 255, 255, 0.95)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--success-border, #a7f3d0)',
-                      color: 'var(--text-main, #0f172a)',
-                      marginBottom: '14px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--success-text, #047857)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>💳</span>
-                        <span>Payment Transaction Ledger</span>
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          background: 'var(--success-bg, #ecfdf5)',
-                          color: 'var(--success-text, #047857)',
-                          border: '1px solid var(--success-border, #a7f3d0)',
-                        }}
-                      >
-                        {placementSuccess.payment_status || 'COMPLETED'}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                        gap: '10px',
-                        fontSize: '0.84rem',
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Payment ID</span>
-                        <strong style={{ color: 'var(--primary, #2563eb)' }}>#{placementSuccess.payment_id}</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Method</span>
-                        <strong>{paymentMethod.replace(/_/g, ' ')}</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block' }}>Transaction Ref</span>
-                        <strong style={{ fontFamily: 'monospace', color: 'var(--text-main, #0f172a)' }}>
-                          {placementSuccess.transaction_ref}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (placementSuccess.order_id) {
-                        setSelectedOrderId(placementSuccess.order_id);
-                        setLookupInput(String(placementSuccess.order_id));
-                        setActiveTab('lookup');
-                      }
-                    }}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      background: 'var(--primary, #2563eb)',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      fontSize: '0.84rem',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Track & Inspect Order #{placementSuccess.order_id} →
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('history')}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      background: '#ffffff',
-                      color: 'var(--text-main, #0f172a)',
-                      fontWeight: 600,
-                      fontSize: '0.84rem',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    View in Order History
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Authoritative Cost Summary Breakdown */}
-          {calculationData && (
-            <div
-              style={{
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                background: '#ffffff',
-                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  padding: '18px 24px',
-                  borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                  background: 'var(--bg-subtle, #f8fafc)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                }}
-              >
-                <div>
-                  <span
-                    style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      color: 'var(--primary, #2563eb)',
-                      letterSpacing: '0.05em',
-                      display: 'block',
-                      marginBottom: '2px',
-                    }}
-                  >
-                    Verified Database Pricing
-                  </span>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                    Authoritative Cost Summary
-                  </h3>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.85rem', color: 'var(--text-secondary, #475569)' }}>
-                  <div>
-                    Customer: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{calculationData.user || 'Unknown'}</strong>
-                  </div>
-                  <div>
-                    Destination: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{calculationData.destination_city || 'Texas'}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Verified Line Items */}
-              <div style={{ padding: '20px 24px' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>
-                  Verified Line Items ({calculationData.items?.length || 0})
-                </div>
-
-                {(!calculationData.items || calculationData.items.length === 0) ? (
-                  <div style={{ fontSize: '0.88rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>
-                    No items calculated.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {calculationData.items.map((item, idx) => (
-                      <div
-                        key={item.variant_id || idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          borderRadius: '10px',
-                          background: 'var(--bg-subtle, #f8fafc)',
-                          border: '1px solid var(--border-color, #e2e8f0)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 auto', minWidth: '180px' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main, #0f172a)', background: '#ffffff', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-color, #cbd5e1)' }}>
-                            {item.sku || `Variant #${item.variant_id}`}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--success-text, #047857)', background: 'var(--success-bg, #ecfdf5)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--success-border, #a7f3d0)' }}>
-                            Available Stock: {item.available_stock ?? 'N/A'}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>
-                            Qty: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{item.quantity}</strong>
-                          </div>
-                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>
-                            {formatCurrency(item.unit_price)}
-                          </div>
-                          <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', minWidth: '80px', textAlign: 'right' }}>
-                            {formatCurrency(item.line_total)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Financial Totals */}
-              <div
-                style={{
-                  borderTop: '1px solid var(--border-color, #e2e8f0)',
-                  padding: '20px 24px',
-                  background: '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', color: 'var(--text-secondary, #475569)' }}>
-                  <span>Subtotal</span>
-                  <strong>{formatCurrency(calculationData.subtotal)}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.92rem', color: 'var(--text-secondary, #475569)' }}>
-                  <span>Texas Shipping Fee ({calculationData.destination_city || 'Regional'})</span>
-                  <strong>{formatCurrency(calculationData.shipping_fee)}</strong>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontSize: '1.15rem',
-                    fontWeight: 800,
-                    color: 'var(--primary, #2563eb)',
-                    borderTop: '1px dashed var(--border-color, #e2e8f0)',
-                    paddingTop: '12px',
-                    marginTop: '4px',
-                  }}
-                >
-                  <span>Grand Total</span>
-                  <span>{formatCurrency(calculationData.total_amount)}</span>
-                </div>
-
-                <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={handlePlaceOrder}
-                    disabled={placingOrder}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '11px 24px',
-                      borderRadius: '8px',
-                      background: 'var(--success, #10b981)',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '0.94rem',
-                      border: 'none',
-                      cursor: placingOrder ? 'not-allowed' : 'pointer',
-                      opacity: placingOrder ? 0.75 : 1,
-                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
-                    }}
-                  >
-                    {placingOrder ? (
-                      <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-                      </svg>
-                    ) : (
-                      <svg style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    <span>{placingOrder ? 'Processing Purchase...' : 'Confirm & Place Live Order'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2 (STAFF ONLY): ALL PLATFORM ORDERS (GET /orders/)                    */}
-      {/* ========================================================================= */}
-      {isStaff && activeTab === 'all_orders' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Controls Bar */}
-          <div
-            style={{
-              padding: '20px 24px',
-              background: 'var(--bg-card, #ffffff)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color, #e2e8f0)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                  System-Wide Platform Orders (`GET /orders/`)
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
-                  Manage lifecycle status transitions, track shipment dispatching, and restock cancelled orders.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={fetchAllOrders}
-                disabled={loadingAllOrders}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  background: 'var(--bg-subtle, #f1f5f9)',
-                  color: 'var(--text-secondary, #475569)',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  border: '1px solid var(--border-color, #cbd5e1)',
-                  cursor: loadingAllOrders ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <svg style={{ width: '14px', height: '14px', animation: loadingAllOrders ? 'spin 1s linear infinite' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>{loadingAllOrders ? 'Refreshing...' : 'Refresh Platform Orders'}</span>
-              </button>
-            </div>
-
-            {/* Filter and Search Row */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <input
-                type="text"
-                placeholder="Search by Order ID, Customer, or Tracking #..."
-                value={allOrdersSearch}
-                onChange={(e) => setAllOrdersSearch(e.target.value)}
-                style={{
-                  flex: '1 1 240px',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color, #cbd5e1)',
-                  fontSize: '0.88rem',
-                  outline: 'none',
-                }}
-              />
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Status:</span>
-                <select
-                  value={allOrdersStatusFilter}
-                  onChange={(e) => setAllOrdersStatusFilter(e.target.value)}
-                  style={{
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-color, #cbd5e1)',
-                    fontSize: '0.88rem',
-                    background: '#ffffff',
-                    outline: 'none',
-                  }}
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="SHIPPED">Shipped</option>
-                  <option value="DELIVERED">Delivered</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Loading */}
-          {loadingAllOrders && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                padding: '48px 24px',
-                background: 'var(--bg-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                color: 'var(--text-secondary, #475569)',
-                fontSize: '0.95rem',
-              }}
-            >
-              <svg style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-              </svg>
-              <span>Loading all platform orders from database...</span>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loadingAllOrders && allOrdersError && (
-            <div
-              style={{
-                padding: '16px 20px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--danger-bg, #fef2f2)',
-                border: '1px solid var(--danger-border, #fecaca)',
-                color: 'var(--danger-text, #b91c1c)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <svg style={{ width: '20px', height: '20px', flexShrink: 0 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <div>
-                <strong>Unable to load platform orders:</strong> {allOrdersError}
-              </div>
-            </div>
-          )}
-
-          {/* Table View */}
-          {!loadingAllOrders && !allOrdersError && (
-            <div
-              style={{
-                background: 'var(--bg-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                  <thead>
-                    <tr style={{ background: 'var(--bg-subtle, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Order</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Customer</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Placed At</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Shipment & Tracking</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>Status</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'right' }}>Total</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 700, color: 'var(--text-secondary, #475569)', textAlign: 'center' }}>Lifecycle Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPlatformOrders.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" style={{ padding: '40px 18px', textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
-                          No platform orders matched your search or filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPlatformOrders.map((ord) => {
-                        const isRowUpdating = updatingStatusOrderId === ord.order_id;
-                        const currStatus = (ord.status || '').toUpperCase();
-                        const isCancelled = currStatus === 'CANCELLED';
-                        const isShipped = currStatus === 'SHIPPED';
-
-                        return (
-                          <tr
-                            key={ord.order_id}
-                            style={{
-                              borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                              transition: 'background 0.15s',
-                              opacity: isRowUpdating ? 0.6 : 1,
-                            }}
-                          >
-                            <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                              #{ord.order_id}
-                            </td>
-                            <td style={{ padding: '14px 18px' }}>
-                              <div style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{ord.customer_name || 'Customer'}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>User ID #{ord.user_id}</div>
-                            </td>
-                            <td style={{ padding: '14px 18px', color: 'var(--text-secondary, #475569)', fontSize: '0.82rem' }}>
-                              {formatDate(ord.placed_at)}
-                            </td>
-                            <td style={{ padding: '14px 18px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #475569)' }}>
-                                  #{ord.shipment_id || 'N/A'}
-                                </span>
-                                {ord.shipping_status && (
-                                  <span
-                                    style={{
-                                      fontSize: '0.68rem',
-                                      padding: '1px 6px',
-                                      borderRadius: '4px',
-                                      fontWeight: 700,
-                                      ...getStatusBadgeStyle(ord.shipping_status),
-                                    }}
-                                  >
-                                    {ord.shipping_status}
-                                  </span>
-                                )}
-                              </div>
-                              {ord.tracking_number && (
-                                <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--primary, #2563eb)', marginTop: '2px' }}>
-                                  {ord.tracking_number}
-                                </div>
-                              )}
-                            </td>
-                            <td style={{ padding: '14px 18px' }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  padding: '3px 8px',
-                                  borderRadius: '9999px',
-                                  fontSize: '0.72rem',
-                                  fontWeight: 700,
-                                  letterSpacing: '0.04em',
-                                  ...getStatusBadgeStyle(ord.status),
-                                }}
-                              >
-                                {ord.status || 'PENDING'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '14px 18px', fontWeight: 800, color: 'var(--text-main, #0f172a)', textAlign: 'right' }}>
-                              {formatCurrency(ord.total_amount)}
-                            </td>
-                            <td style={{ padding: '14px 18px', textAlign: 'center' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {/* Transition Buttons */}
-                                {!isCancelled && !isShipped && currStatus !== 'CONFIRMED' && (
-                                  <button
-                                    type="button"
-                                    disabled={isRowUpdating}
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'CONFIRMED')}
-                                    title="Confirm order"
-                                    style={{
-                                      padding: '4px 8px',
-                                      borderRadius: '5px',
-                                      background: '#eff6ff',
-                                      color: '#1d4ed8',
-                                      border: '1px solid #bfdbfe',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 600,
-                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                                    }}
-                                  >
-                                    Confirm
-                                  </button>
-                                )}
-
-                                {!isCancelled && !isShipped && (
-                                  <button
-                                    type="button"
-                                    disabled={isRowUpdating}
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'SHIPPED')}
-                                    title="Dispatch & set shipment to DISPATCHED"
-                                    style={{
-                                      padding: '4px 8px',
-                                      borderRadius: '5px',
-                                      background: '#f5f3ff',
-                                      color: '#6d28d9',
-                                      border: '1px solid #ddd6fe',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 600,
-                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                                    }}
-                                  >
-                                    Ship 🚚
-                                  </button>
-                                )}
-
-                                {!isCancelled && !isShipped && (
-                                  <button
-                                    type="button"
-                                    disabled={isRowUpdating}
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, 'CANCELLED')}
-                                    title="Cancel order and restock inventory"
-                                    style={{
-                                      padding: '4px 8px',
-                                      borderRadius: '5px',
-                                      background: '#fef2f2',
-                                      color: '#b91c1c',
-                                      border: '1px solid #fecaca',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 600,
-                                      cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                )}
-
-                                {isShipped && (
-                                  <span style={{ fontSize: '0.72rem', color: '#6d28d9', fontWeight: 600, padding: '2px 6px', background: '#f5f3ff', borderRadius: '4px' }}>
-                                    Dispatched
-                                  </span>
-                                )}
-
-                                {isCancelled && (
-                                  <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600, padding: '2px 6px', background: '#fef2f2', borderRadius: '4px' }}>
-                                    Restocked
-                                  </span>
-                                )}
-
-                                {/* Inspect Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedOrderId(ord.order_id);
-                                    setLookupInput(String(ord.order_id));
-                                    setActiveTab('lookup');
-                                  }}
-                                  style={{
-                                    padding: '4px 8px',
-                                    borderRadius: '5px',
-                                    background: 'var(--bg-subtle, #f1f5f9)',
-                                    color: 'var(--text-secondary, #475569)',
-                                    border: '1px solid var(--border-color, #cbd5e1)',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Inspect
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: CUSTOMER ORDER HISTORY (GET /orders/user/:id)                      */}
-      {/* ========================================================================= */}
-      {activeTab === 'history' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* History Header & Target Customer Switcher for Staff */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              padding: '20px 24px',
-              background: 'var(--bg-card, #ffffff)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color, #e2e8f0)',
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                {isStaff ? `Customer #${historyTargetUserId} Order History` : 'My Order History'}
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '2px 0 0 0' }}>
-                {isStaff
-                  ? `Staff view: Itemized purchase history for Customer #${historyTargetUserId}.`
-                  : `Authenticated as User #${activeUserId} (${userName}).`}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              {isStaff && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted, #64748b)' }}>
-                    Customer ID:
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={historyTargetUserId}
-                    onChange={(e) => setHistoryTargetUserId(e.target.value)}
-                    style={{
-                      width: '80px',
-                      padding: '6px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-color, #cbd5e1)',
-                      fontSize: '0.84rem',
-                      outline: 'none',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fetchCustomerOrders(historyTargetUserId)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      background: 'var(--primary, #2563eb)',
-                      color: '#ffffff',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Load
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => fetchCustomerOrders(historyTargetUserId)}
-                disabled={loadingOrders}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  background: 'var(--bg-subtle, #f1f5f9)',
-                  color: 'var(--text-secondary, #475569)',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  border: '1px solid var(--border-color, #cbd5e1)',
-                  cursor: loadingOrders ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <svg style={{ width: '14px', height: '14px', animation: loadingOrders ? 'spin 1s linear infinite' : 'none' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>{loadingOrders ? 'Refreshing...' : 'Refresh'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Loading */}
-          {loadingOrders && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                padding: '48px 24px',
-                background: 'var(--bg-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                color: 'var(--text-secondary, #475569)',
-                fontSize: '0.95rem',
-              }}
-            >
-              <svg style={{ width: '24px', height: '24px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-              </svg>
-              <span>Fetching customer orders...</span>
-            </div>
-          )}
-
-          {/* Orders Fetch Error (Includes 403 Data Isolation message) */}
-          {!loadingOrders && ordersError && (
-            <div
-              style={{
-                padding: '16px 20px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--danger-bg, #fef2f2)',
-                border: '1px solid var(--danger-border, #fecaca)',
-                color: 'var(--danger-text, #b91c1c)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px',
-              }}
-            >
-              <svg style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '2px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <div>
-                <strong style={{ display: 'block', marginBottom: '2px' }}>Access / Query Notice:</strong>
-                <span style={{ fontSize: '0.9rem' }}>{ordersError}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Empty Orders */}
-          {!loadingOrders && !ordersError && orders.length === 0 && (
-            <div
-              style={{
-                padding: '60px 24px',
-                borderRadius: '16px',
-                background: 'var(--bg-card, #ffffff)',
-                border: '1px dashed var(--border-color, #e2e8f0)',
-                textAlign: 'center',
-                color: 'var(--text-muted, #64748b)',
-              }}
-            >
-              <svg style={{ width: '48px', height: '48px', margin: '0 auto 12px auto', opacity: 0.5 }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 4px 0' }}>
-                No past orders found
-              </h3>
-              <p style={{ fontSize: '0.88rem', margin: '0 0 16px 0' }}>
-                No order history was recorded for User #{historyTargetUserId}.
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveTab('checkout')}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  background: 'var(--primary, #2563eb)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '0.85rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Go to Checkout Tab
-              </button>
-            </div>
-          )}
-
-          {/* Orders Cards List */}
-          {!loadingOrders && !ordersError && orders.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.map((ord) => {
-                const items = ord.items || [];
-                const isCurrentSelected = ord.order_id === selectedOrderId;
-                const isRowUpdating = updatingStatusOrderId === ord.order_id;
-                const currStatus = (ord.status || '').toUpperCase();
-
-                return (
-                  <div
-                    key={ord.order_id}
-                    style={{
-                      background: 'var(--bg-card, #ffffff)',
-                      borderRadius: '16px',
-                      border: isCurrentSelected ? '2px solid var(--primary, #2563eb)' : '1px solid var(--border-color, #e2e8f0)',
-                      padding: '22px 24px',
-                      boxShadow: isCurrentSelected ? '0 4px 16px rgba(37, 99, 235, 0.1)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '16px',
-                      transition: 'border-color 0.2s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                          Order #{ord.order_id}
-                        </span>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            padding: '3px 10px',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                            ...getStatusBadgeStyle(ord.status),
-                          }}
-                        >
-                          {ord.status || 'UNKNOWN'}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
-                          Placed: <strong style={{ color: 'var(--text-secondary, #475569)' }}>{formatDate(ord.placed_at)}</strong>
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
-                          Shipment: <strong style={{ color: 'var(--text-secondary, #475569)' }}>{ord.shipment_id ? `#${ord.shipment_id}` : 'Unassigned'}</strong>
-                        </div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>
-                          {formatCurrency(ord.total_amount)}
-                        </div>
-
-                        {/* Staff Lifecycle Controls in History Cards */}
-                        {isStaff && currStatus !== 'CANCELLED' && currStatus !== 'SHIPPED' && (
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {currStatus !== 'CONFIRMED' && (
-                              <button
-                                type="button"
-                                disabled={isRowUpdating}
-                                onClick={() => handleUpdateOrderStatus(ord.order_id, 'CONFIRMED')}
-                                style={{
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
-                                  background: '#eff6ff',
-                                  color: '#1d4ed8',
-                                  border: '1px solid #bfdbfe',
-                                  fontSize: '0.76rem',
-                                  fontWeight: 600,
-                                  cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                                }}
-                              >
-                                Confirm
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              disabled={isRowUpdating}
-                              onClick={() => handleUpdateOrderStatus(ord.order_id, 'SHIPPED')}
-                              style={{
-                                padding: '5px 10px',
-                                borderRadius: '6px',
-                                background: '#f5f3ff',
-                                color: '#6d28d9',
-                                border: '1px solid #ddd6fe',
-                                fontSize: '0.76rem',
-                                fontWeight: 600,
-                                cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              Ship
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isRowUpdating}
-                              onClick={() => handleUpdateOrderStatus(ord.order_id, 'CANCELLED')}
-                              style={{
-                                padding: '5px 10px',
-                                borderRadius: '6px',
-                                background: '#fef2f2',
-                                color: '#b91c1c',
-                                border: '1px solid #fecaca',
-                                fontSize: '0.76rem',
-                                fontWeight: 600,
-                                cursor: isRowUpdating ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedOrderId(ord.order_id);
-                            setLookupInput(String(ord.order_id));
-                            setActiveTab('lookup');
-                          }}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '6px',
-                            background: isCurrentSelected ? 'var(--primary, #2563eb)' : 'var(--bg-subtle, #f1f5f9)',
-                            color: isCurrentSelected ? '#ffffff' : 'var(--text-secondary, #475569)',
-                            border: '1px solid var(--border-color, #cbd5e1)',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Inspect Details →
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Itemized Line Items for Order */}
-                    <div
-                      style={{
-                        borderTop: '1px solid var(--border-color, #e2e8f0)',
-                        paddingTop: '14px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                      }}
-                    >
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Itemized Products ({items.length})
-                      </div>
-
-                      {items.length === 0 ? (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic', padding: '4px 0' }}>
-                          No line items recorded for this order.
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {items.map((item) => (
-                            <div
-                              key={item.order_item_id || item.variant_id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                flexWrap: 'wrap',
-                                gap: '10px',
-                                padding: '10px 14px',
-                                borderRadius: '8px',
-                                background: 'var(--bg-subtle, #f8fafc)',
-                                border: '1px solid var(--border-color, #e2e8f0)',
-                              }}
-                            >
-                              <div style={{ minWidth: '200px', flex: '1 1 auto' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>
-                                  {item.product_title}
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', marginTop: '2px' }}>
-                                  {item.attribute_name && item.attribute_value && (
-                                    <span>
-                                      {item.attribute_name}: <strong>{item.attribute_value}</strong>
-                                    </span>
-                                  )}
-                                  {item.sku && (
-                                    <span style={{ fontFamily: 'monospace', background: '#ffffff', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--border-color, #cbd5e1)' }}>
-                                      {item.sku}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
-                                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
-                                  Qty: <strong>{item.quantity}</strong>
-                                </div>
-                                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
-                                  {formatCurrency(item.unit_price)}
-                                </div>
-                                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', minWidth: '70px', textAlign: 'right' }}>
-                                  {formatCurrency(item.line_total)}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 4: SINGLE ORDER INSPECTION & TRACKING (GET /orders/:id)               */}
-      {/* ========================================================================= */}
-      {activeTab === 'lookup' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Lookup Input Bar */}
-          <div
-            style={{
-              padding: '20px 24px',
-              background: 'var(--bg-card, #ffffff)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color, #e2e8f0)',
-              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                Single Order Inspection (`GET /orders/:id`)
-              </h2>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted, #64748b)', margin: '3px 0 0 0' }}>
-                {isStaff
-                  ? 'Staff Mode: Retrieve any order across the system, view shipment timestamps, and trigger lifecycle transitions.'
-                  : 'Customer Mode: Inspect details and line items for orders placed by your account.'}
-              </p>
-            </div>
-
-            <form onSubmit={handleLookupSubmit} style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
-                type="number"
-                min="1"
-                placeholder="Enter Order ID (e.g. 1)"
-                value={lookupInput}
-                onChange={(e) => setLookupInput(e.target.value)}
-                style={{
-                  width: '240px',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color, #cbd5e1)',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={loadingDetails}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  background: 'var(--primary, #2563eb)',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '0.88rem',
-                  border: 'none',
-                  cursor: loadingDetails ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                {loadingDetails ? (
-                  <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-                  </svg>
-                ) : (
-                  <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                )}
-                <span>Inspect Order</span>
-              </button>
-
-              {orders.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>Quick Pick:</span>
-                  {orders.slice(0, 4).map((ord) => (
-                    <button
-                      key={ord.order_id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedOrderId(ord.order_id);
-                        setLookupInput(String(ord.order_id));
-                      }}
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        background: selectedOrderId === ord.order_id ? 'var(--primary-light, #eff6ff)' : 'var(--bg-subtle, #f1f5f9)',
-                        color: selectedOrderId === ord.order_id ? 'var(--primary, #2563eb)' : 'var(--text-secondary, #475569)',
-                        border: selectedOrderId === ord.order_id ? '1px solid var(--primary-border, #bfdbfe)' : '1px solid var(--border-color, #cbd5e1)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      #{ord.order_id}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Loading */}
-          {loadingDetails && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                padding: '48px 24px',
-                background: 'var(--bg-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                color: 'var(--text-secondary, #475569)',
-                fontSize: '0.95rem',
-              }}
-            >
-              <svg style={{ width: '22px', height: '22px', animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
-              </svg>
-              <span>Loading details for Order #{selectedOrderId}...</span>
-            </div>
-          )}
-
-          {/* Error Details State (includes 403 Customer Isolation alert) */}
-          {!loadingDetails && detailsError && (
-            <div
-              style={{
-                padding: '18px 22px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--danger-bg, #fef2f2)',
-                border: '1px solid var(--danger-border, #fecaca)',
-                color: 'var(--danger-text, #b91c1c)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px',
-              }}
-            >
-              <svg style={{ width: '20px', height: '20px', flexShrink: 0, marginTop: '2px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <div>
-                <strong style={{ display: 'block', marginBottom: '2px', fontSize: '0.95rem' }}>Inspection Query Notice:</strong>
-                <span style={{ fontSize: '0.9rem', lineHeight: 1.45 }}>{detailsError}</span>
-                {!isStaff && (
-                  <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
-                    Security Policy: Customers are prohibited from inspecting orders belonging to other user accounts.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Order Details Presentation Card */}
-          {!loadingDetails && !detailsError && orderDetails && (
-            <div
-              style={{
-                background: 'var(--bg-card, #ffffff)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color, #e2e8f0)',
-                boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  padding: '20px 24px',
-                  borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  background: 'var(--bg-subtle, #f8fafc)',
-                }}
-              >
-                <div>
-                  <span
-                    style={{
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted, #64748b)',
-                      letterSpacing: '0.05em',
-                      display: 'block',
-                      marginBottom: '2px',
-                    }}
-                  >
-                    Verified Database Record
-                  </span>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                    Order #{orderDetails.order_id}
-                  </h2>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '6px 14px',
-                      borderRadius: '9999px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      ...getStatusBadgeStyle(orderDetails.status),
-                    }}
-                  >
-                    {orderDetails.status || 'UNKNOWN'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Staff Lifecycle Control Panel for Inspected Order */}
-              {isStaff && (
-                <div
-                  style={{
-                    padding: '16px 24px',
-                    background: '#f8fafc',
-                    borderBottom: '1px solid var(--border-color, #e2e8f0)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary, #475569)' }}>
-                      Manager Order Transitions:
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
-                      (Synchronizes shipments & restocks inventory on cancel)
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {orderDetails.status !== 'CONFIRMED' && orderDetails.status !== 'SHIPPED' && orderDetails.status !== 'CANCELLED' && (
-                      <button
-                        type="button"
-                        disabled={updatingStatusOrderId === orderDetails.order_id}
-                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'CONFIRMED')}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: '6px',
-                          background: '#eff6ff',
-                          color: '#1d4ed8',
-                          border: '1px solid #bfdbfe',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        ✓ Confirm Order
-                      </button>
-                    )}
-
-                    {orderDetails.status !== 'SHIPPED' && orderDetails.status !== 'CANCELLED' && (
-                      <button
-                        type="button"
-                        disabled={updatingStatusOrderId === orderDetails.order_id}
-                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'SHIPPED')}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: '6px',
-                          background: '#f5f3ff',
-                          color: '#6d28d9',
-                          border: '1px solid #ddd6fe',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        🚚 Mark Shipped (Dispatches)
-                      </button>
-                    )}
-
-                    {orderDetails.status !== 'CANCELLED' && orderDetails.status !== 'SHIPPED' && (
-                      <button
-                        type="button"
-                        disabled={updatingStatusOrderId === orderDetails.order_id}
-                        onClick={() => handleUpdateOrderStatus(orderDetails.order_id, 'CANCELLED')}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: '6px',
-                          background: '#fef2f2',
-                          color: '#b91c1c',
-                          border: '1px solid #fecaca',
-                          fontWeight: 700,
-                          fontSize: '0.82rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        ✕ Cancel & Restock
-                      </button>
-                    )}
-
-                    {orderDetails.status === 'SHIPPED' && (
-                      <span style={{ fontSize: '0.82rem', color: '#6d28d9', fontWeight: 700, background: '#ede9fe', padding: '4px 10px', borderRadius: '6px' }}>
-                        Order Dispatched / In Transit
-                      </span>
-                    )}
-
-                    {orderDetails.status === 'CANCELLED' && (
-                      <span style={{ fontSize: '0.82rem', color: '#b91c1c', fontWeight: 700, background: '#fee2e2', padding: '4px 10px', borderRadius: '6px' }}>
-                        Order Cancelled & Restocked
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Field Matrix */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '16px',
-                  padding: '24px',
-                }}
-              >
-                <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Customer ID</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>User #{orderDetails.user_id ?? 'N/A'}</div>
-                </div>
-
-                <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Shipment ID</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                    {orderDetails.shipment_id ? `#${orderDetails.shipment_id}` : 'Unassigned'}
-                  </div>
-                  {orderDetails.shipping_status && (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, ...getStatusBadgeStyle(orderDetails.shipping_status), padding: '1px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
-                      Status: {orderDetails.shipping_status}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ padding: '14px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '10px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted, #64748b)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Placed Date</div>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{formatDate(orderDetails.placed_at)}</div>
-                </div>
-
-                <div style={{ padding: '14px', background: 'var(--primary-light, #eff6ff)', borderRadius: '10px', border: '1px solid var(--primary-border, #bfdbfe)' }}>
-                  <div style={{ fontSize: '0.74rem', color: 'var(--primary, #2563eb)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Total Amount</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary, #2563eb)' }}>{formatCurrency(orderDetails.total_amount)}</div>
-                </div>
-              </div>
-
-              {/* Shipment Tracking Details Row (if shipment exists) */}
-              {orderDetails.tracking_number && (
-                <div
-                  style={{
-                    margin: '0 24px 20px 24px',
-                    padding: '14px 18px',
-                    background: '#f8fafc',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-color, #e2e8f0)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted, #64748b)', textTransform: 'uppercase' }}>Tracking Number:</span>
-                    <strong style={{ fontFamily: 'monospace', color: 'var(--primary, #2563eb)', fontSize: '0.92rem' }}>
-                      {orderDetails.tracking_number}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.82rem', color: 'var(--text-secondary, #475569)' }}>
-                    {orderDetails.estimated_arrival && (
-                      <div>Est. Arrival: <strong>{new Date(orderDetails.estimated_arrival).toLocaleDateString()}</strong></div>
-                    )}
-                    {orderDetails.dispatched_at && (
-                      <div>Dispatched: <strong>{formatDate(orderDetails.dispatched_at)}</strong></div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Transaction Ledger Section */}
-              <div
-                style={{
-                  margin: '0 24px 20px 24px',
-                  padding: '16px 20px',
-                  borderRadius: '12px',
-                  background: orderDetails.payment ? 'var(--bg-subtle, #f8fafc)' : '#ffffff',
-                  border: '1px solid var(--border-color, #e2e8f0)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <svg style={{ width: '18px', height: '18px', color: 'var(--primary, #2563eb)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="5" width="20" height="14" rx="2" />
-                      <line x1="2" y1="10" x2="22" y2="10" />
-                    </svg>
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-                      Payment Transaction Ledger
-                    </h3>
-                  </div>
-                  {orderDetails.payment ? (
+                  <span>Checkout</span>
+                  {cartItemCount > 0 && (
                     <span
                       style={{
-                        fontSize: '0.72rem',
+                        background: activeTab === 'checkout' ? '#0264d6' : '#cbd5e1',
+                        color: activeTab === 'checkout' ? '#ffffff' : '#334155',
+                        fontSize: '0.7rem',
                         fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        ...getStatusBadgeStyle(orderDetails.payment.payment_status),
+                        padding: '1px 6px',
+                        borderRadius: '9999px',
                       }}
                     >
-                      {orderDetails.payment.payment_status || 'COMPLETED'}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>
-                      No payment record linked
+                      {cartItemCount}
                     </span>
                   )}
-                </div>
+                </button>
 
-                {orderDetails.payment ? (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                      gap: '12px',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                        Payment ID
-                      </span>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--primary, #2563eb)' }}>
-                        #{orderDetails.payment.payment_id}
-                      </strong>
-                    </div>
+                {/* Tab 2: History */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('history')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: activeTab === 'history' ? '#ffffff' : 'transparent',
+                    color: activeTab === 'history' ? '#0264d6' : '#64748b',
+                    fontWeight: activeTab === 'history' ? 700 : 500,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    boxShadow: activeTab === 'history' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m7.5 4.27 9 5.15" />
+                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                    <path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+                  </svg>
+                  <span>Order History</span>
+                </button>
+              </>
+            )}
 
-                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                        Payment Method
-                      </span>
-                      <strong style={{ fontSize: '0.92rem', color: 'var(--text-main, #0f172a)' }}>
-                        {(orderDetails.payment.payment_method || 'CREDIT_CARD').replace(/_/g, ' ')}
-                      </strong>
-                    </div>
+            {/* Tab 3: Inspect Order / Receipt */}
+            {(isStaff || activeTab === 'lookup') && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('lookup')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: activeTab === 'lookup' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'lookup' ? '#0264d6' : '#64748b',
+                  fontWeight: activeTab === 'lookup' ? 700 : 500,
+                  fontSize: '0.8125rem',
+                  cursor: 'pointer',
+                  boxShadow: activeTab === 'lookup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <span>{activeTab === 'lookup' && inspectedOrderId ? `Order #${inspectedOrderId} Details` : 'Order Details'}</span>
+              </button>
+            )}
 
-                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                        Transaction Ref
-                      </span>
-                      <strong style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-main, #0f172a)' }}>
-                        {orderDetails.payment.transaction_ref || 'N/A'}
-                      </strong>
-                    </div>
-
-                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                        Settled Amount
-                      </span>
-                      <strong style={{ fontSize: '1rem', color: 'var(--success-text, #047857)' }}>
-                        {formatCurrency(orderDetails.payment.amount)}
-                      </strong>
-                    </div>
-
-                    <div style={{ padding: '10px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #64748b)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-                        Processed At
-                      </span>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary, #475569)', fontWeight: 600 }}>
-                        {formatDate(orderDetails.payment.processed_at)}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.84rem', color: 'var(--text-muted, #64748b)' }}>
-                    Legacy order record without an attached payment transaction ledger entry.
-                  </div>
-                )}
-              </div>
-
-              {/* Line Items Section */}
-              <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', padding: '24px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)', margin: '0 0 16px 0' }}>
-                  Itemized Line Items ({orderDetails.items?.length || 0})
-                </h3>
-
-                {(!orderDetails.items || orderDetails.items.length === 0) ? (
-                  <div
-                    style={{
-                      padding: '18px',
-                      borderRadius: '8px',
-                      background: 'var(--bg-subtle, #f8fafc)',
-                      border: '1px dashed var(--border-color, #e2e8f0)',
-                      color: 'var(--text-muted, #64748b)',
-                      fontSize: '0.9rem',
-                      textAlign: 'center',
-                    }}
-                  >
-                    No line items attached to this order record.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {orderDetails.items.map((item) => (
-                      <div
-                        key={item.order_item_id || item.variant_id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: '16px',
-                          padding: '14px 16px',
-                          borderRadius: '10px',
-                          border: '1px solid var(--border-color, #e2e8f0)',
-                          background: 'var(--bg-card, #ffffff)',
-                        }}
-                      >
-                        <div style={{ minWidth: '220px', flex: '1 1 auto' }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', marginBottom: '4px' }}>
-                            {item.product_title}
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
-                            {item.attribute_name && item.attribute_value && (
-                              <span style={{ background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-light, #e2e8f0)' }}>
-                                {item.attribute_name}: <strong>{item.attribute_value}</strong>
-                              </span>
-                            )}
-                            {item.sku && (
-                              <span style={{ fontFamily: 'monospace', background: 'var(--bg-subtle, #f1f5f9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-light, #e2e8f0)' }}>
-                                SKU: {item.sku}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
-                              {formatCurrency(item.unit_price)} × {item.quantity}
-                            </div>
-                            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
-                              {formatCurrency(item.line_total)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            {/* Tab 4: Warehouse Fulfillment Queue (Staff Only) */}
+            {isStaff && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('fulfillment')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: activeTab === 'fulfillment' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'fulfillment' ? '#0264d6' : '#64748b',
+                  fontWeight: activeTab === 'fulfillment' ? 700 : 500,
+                  fontSize: '0.8125rem',
+                  cursor: 'pointer',
+                  boxShadow: activeTab === 'fulfillment' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" />
+                </svg>
+                <span>Fulfillment</span>
+              </button>
+            )}
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Main Tab Content Display */}
+      <div style={{ flex: 1 }}>
+        {isCheckingCart ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '14px' }}>
+            <div
+              style={{
+                width: '34px',
+                height: '34px',
+                border: '3px solid #e2e8f0',
+                borderTopColor: '#0264d6',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+            <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>
+              Loading orders...
+            </span>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          </div>
+        ) : (
+          <>
+            {!isStaff && activeTab === 'checkout' && (
+              <CheckoutSplitView
+                onOrderPlaced={(order) => {
+                  api.get('/auth_cart/cart')
+                    .then((res) => {
+                      const count = res.data?.item_count ?? (Array.isArray(res.data?.items) ? res.data.items.length : 0);
+                      setCartItemCount(count);
+                    })
+                    .catch(() => setCartItemCount(0));
+
+                  if (order?.order_id) {
+                    setInspectedOrderId(order.order_id);
+                  }
+                }}
+                onNavigateToTrack={(orderId) => handleInspectOrder(orderId)}
+              />
+            )}
+
+        {!isStaff && activeTab === 'history' && (
+          <div style={{ padding: '0 24px' }}>
+            <OrderHistoryView
+              activeUserId={activeUserId}
+              onInspectOrder={handleInspectOrder}
+              onNavigateToCheckout={() => handleTabChange('checkout')}
+            />
+          </div>
+        )}
+
+        {activeTab === 'lookup' && (
+          <div style={{ padding: '0 24px' }}>
+            <OrderLookupView
+              initialOrderId={inspectedOrderId}
+              onBackToHistory={() => handleTabChange(isStaff ? 'fulfillment' : 'history')}
+              isStaff={isStaff}
+            />
+          </div>
+        )}
+
+        {activeTab === 'fulfillment' && isStaff && (
+          <div style={{ padding: '0 24px' }}>
+            <FulfillmentQueueView
+              isStaff={isStaff}
+              onInspectOrder={handleInspectOrder}
+            />
+          </div>
+        )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

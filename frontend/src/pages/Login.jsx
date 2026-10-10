@@ -69,8 +69,8 @@ export default function LoginPage() {
         if (axiosErr.response?.data?.message) {
           throw new Error(axiosErr.response.data.message);
         }
-        // Fallback to direct fetch
-        const response = await fetch('http://localhost:5000/api/auth_cart/login', {
+        // Fallback to direct fetch if network/proxy issue
+        const response = await fetch(`${baseUrl}/api/auth_cart/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailOrUser, username: emailOrUser, password: pwdToUse }),
@@ -97,7 +97,7 @@ export default function LoginPage() {
           navigate('/customer-dashboard');
         } else if (roleId === 2) {
           navigate('/manager-dashboard');
-        } else if (roleId === 3 || roleId === 4) {
+        } else if (roleId === 3) {
           navigate('/system-administrator');
         } else {
           navigate('/analytics');
