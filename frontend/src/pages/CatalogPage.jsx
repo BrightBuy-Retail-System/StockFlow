@@ -66,92 +66,22 @@ const CATEGORY_THUMBNAILS = {
   },
 };
 
-// ─── smart product image resolver ─────────────────────────────────────────────
+// ─── product image & gallery resolvers ─────────────────────────────────────────
+const DEFAULT_PRODUCT_IMG = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&auto=format&fit=crop&q=80';
+
 function getProductPhoto(product) {
-  if (product?.image_url) return product.image_url;
-  const name = (product?.name || product?.title || '').toLowerCase();
-  if (name.includes('soundcore r50i nc') || (name.includes('soundcore') && name.includes('nc'))) {
-    return 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone') || name.includes('tws')) {
-    return 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('apple') || name.includes('adapter') || name.includes('charger') || name.includes('20w')) {
-    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('aspor') || name.includes('power bank') || name.includes('battery') || name.includes('mah')) {
-    return 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('speaker') || name.includes('jbl') || name.includes('audio') || name.includes('sound')) {
-    return 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('projector') || name.includes('cinema') || name.includes('display')) {
-    return 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('car') || name.includes('mount') || name.includes('holder')) {
-    return 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('phone') || name.includes('iphone') || name.includes('samsung') || name.includes('galaxy') || name.includes('pixel')) {
-    return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('watch') || name.includes('smartwatch')) {
-    return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('cable') || name.includes('type-c') || name.includes('lightning')) {
-    return 'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=700&auto=format&fit=crop&q=80';
-  }
-  return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&auto=format&fit=crop&q=80';
+  return product?.image_url || DEFAULT_PRODUCT_IMG;
 }
 
 function getProductGallery(product) {
-  if (product?.image_url) {
-    return [
-      product.image_url,
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  const name = (product?.name || product?.title || '').toLowerCase();
-  if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone')) {
-    return [
-      'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('power bank') || name.includes('battery') || name.includes('aspor')) {
-    return [
-      'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('speaker') || name.includes('jbl') || name.includes('audio')) {
-    return [
-      'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1543512214-318c7553f230?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('phone') || name.includes('iphone') || name.includes('samsung')) {
-    return [
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
+  const photo = getProductPhoto(product);
   return [
-    getProductPhoto(product),
+    photo,
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
   ];
 }
+
 
 function getDeliveryDateRange() {
   const now = new Date();
