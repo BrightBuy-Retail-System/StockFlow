@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import headsetImg from '../../assets/headset.png';
 
-export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder, onNavigateToCheckout }) {
+export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavigateToCheckout }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [targetUserId, setTargetUserId] = useState(activeUserId);
 
-  const fetchOrders = async (uid = targetUserId) => {
+  const fetchOrders = async (uid = activeUserId) => {
+    if (!uid) return;
     setLoading(true);
     setError(null);
     try {
@@ -25,7 +25,7 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
       if (err.response?.status === 403) {
         setError(resMsg || 'Access forbidden: You cannot view order histories of other users.');
       } else if (err.response?.status === 404) {
-        setError(`No past orders found for customer #${uid}.`);
+        setError(`No past orders found.`);
       } else {
         setError(resMsg || err.message || 'Failed to load order history.');
       }
@@ -36,21 +36,21 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
   };
 
   useEffect(() => {
-    fetchOrders(targetUserId);
-  }, [targetUserId]);
+    fetchOrders(activeUserId);
+  }, [activeUserId]);
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'DELIVERED':
         return { label: 'Delivered', bg: '#dcfce7', color: '#15803d', icon: '✓' };
       case 'SHIPPED':
-        return { label: 'Dispatched / In Transit', bg: '#e0f2fe', color: '#0369a1', icon: '🚚' };
+        return { label: 'In Transit', bg: '#e0f2fe', color: '#0369a1', icon: '●' };
       case 'CONFIRMED':
-        return { label: 'Order Confirmed', bg: '#fef3c7', color: '#b45309', icon: '📦' };
+        return { label: 'Confirmed', bg: '#fef3c7', color: '#b45309', icon: '●' };
       case 'CANCELLED':
         return { label: 'Cancelled', bg: '#fee2e2', color: '#b91c1c', icon: '✕' };
       default:
-        return { label: 'Pending Processing', bg: '#f1f5f9', color: '#475569', icon: '⏳' };
+        return { label: 'Processing', bg: '#f1f5f9', color: '#475569', icon: '●' };
     }
   };
 
@@ -59,29 +59,13 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
       {/* Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>My Orders & Purchase History</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+            Your Orders
+          </h1>
           <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
-            Inspect past deliveries, verified carrier tracking numbers, and financial receipts.
+            View your past purchases, shipment status, and order receipts.
           </p>
         </div>
-
-        {isStaff && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600 }}>Filter Customer ID:</span>
-            <input
-              type="number"
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-              style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
-            />
-            <button
-              onClick={() => fetchOrders(targetUserId)}
-              style={{ padding: '6px 12px', background: '#0264d6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Fetch
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Error Notice */}
@@ -95,15 +79,19 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
           <div className="spinner" style={{ width: '32px', height: '32px', marginBottom: '12px' }} />
-          <div style={{ color: '#64748b', fontSize: '0.875rem' }}>Loading customer order history...</div>
+          <div style={{ color: '#64748b', fontSize: '0.875rem' }}>Loading your orders...</div>
         </div>
       ) : orders.length === 0 ? (
         /* Empty State */
         <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '60px 20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🛍️</div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>No orders found yet</h2>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#64748b' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>No orders yet</h2>
           <p style={{ color: '#64748b', fontSize: '0.875rem', maxWidth: '420px', margin: '0 auto 20px' }}>
-            You haven't submitted any orders yet. Discover high-quality gadgets in our catalog or test our multi-step checkout experience!
+            When you place an order, it will appear here so you can track delivery and view receipts.
           </p>
           <button
             onClick={onNavigateToCheckout}
@@ -197,15 +185,7 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
                 {/* Order Body Details */}
                 <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Carrier Tracking Tag */}
-                    {ord.tracking_number && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem' }}>
-                        <span style={{ color: '#64748b' }}>Carrier Tracking:</span>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>
-                          {ord.tracking_number}
-                        </span>
-                      </div>
-                    )}
+
 
                     {/* Line Items List */}
                     {Array.isArray(ord.items) && ord.items.length > 0 ? (
@@ -237,7 +217,7 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                        Itemized line items verified under transactional ledger.
+                        Order details available in receipt.
                       </div>
                     )}
                   </div>
@@ -257,12 +237,14 @@ export default function OrderHistoryView({ activeUserId, isStaff, onInspectOrder
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        gap: '8px',
                         boxShadow: '0 2px 6px rgba(2, 100, 214, 0.2)',
                       }}
                     >
-                      <span>🔍</span>
-                      <span>Track Order</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" />
+                      </svg>
+                      <span>View Order</span>
                     </button>
                   </div>
                 </div>
