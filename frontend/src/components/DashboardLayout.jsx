@@ -109,6 +109,7 @@ export default function DashboardLayout() {
     if (roleId === 2) {
       return [
         { label: 'Dashboard', to: '/manager-dashboard' },
+        { label: 'Orders & Fulfillment', to: '/orders' },
         { label: 'Inventory Stock', to: '/catalog' },
         { label: 'Logistics Hubs', to: '/logistics' },
         { label: 'Analytics & BI', to: '/analytics' },
@@ -116,10 +117,11 @@ export default function DashboardLayout() {
       ];
     }
 
-    // 4. System Administrator (Role 3)
-    if (roleId === 3) {
+    // 4. System Administrator (Roles 3 & 4)
+    if (roleId === 3 || roleId === 4) {
       return [
         { label: 'Admin Console', to: '/system-administrator' },
+        { label: 'Orders & Fulfillment', to: '/orders' },
         { label: 'Manager Pipeline', to: '/manager-dashboard' },
         { label: 'Inventory Stock', to: '/catalog' },
         { label: 'Logistics', to: '/logistics' },
@@ -307,6 +309,14 @@ export default function DashboardLayout() {
                           <span>Manager Dashboard</span>
                         </Link>
                         <Link
+                          to="/orders"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Orders &amp; Fulfillment</span>
+                        </Link>
+                        <Link
                           to="/catalog"
                           className="btn-ghost"
                           style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
@@ -333,7 +343,7 @@ export default function DashboardLayout() {
                       </>
                     )}
 
-                    {roleId === 3 && (
+                    {(roleId === 3 || roleId === 4) && (
                       <>
                         <Link
                           to="/system-administrator"
@@ -343,6 +353,14 @@ export default function DashboardLayout() {
                         >
                           <UserIcon className="btn-icon" />
                           <span>System Administration</span>
+                        </Link>
+                        <Link
+                          to="/orders"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Orders &amp; Fulfillment</span>
                         </Link>
                         <Link
                           to="/manager-dashboard"
