@@ -569,76 +569,510 @@ export default function LogisticsPage() {
               ) : (
                 <select
                   style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.875rem',
+                  }}
+                  value={selectedVariantId}
+                  onChange={(e) => setSelectedVariantId(e.target.value)}
+                >
+                  {sampleVariants.map((v) => (
+                    <option key={v.variant_id} value={v.variant_id}>
+                      #{v.variant_id}: {v.title} ({v.sku}) — {v.stock_quantity > 0 ? `${v.stock_quantity} in stock` : 'OUT OF STOCK'}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                Quantity
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.875rem',
+                }}
+              />
+            </div>
+
+            {/* Calculate Button */}
+            <div>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={loadingEstimate}
+                style={{
+                  width: '100%',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <ZapIcon className="btn-icon" />
+                <span>{loadingEstimate ? 'Calculating Route...' : 'Calculate Delivery'}</span>
+              </button>
+            </div>
+          </form>
+
+          {estimateError && (
+            <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '8px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', fontSize: '0.85rem' }}>
+              <strong>Error:</strong> {estimateError}
+            </div>
+          )}
+
+          {/* Estimate Result Display */}
+          {estimate && (
+            <div style={{
+              marginTop: '24px',
+              padding: '22px',
+              borderRadius: '12px',
+              background: 'var(--primary-light)',
+              border: '1px solid var(--primary-border)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
+                <div>
+                  <div style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Route Computation Successful
+                  </div>
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0 0 0' }}>
+                    Destination: {estimate.city_name} &middot; {estimate.hub_name}
+                  </h3>
+                </div>
+
+                {estimate.out_of_stock_penalty_days > 0 ? (
+                  <span className="chip chip-amber" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
+                    ⚠️ +{estimate.out_of_stock_penalty_days} Days Backorder Penalty Applied
+                  </span>
+                ) : (
+                  <span className="chip chip-emerald" style={{ fontSize: '0.8rem', padding: '4px 10px' }}>
+                    ✓ 100% In-Stock Priority Route
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', background: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Lead Time</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    {estimate.total_lead_time_days} {estimate.total_lead_time_days === 1 ? 'Day' : 'Days'}
+                  </div>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
+                    Base: {estimate.base_lead_time_days}d + Penalty: {estimate.out_of_stock_penalty_days}d
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Estimated Arrival</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>
+                    {formatDate(estimate.estimated_delivery_date)}
+                  </div>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
+                    Guaranteed fulfillment window
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Regional Shipping Fee</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    ${Number(estimate.shipping_fee || 0).toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)' }}>
+                    Flat municipal hub freight
+                  </div>
                 </div>
               </div>
-              <div>
-                <div style={labelStyle}>Estimated arrival</div>
-                <div style={{ fontWeight: 700 }}>{estimate.estimated_delivery_date}</div>
-              </div>
-              <div>
-                <div style={labelStyle}>Shipping fee</div>
-                <div style={{ fontWeight: 700 }}>${Number(estimate.shipping_fee || 0).toFixed(2)}</div>
+
+              {/* Item stock breakdown */}
+              {estimate.item_breakdown && estimate.item_breakdown.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                    Fulfillment Inventory Inspection:
+                  </div>
+                  <div className="table-container" style={{ background: '#ffffff', borderRadius: '8px' }}>
+                    <table className="enterprise-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th>SKU / Product</th>
+                          <th>Qty Requested</th>
+                          <th>Warehouse Stock</th>
+                          <th>Stock Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {estimate.item_breakdown.map((itm, i) => (
+                          <tr key={i}>
+                            <td>
+                              <strong>{itm.title}</strong>
+                              <span style={{ display: 'block', fontSize: '0.725rem', color: 'var(--text-muted)' }}>{itm.sku}</span>
+                            </td>
+                            <td>{itm.requested_quantity}</td>
+                            <td>{itm.current_stock} units available</td>
+                            <td>
+                              {itm.adds_delay ? (
+                                <span className="chip chip-amber">Shortage (+3d Delay)</span>
+                              ) : (
+                                <span className="chip chip-emerald">In Stock</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =======================================================================
+          TAB 3: Live Parcel Tracker with 4-Step Progress Stepper
+          ======================================================================= */}
+      {activeTab === 'tracker' && (
+        <div className="card" style={{ padding: '24px', borderRadius: '14px', border: '1px solid var(--border-color)', background: 'var(--bg-card)' }}>
+          <div className="card-header" style={{ marginBottom: '18px' }}>
+            <div>
+              <div className="card-title">Live Parcel Tracking &amp; Status Stepper</div>
+              <div className="card-subtitle">
+                Query parcel dispatch progress across Texas distribution centers by tracking reference.
               </div>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Shipment Tracker */}
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <div className="card-title">Track a Shipment</div>
-            <div className="card-subtitle">Look up status by tracking number.</div>
+          {/* Quick-Click Sample Tracking Badges */}
+          <div style={{ marginBottom: '16px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '8px' }}>
+              1-Click Demo Samples:
+            </span>
+            <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+              {sampleTrackingNumbers.map((s) => (
+                <button
+                  key={s.code}
+                  type="button"
+                  onClick={() => handleQuickTrack(s.code)}
+                  style={{
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-color)',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  <code>{s.code}</code> ({s.city}) &middot; <span className={`chip ${STATUS_CHIP[s.status] || 'chip-slate'}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>{s.status}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <form onSubmit={handleTrack} style={{ display: 'flex', gap: '12px', alignItems: 'end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1', minWidth: '220px' }}>
-            <label style={labelStyle}>Tracking number</label>
+          {/* Search Bar */}
+          <form onSubmit={(e) => { e.preventDefault(); handleTrack(); }} style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
+            <div style={{ flex: '1', minWidth: '240px', position: 'relative' }}>
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Enter tracking number (e.g. TX-TRK-9081241)"
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-main)',
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={loadingTrack}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <SearchIcon className="btn-icon" />
+              <span>{loadingTrack ? 'Tracking...' : 'Track Parcel'}</span>
+            </button>
+          </form>
+
+          {trackError && (
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger-text)', fontSize: '0.85rem' }}>
+              <strong>Error:</strong> {trackError}
+            </div>
+          )}
+
+          {/* Visual Tracking Stepper & Context Card */}
+          {shipment && (
+            <div style={{ marginTop: '20px', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', background: 'var(--bg-subtle)' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    Parcel Reference
+                  </span>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: '2px 0 0 0' }}>
+                    <code>{shipment.tracking_number}</code>
+                  </h2>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span className={`chip ${STATUS_CHIP[shipment.shipping_status] || 'chip-slate'}`} style={{ fontSize: '0.85rem', padding: '6px 14px', fontWeight: 700 }}>
+                    {shipment.shipping_status}
+                  </span>
+                </div>
+              </div>
+
+              {/* 4-Step Progress Stepper */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '12px',
+                position: 'relative',
+                margin: '28px 0',
+              }}>
+                {[
+                  { step: 1, label: 'Order Confirmed', time: 'Initial placement' },
+                  { step: 2, label: 'Dispatched from Hub', time: formatDateTime(shipment.dispatched_at) },
+                  { step: 3, label: 'In Transit across TX', time: shipment.shipping_status === 'IN_TRANSIT' ? 'On Highway / Rail' : 'En route' },
+                  { step: 4, label: 'Delivered', time: formatDateTime(shipment.delivered_at) },
+                ].map((st) => {
+                  const currIdx = getStepperIndex(shipment.shipping_status);
+                  const isDone = st.step <= currIdx;
+                  const isCurrent = st.step === currIdx;
+
+                  return (
+                    <div key={st.step} style={{ textAlign: 'center', position: 'relative' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        margin: '0 auto 8px auto',
+                        background: isDone ? 'var(--primary)' : 'var(--bg-card)',
+                        border: isDone ? '2px solid var(--primary)' : '2px solid var(--border-color)',
+                        color: isDone ? '#ffffff' : 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        boxShadow: isCurrent ? '0 0 0 4px var(--primary-light)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }}>
+                        {isDone && st.step < currIdx ? '✓' : st.step}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: isDone ? 700 : 500, color: isDone ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                        {st.label}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {st.time}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Detailed Context Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', background: '#ffffff', padding: '18px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Destination City &amp; Hub</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {shipment.city_name} &middot; {shipment.hub_name}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Estimated Arrival</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginTop: '2px' }}>
+                    {formatDate(shipment.estimated_arrival)}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Linked Order #</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
+                    {shipment.order_id ? `#${shipment.order_id} (${shipment.order_status})` : 'Standalone Parcel'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recipient Information</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>
+                    {shipment.customer_name || 'Registered Customer'}
+                    {shipment.recipient_phone ? ` &middot; ${shipment.recipient_phone}` : ''}
+                  </div>
+                </div>
+              </div>
+
+              {shipment.delivery_address && (
+                <div style={{ marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)', background: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <strong>Delivery Street Address:</strong> {shipment.delivery_address}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =======================================================================
+          TAB 4: Dispatches Pipeline & Logistics Management
+          ======================================================================= */}
+      {activeTab === 'pipeline' && (
+        <div className="card" style={{ padding: '24px', borderRadius: '14px', border: '1px solid var(--border-color)', background: 'var(--bg-card)' }}>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
+            <div>
+              <div className="card-title">Texas Dispatches &amp; Fulfillment Pipeline</div>
+              <div className="card-subtitle">
+                Monitor and advance shipment statuses across the state network. Synchronizes with order status records.
+              </div>
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['ALL', 'PENDING', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED'].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setPipelineStatusFilter(st)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: '1px solid var(--border-color)',
+                    background: pipelineStatusFilter === st ? 'var(--primary)' : 'var(--bg-card)',
+                    color: pipelineStatusFilter === st ? '#ffffff' : 'var(--text-secondary)',
+                  }}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ marginBottom: '16px' }}>
             <input
-              style={inputStyle}
               type="text"
-              value={trackingNumber}
-              onChange={(e) => setTrackingNumber(e.target.value)}
-              placeholder="e.g. TX-TRK-9081241"
+              placeholder="Search dispatches by tracking number or destination city..."
+              value={pipelineSearch}
+              onChange={(e) => {
+                setPipelineSearch(e.target.value);
+                fetchShipmentsList(pipelineStatusFilter, e.target.value);
+              }}
+              style={{
+                width: '100%',
+                maxWidth: '420px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                fontSize: '0.85rem',
+                color: 'var(--text-main)',
+              }}
             />
           </div>
-          <button type="submit" className="btn-primary" disabled={loadingTrack}>
-            {loadingTrack ? 'Searching…' : 'Track'}
-          </button>
-        </form>
 
-        {trackError && (
-          <p style={{ color: 'var(--danger-text)', fontSize: '0.85rem', marginTop: '14px' }}>{trackError}</p>
-        )}
+          {/* Feedback Alert */}
+          {statusUpdateMessage && (
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '0.825rem',
+              marginBottom: '16px',
+              background: statusUpdateMessage.type === 'success' ? 'var(--success-bg)' : 'var(--danger-bg)',
+              border: `1px solid ${statusUpdateMessage.type === 'success' ? 'var(--success-border)' : 'var(--danger-border)'}`,
+              color: statusUpdateMessage.type === 'success' ? 'var(--success-text)' : 'var(--danger-text)',
+            }}>
+              {statusUpdateMessage.text}
+            </div>
+          )}
 
-        {shipment && (
-          <div className="table-container" style={{ marginTop: '18px' }}>
-            <table className="enterprise-table">
+          {/* Shipments Table */}
+          <div className="table-container">
+            <table className="enterprise-table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr>
                   <th>Tracking #</th>
-                  <th>Destination</th>
+                  <th>Destination Hub</th>
                   <th>Status</th>
-                  <th>Estimated arrival</th>
-                  <th>Dispatched</th>
-                  <th>Delivered</th>
+                  <th>Est. Arrival</th>
+                  <th>Dispatched At</th>
+                  <th>Order Ref</th>
+                  <th>Action / Status Advance</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>{shipment.tracking_number}</td>
-                  <td>{shipment.city_name} &middot; {shipment.hub_name}</td>
-                  <td>
-                    <span className={`chip ${STATUS_CHIP[shipment.shipping_status] || 'chip-slate'}`}>
-                      {shipment.shipping_status}
-                    </span>
-                  </td>
-                  <td>{shipment.estimated_arrival || '—'}</td>
-                  <td>{shipment.dispatched_at || '—'}</td>
-                  <td>{shipment.delivered_at || '—'}</td>
-                </tr>
+                {loadingShipments ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>
+                      Loading dispatch pipeline...
+                    </td>
+                  </tr>
+                ) : shipmentsList.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      No shipments matching the filter criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  shipmentsList.map((s) => (
+                    <tr key={s.shipment_id}>
+                      <td>
+                        <strong style={{ fontFamily: 'monospace', fontSize: '0.825rem' }}>
+                          {s.tracking_number}
+                        </strong>
+                      </td>
+                      <td>
+                        <div>{s.city_name}</div>
+                        <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{s.hub_name}</span>
+                      </td>
+                      <td>
+                        <span className={`chip ${STATUS_CHIP[s.shipping_status] || 'chip-slate'}`}>
+                          {s.shipping_status}
+                        </span>
+                      </td>
+                      <td>{formatDate(s.estimated_arrival)}</td>
+                      <td>{formatDateTime(s.dispatched_at)}</td>
+                      <td>
+                        {s.order_id ? (
+                          <span>Order #{s.order_id}</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
+                        )}
+                      </td>
               </tbody>
             </table>
           </div>
