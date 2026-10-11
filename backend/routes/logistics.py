@@ -478,6 +478,48 @@ def update_shipment_status(shipment_id):
             cursor.execute("UPDATE orders SET status = 'DELIVERED' WHERE shipment_id = %s", (shipment_id,))
 
         conn.commit()
+
+        # Fetch updated record
+        cursor.execute(
+            """
+            SELECT s.shipment_id, s.tracking_number, s.shipping_status, s.estimated_arrival,
+                   s.dispatched_at, s.delivered_at, c.city_name, c.hub_name
+            FROM shipments s
+            JOIN texas_cities c ON s.destination_city_id = c.city_id
+            WHERE s.shipment_id = %s
+            """,
+            (shipment_id,),
+        )
+        updated = cursor.fetchone()
+        cursor.close()
+
+        return jsonify({
+            "message": f"Shipment #{shipment_id} transitioned from '{old_status}' to '{new_status}' successfully",
+            "shipment": clean_row(updated),
+        }), 200
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({"error": f"Failed to update shipment status: {str(err)}"}), 500
     finally:
+        if conn and conn.is_connected():
+            conn.close()
+
+
+@logistics_bp.route('/sample-variants', methods=['GET'])
+def get_sample_variants():
+    """Returns sample products and variants with live stock to facilitate 1-click delivery estimates."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT 
+                pv.variant_id, 
+                pv.sku, 
+                p.title, 
+                pv.attribute_value,
+                COALESCE(inv.stock_quantity, 0) AS stock_quantity
         cursor.close()
         conn.close()
