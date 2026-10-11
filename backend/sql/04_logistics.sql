@@ -1,3 +1,13 @@
+-- ============================================================================
+-- StockFlow (BrightBuy) - Member 4: Texas Regional Logistics & Warehouses
+-- Course: CS3043 - Database Systems
+-- Reference: Lecture Notes 1 - 9 (DDL, Constraints, Foreign Keys, Indexes, Views)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- SECTION 1: DATA DEFINITION LANGUAGE (DDL) - Core Logistics Relations
+-- ----------------------------------------------------------------------------
+
 -- Table 1: Texas Regional Distribution Hubs & Municipalities
 CREATE TABLE IF NOT EXISTS texas_cities (
     city_id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -24,8 +34,10 @@ CREATE TABLE IF NOT EXISTS shipments (
         ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- ----------------------------------------------------------------------------
 -- SECTION 2: INDEX OPTIMIZATION (DDL)
 -- Speed up destination routing, dispatch status filtering, and ETA ordering
+-- ----------------------------------------------------------------------------
 CREATE INDEX idx_shipments_destination 
     ON shipments (destination_city_id);
 
@@ -35,7 +47,10 @@ CREATE INDEX idx_shipments_status
 CREATE INDEX idx_shipments_estimated 
     ON shipments (estimated_arrival);
 
+-- ----------------------------------------------------------------------------
 -- SECTION 3: VIRTUAL RELATIONS (VIEWS) - Operational Analytics
+-- ----------------------------------------------------------------------------
+
 -- VIEW 1: Texas Regional Hub Throughput & Performance Summary
 -- Aggregates real-time shipment status counts per regional hub
 DROP VIEW IF EXISTS v_texas_hub_shipment_stats;
@@ -85,3 +100,13 @@ JOIN texas_cities c ON s.destination_city_id = c.city_id
 LEFT JOIN orders o ON o.shipment_id = s.shipment_id
 LEFT JOIN users u ON o.user_id = u.user_id;
 
+-- ----------------------------------------------------------------------------
+-- SECTION 4: ARCHITECTURE & STORED LOGIC NOTE
+-- ----------------------------------------------------------------------------
+-- Note on Cloud Engine Compatibility:
+-- StockFlow is deployed on TiDB Serverless (distributed cloud relational database).
+-- TiDB enforces strict relational integrity, joins, indexes, and ACID transactions,
+-- while procedural delivery rules (3-day out-of-stock lead penalty) and shipment
+-- state transitions (dispatched_at / delivered_at timestamp synchronization) are
+-- implemented via application-layer Python services (`routes/logistics.py` and
+-- `routes/orders.py`) to guarantee high-performance non-blocking distributed execution.
