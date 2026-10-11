@@ -321,32 +321,163 @@ def list_shipments():
 
     conn = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        where_clauses = []
+        params = []
+
+        if status_filter and status_filter != 'ALL':
+            where_clauses.append("s.shipping_status = %s")
+            params.append(status_filter)
+
+        if query_search:
+            where_clauses.append("(s.tracking_number LIKE %s OR c.city_name LIKE %s OR c.hub_name LIKE %s)")
+            wildcard = f"%{query_search}%"
+            params.extend([wildcard, wildcard, wildcard])
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        sql = f"""
+            SELECT 
+                s.shipment_id, 
+                s.tracking_number, 
+                s.shipping_status,
+                s.estimated_arrival, 
+                s.dispatched_at, 
+                s.delivered_at,
+                s.delivery_address, 
+                s.recipient_phone,
+                c.city_name, 
+                c.hub_name,
+                o.order_id,
+                o.status AS order_status,
+                o.total_amount
+            FROM shipments s
+            JOIN texas_cities c ON s.destination_city_id = c.city_id
+            LEFT JOIN orders o ON o.shipment_id = s.shipment_id
+            {where_sql}
+            ORDER BY 
+                CASE 
+                    WHEN s.shipping_status = 'PENDING' THEN 1
+                    WHEN s.shipping_status = 'IN_TRANSIT' THEN 2
+                    WHEN s.shipping_status = 'DISPATCHED' THEN 3
+                    ELSE 4
+                END ASC,
+                s.estimated_arrival ASC
+            LIMIT %s
+        """
+        params.append(limit)
+
+        cursor.execute(sql, tuple(params))
+        shipments = cursor.fetchall()
         cursor.close()
-        conn.close()
+
+        return jsonify([clean_row(row) for row in shipments]), 200
+    except Exception as err:
+        return jsonify({"error": f"Failed to list shipments: {str(err)}"}), 500
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
 
 
 @logistics_bp.route('/upcoming-shipments', methods=['GET'])
 def upcoming_shipments():
     """
-    Admin/logistics view: all shipments that haven't been delivered
-    yet, soonest estimated arrival first. Matches Management Report
-    style views used elsewhere in the project.
+    Logistics dispatcher view: all shipments that haven't been delivered
+    yet, soonest estimated arrival first.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
-            SELECT s.shipment_id, s.tracking_number, s.shipping_status,
-                   s.estimated_arrival, c.city_name, c.hub_name
+            SELECT 
+                s.shipment_id, 
+                s.tracking_number, 
+                s.shipping_status,
+                s.estimated_arrival, 
+                s.dispatched_at,
+                s.delivery_address,
+                c.city_name, 
+                c.hub_name,
+                o.order_id,
+                o.total_amount
             FROM shipments s
             JOIN texas_cities c ON s.destination_city_id = c.city_id
+            LEFT JOIN orders o ON o.shipment_id = s.shipment_id
             WHERE s.shipping_status != 'DELIVERED'
             ORDER BY s.estimated_arrival ASC
+            LIMIT 50
             """
         )
         shipments = cursor.fetchall()
-        return jsonify(shipments), 200
+        cursor.close()
+        return jsonify([clean_row(row) for row in shipments]), 200
+    except Exception as err:
+        return jsonify({"error": f"Failed to fetch upcoming dispatches: {str(err)}"}), 500
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
+
+
+@logistics_bp.route('/shipments/<int:shipment_id>/status', methods=['PATCH'])
+def update_shipment_status(shipment_id):
+    """
+    Dispatcher / Manager Action: Advance shipment status through lifecycle:
+    PENDING -> DISPATCHED -> IN_TRANSIT -> DELIVERED.
+    Automatically records dispatched_at and delivered_at timestamps.
+    """
+    data = request.get_json(silent=True) or {}
+    new_status = data.get('status', '').strip().upper()
+    valid_statuses = ['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED']
+
+    if new_status not in valid_statuses:
+        return jsonify({
+            "error": f"Invalid status '{new_status}'. Allowed: {', '.join(valid_statuses)}"
+        }), 400
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT shipment_id, shipping_status FROM shipments WHERE shipment_id = %s", (shipment_id,))
+        existing = cursor.fetchone()
+        if not existing:
+            cursor.close()
+            return jsonify({"error": f"Shipment #{shipment_id} not found"}), 404
+
+        old_status = existing['shipping_status']
+
+        # Determine timestamp updates
+        timestamp_clauses = []
+        params = [new_status]
+
+        if new_status == 'DISPATCHED' and old_status != 'DISPATCHED':
+            timestamp_clauses.append("dispatched_at = COALESCE(dispatched_at, NOW())")
+        elif new_status == 'DELIVERED' and old_status != 'DELIVERED':
+            timestamp_clauses.append("delivered_at = NOW()")
+            timestamp_clauses.append("dispatched_at = COALESCE(dispatched_at, NOW())")
+
+        set_extra = f", {', '.join(timestamp_clauses)}" if timestamp_clauses else ""
+        params.append(shipment_id)
+
+        update_query = f"""
+            UPDATE shipments
+            SET shipping_status = %s {set_extra}
+            WHERE shipment_id = %s
+        """
+        cursor.execute(update_query, tuple(params))
+
+        # Synchronize linked order status if applicable
+        if new_status == 'DISPATCHED':
+            cursor.execute("UPDATE orders SET status = 'SHIPPED' WHERE shipment_id = %s AND status = 'PENDING'", (shipment_id,))
+        elif new_status == 'DELIVERED':
+            cursor.execute("UPDATE orders SET status = 'DELIVERED' WHERE shipment_id = %s", (shipment_id,))
+
+        conn.commit()
     finally:
         cursor.close()
         conn.close()
