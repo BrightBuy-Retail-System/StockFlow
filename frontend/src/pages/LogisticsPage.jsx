@@ -1073,11 +1073,94 @@ export default function LogisticsPage() {
                           <span style={{ color: 'var(--text-muted)' }}>—</span>
                         )}
                       </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickTrack(s.tracking_number)}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--bg-subtle)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Track
+                          </button>
+
+                          {/* Quick Lifecycle Advance Buttons */}
+                          {s.shipping_status === 'PENDING' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(s.shipment_id, 'DISPATCHED')}
+                              disabled={updatingShipmentId === s.shipment_id}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--warning-border)',
+                                background: 'var(--warning-bg)',
+                                color: 'var(--warning-text)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Dispatch
+                            </button>
+                          )}
+
+                          {s.shipping_status === 'DISPATCHED' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(s.shipment_id, 'IN_TRANSIT')}
+                              disabled={updatingShipmentId === s.shipment_id}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--primary-border)',
+                                background: 'var(--primary-light)',
+                                color: 'var(--primary)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              In Transit
+                            </button>
+                          )}
+
+                          {s.shipping_status === 'IN_TRANSIT' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(s.shipment_id, 'DELIVERED')}
+                              disabled={updatingShipmentId === s.shipment_id}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid var(--success-border)',
+                                background: 'var(--success-bg)',
+                                color: 'var(--success-text)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Deliver
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
