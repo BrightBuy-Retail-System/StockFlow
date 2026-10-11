@@ -53,6 +53,7 @@ def get_executive_overview():
                 SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending_orders,
                 SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed_orders,
                 SUM(CASE WHEN status = 'SHIPPED' THEN 1 ELSE 0 END) AS shipped_orders,
+                SUM(CASE WHEN status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_orders,
                 SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_orders
             FROM orders
         """)
@@ -97,6 +98,7 @@ def get_executive_overview():
                     "pending": order_metrics.get("pending_orders", 0),
                     "confirmed": order_metrics.get("confirmed_orders", 0),
                     "shipped": order_metrics.get("shipped_orders", 0),
+                    "delivered": order_metrics.get("delivered_orders", 0),
                     "cancelled": order_metrics.get("cancelled_orders", 0),
                 },
                 "inventory_summary": {
