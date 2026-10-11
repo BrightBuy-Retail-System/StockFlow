@@ -521,5 +521,18 @@ def get_sample_variants():
                 p.title, 
                 pv.attribute_value,
                 COALESCE(inv.stock_quantity, 0) AS stock_quantity
+            FROM product_variants pv
+            JOIN products p ON pv.product_id = p.product_id
+            LEFT JOIN inventory inv ON pv.variant_id = inv.variant_id
+            ORDER BY pv.variant_id ASC
+            LIMIT 12
+            """
+        )
+        variants = cursor.fetchall()
         cursor.close()
-        conn.close()
+        return jsonify([clean_row(v) for v in variants]), 200
+    except Exception as err:
+        return jsonify({"error": f"Failed to fetch sample catalog variants: {str(err)}"}), 500
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
