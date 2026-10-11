@@ -112,7 +112,7 @@ export default function DashboardLayout() {
         { label: 'Orders & Fulfillment', to: '/orders' },
         { label: 'Inventory Stock', to: '/catalog' },
         { label: 'Logistics Hubs', to: '/logistics' },
-        { label: 'Analytics & BI', to: '/analytics' },
+        { label: 'Analytics', to: '/analytics' },
         { label: 'Storefront', to: '/', end: true },
       ];
     }
@@ -488,7 +488,7 @@ export default function DashboardLayout() {
             <div className="footer-links-col">
               <span className="footer-col-header">Infrastructure</span>
               <Link to="/logistics">Texas Logistics Hubs</Link>
-              <Link to="/analytics">Analytics & BI</Link>
+              <Link to="/analytics">Analytics</Link>
               <Link to="/">Executive Overview</Link>
             </div>
 

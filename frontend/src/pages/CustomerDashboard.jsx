@@ -154,30 +154,16 @@ export default function CustomerDashboard() {
           ========================================================================== */}
       <section
         style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)',
+          background: '#ffffff',
           borderRadius: '24px',
           padding: '32px 36px',
-          color: '#ffffff',
+          color: '#0f172a',
           marginBottom: '32px',
-          boxShadow: '0 20px 45px -12px rgba(15, 23, 42, 0.25)',
+          border: '1.5px solid #e2e8f0',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Ambient background glow */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '280px',
-            height: '280px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-
         <div
           style={{
             display: 'flex',
@@ -193,68 +179,24 @@ export default function CustomerDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div
               style={{
-                width: '68px',
-                height: '68px',
-                borderRadius: '20px',
-                background: 'linear-gradient(135deg, #2563eb 0%, #6366f1 100%)',
-                color: '#ffffff',
+                width: '64px',
+                height: '64px',
+                borderRadius: '18px',
+                background: '#ffffff',
+                color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.5rem',
                 fontWeight: 800,
-                boxShadow: '0 8px 20px rgba(37, 99, 235, 0.4)',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
               }}
             >
               {initials}
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.25)',
-                    border: '1px solid rgba(147, 197, 253, 0.4)',
-                    color: '#93c5fd',
-                    padding: '3px 10px',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Customer Account • Role ID: {user.role_id || 1}
-                </span>
-
-                <span
-                  style={{
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    border: '1px solid rgba(253, 230, 138, 0.3)',
-                    color: '#fcd34d',
-                    padding: '3px 10px',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  ✨ BrightBuy VIP Club Member
-                </span>
-
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    color: '#94a3b8',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                  }}
-                >
-                  ID #{user.id || user.user_id || 'CUST-01'}
-                </span>
-              </div>
-
               <h1
                 style={{
                   fontFamily: 'Outfit, sans-serif',
@@ -262,11 +204,12 @@ export default function CustomerDashboard() {
                   fontWeight: 800,
                   margin: '0 0 4px',
                   letterSpacing: '-0.02em',
+                  color: '#0f172a',
                 }}
               >
                 Welcome back, {user.username || user.full_name}!
               </h1>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#cbd5e1' }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>
                 Manage your tech orders, track shipments from Texas logistics hubs, and review your cart.
               </p>
             </div>
@@ -282,18 +225,19 @@ export default function CustomerDashboard() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#ffffff',
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                color: '#0f172a',
                 padding: '10px 18px',
                 borderRadius: '9999px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
             >
               <RefreshCwIcon className={`w-4 h-4 ${refreshing ? 'spin' : ''}`} />
               <span>{refreshing ? 'Syncing...' : 'Sync Data'}</span>
@@ -305,18 +249,25 @@ export default function CustomerDashboard() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                color: '#ffffff',
+                background: '#ffffff',
+                border: '1.5px solid #2563eb',
+                color: '#2563eb',
                 padding: '10px 22px',
                 borderRadius: '9999px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 textDecoration: 'none',
-                boxShadow: '0 6px 16px rgba(37, 99, 235, 0.4)',
-                transition: 'transform 0.2s',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)',
+                transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#2563eb';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.color = '#2563eb';
+              }}
             >
               <ShoppingBagIcon className="w-4 h-4" />
               <span>Shop Tech Drops</span>
@@ -326,23 +277,22 @@ export default function CustomerDashboard() {
               type="button"
               onClick={handleLogout}
               style={{
-                background: 'transparent',
-                border: '1px solid rgba(239, 68, 68, 0.4)',
-                color: '#f87171',
+                background: '#ffffff',
+                border: '1.5px solid #fecaca',
+                color: '#ef4444',
                 padding: '10px 18px',
                 borderRadius: '9999px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#ef4444';
-                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.background = '#fee2e2';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = '#f87171';
+                e.currentTarget.style.background = '#ffffff';
               }}
             >
               Sign Out
@@ -369,28 +319,14 @@ export default function CustomerDashboard() {
             borderRadius: '20px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
             transition: 'all 0.25s ease',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Lifetime Orders
             </span>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#eff6ff',
-                color: '#2563eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <OrdersIcon className="w-5 h-5" />
-            </div>
           </div>
           <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
             {totalOrdersCount}
@@ -408,28 +344,14 @@ export default function CustomerDashboard() {
             borderRadius: '20px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
             transition: 'all 0.25s ease',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Total Purchases
             </span>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#ecfdf5',
-                color: '#10b981',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CreditCardIcon className="w-5 h-5" />
-            </div>
           </div>
           <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
             ${totalSpent.toFixed(2)}
@@ -446,28 +368,14 @@ export default function CustomerDashboard() {
             borderRadius: '20px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
             transition: 'all 0.25s ease',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               In-Transit / Active
             </span>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#fffbeb',
-                color: '#d97706',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <TruckIcon className="w-5 h-5" />
-            </div>
           </div>
           <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
             {activeShipmentsCount}
@@ -485,28 +393,14 @@ export default function CustomerDashboard() {
             borderRadius: '20px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
             transition: 'all 0.25s ease',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <span style={{ fontSize: '0.825rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Shopping Cart
             </span>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: '#f5f3ff',
-                color: '#8b5cf6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ShoppingBagIcon className="w-5 h-5" />
-            </div>
           </div>
           <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
             {cartData.item_count || 0} Items
@@ -646,8 +540,9 @@ export default function CustomerDashboard() {
                     fontSize: '0.775rem',
                     fontWeight: 700,
                     border: statusFilter === st ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                    background: statusFilter === st ? '#eff6ff' : '#ffffff',
-                    color: statusFilter === st ? '#1d4ed8' : '#64748b',
+                    background: statusFilter === st ? '#ffffff' : '#ffffff',
+                    color: statusFilter === st ? '#2563eb' : '#64748b',
+                    boxShadow: statusFilter === st ? '0 2px 8px rgba(37, 99, 235, 0.15)' : '0 2px 6px rgba(0, 0, 0, 0.04)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
@@ -768,15 +663,16 @@ export default function CustomerDashboard() {
                           </span>
                           <span
                             style={{
-                              background: statusBg,
+                              background: '#ffffff',
                               color: statusColor,
-                              border: `1px solid ${statusColor}40`,
+                              border: `1.5px solid ${statusColor}60`,
                               padding: '3px 10px',
                               borderRadius: '9999px',
                               fontSize: '0.75rem',
-                              fontWeight: 800,
+                              fontWeight: 700,
                               textTransform: 'uppercase',
                               letterSpacing: '0.04em',
+                              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
                             }}
                           >
                             ● {order.status}
@@ -875,17 +771,27 @@ export default function CustomerDashboard() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            border: '1px solid #bfdbfe',
+                            background: '#ffffff',
+                            color: '#334155',
+                            border: '1.5px solid #cbd5e1',
                             padding: '8px 16px',
                             borderRadius: '9999px',
                             fontSize: '0.825rem',
                             fontWeight: 700,
                             cursor: 'pointer',
+                            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.borderColor = '#94a3b8';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.borderColor = '#cbd5e1';
                           }}
                         >
-                          <EyeIcon className="w-3.5 h-3.5" />
+                          <EyeIcon className="w-3.5 h-3.5" style={{ color: '#64748b' }} />
                           <span>View Full Receipt</span>
                         </button>
 
