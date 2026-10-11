@@ -16,6 +16,7 @@ const STATUS_CHIP = {
   DELIVERED: 'chip-emerald',
 };
 
+// Formats ISO date or datetime strings cleanly (e.g. "Oct 11, 2026")
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   try {
