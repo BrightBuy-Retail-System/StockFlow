@@ -4745,6 +4745,139 @@ svg.w-12, .w-12 { width: 48px !important; height: 48px !important; }
   }
 }
 
+/* ==========================================================================
+   Sharp Box Design System — System-Wide Corner Reduction & Crisp Shadow
+   Reduces/removes rounded corners across all boxes, cards, containers, buttons,
+   inputs, and panels to create a modern sharp aesthetic while preserving shadows.
+   ========================================================================== */
+:root {
+  --radius-box: 2px;
+  --radius-card: 2px;
+  --radius-btn: 2px;
+  --radius-input: 2px;
+  --radius-pill: 2px;
+  --radius-badge: 2px;
+  --radius-modal: 2px;
+}
 
+/* 1. All boxes, cards, containers, panels, dialogs, sliders, trust strips */
+.card,
+.card-main,
+.card-floating-top,
+.card-floating-bottom,
+.st-card,
+.st-product-card,
+.st-hero-slider,
+.ov-hero,
+.ov-stat-card,
+.ov-cat-card,
+.ov-product-card,
+.ov-card,
+.ov-card-img,
+.ov-trust-item,
+.ov-trust-icon,
+.ov-newsletter,
+.ov-banner,
+.ov-banner-content,
+.ov-empty,
+.platform-about-section,
+.platform-card,
+.platform-card-icon-wrap,
+.glass-card,
+.modal-content,
+.st-modal-dialog,
+.dialog,
+.dropdown-menu,
+.st-admin-card,
+.st-admin-card-header,
+.table-container,
+.overview-container,
+.search-container,
+.filter-bar,
+.panel,
+.box,
+.stat-card,
+.feature-card,
+.product-card,
+.order-card,
+.summary-card,
+[class*="-card"],
+[class*="-box"],
+[class*="-panel"],
+[class*="Card"],
+[class*="Box"],
+[class*="Panel"] {
+  border-radius: var(--radius-box, 2px) !important;
+}
 
+/* 2. Form controls, text inputs, search fields, selects, textareas */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+select,
+textarea,
+.form-input,
+.st-search-input,
+.search-input,
+.ov-input,
+.ov-select,
+.ov-newsletter-input,
+.st-input {
+  border-radius: var(--radius-input, 2px) !important;
+}
 
+/* 3. Buttons, action pills, chips, tags, filter pills */
+button:not([style*="50%"]):not([style*="border-radius: 50"]):not(.pulse-dot):not([style*="width: 18px"]):not([style*="width: 24px"]):not(.st-arrow-btn):not(.ov-arrow),
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.btn-register,
+.st-btn,
+.st-btn-primary,
+.st-btn-secondary,
+.st-btn-pill-primary,
+.st-btn-pill-secondary,
+.ov-btn-primary,
+.ov-btn-secondary,
+.st-spec-pill,
+.announcement-pill,
+.connection-badge,
+.navbar-cart-btn,
+.brand-logo-badge,
+.nav-link,
+.ov-chip,
+.ov-badge,
+.ov-tag,
+.badge:not([style*="50%"]):not(.pulse-dot),
+[class*="btn-pill"],
+[class*="button-pill"],
+[class*="-pill"],
+[class*="badge"]:not([style*="50%"]):not(.pulse-dot) {
+  border-radius: var(--radius-btn, 2px) !important;
+}
+
+/* 4. Images & visual thumbnails inside cards/hero */
+.st-card-img-wrap,
+.st-card-img-wrap img,
+.ov-hero-visual img,
+.ov-product-thumb,
+.ov-product-thumb img {
+  border-radius: var(--radius-box, 2px) !important;
+}
+
+/* 5. Override all inline-styled boxes and containers (protecting circular dots/avatars) */
+div[style*="border-radius"]:not([style*="50%"]):not([style*="border-radius: 50"]):not(.pulse-dot),
+section[style*="border-radius"]:not([style*="50%"]),
+article[style*="border-radius"]:not([style*="50%"]),
+aside[style*="border-radius"]:not([style*="50%"]),
+header[style*="border-radius"]:not([style*="50%"]),
+footer[style*="border-radius"]:not([style*="50%"]),
+button[style*="border-radius"]:not([style*="50%"]):not([style*="border-radius: 50"]):not([style*="width: 18px"]):not([style*="width: 24px"]):not(.st-arrow-btn):not(.ov-arrow):not(.pulse-dot),
+input[style*="border-radius"]:not([style*="50%"]),
+span[style*="border-radius"]:not([style*="50%"]):not([style*="border-radius: 50"]):not(.pulse-dot) {
+  border-radius: var(--radius-box, 2px) !important;
+}

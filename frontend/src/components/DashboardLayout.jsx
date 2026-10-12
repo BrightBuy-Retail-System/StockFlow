@@ -276,7 +276,7 @@ export default function DashboardLayout() {
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     padding: '2px 6px',
-                    borderRadius: '4px',
+                    borderRadius: '2px',
                     background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
                     color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
                   }}>
@@ -294,7 +294,7 @@ export default function DashboardLayout() {
                       minWidth: '220px',
                       background: 'var(--bg-card, #1e222d)',
                       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
-                      borderRadius: '10px',
+                      borderRadius: '2px',
                       padding: '8px',
                       boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
                       zIndex: 1000,

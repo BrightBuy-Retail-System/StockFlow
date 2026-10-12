@@ -685,7 +685,7 @@ export default function OverviewPage() {
       <section
         style={{
           background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-          borderRadius: '20px',
+          borderRadius: '2px',
           padding: '36px 32px',
           color: '#ffffff',
           display: 'grid',
@@ -700,7 +700,7 @@ export default function OverviewPage() {
             style={{
               display: 'inline-block',
               padding: '4px 12px',
-              borderRadius: '9999px',
+              borderRadius: '2px',
               background: 'rgba(255, 255, 255, 0.15)',
               fontSize: '0.78rem',
               fontWeight: 700,
@@ -727,7 +727,7 @@ export default function OverviewPage() {
                 key={idx}
                 style={{
                   background: 'rgba(255,255,255,0.12)',
-                  borderRadius: '12px',
+                  borderRadius: '2px',
                   padding: '14px 16px',
                   border: '1px solid rgba(255,255,255,0.18)',
                   transition: 'background 0.2s ease',
