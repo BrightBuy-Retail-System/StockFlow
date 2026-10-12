@@ -127,9 +127,11 @@ export default function LoginPage() {
       <div className="st-auth-card">
         {/* Header Branding */}
         <div className="st-auth-header">
-          <div className="st-auth-logo-badge">
-            <ShoppingBagIcon style={{ width: '24px', height: '24px', color: '#ffffff' }} />
-          </div>
+          <img
+            src="/brightbuy-logo.png"
+            alt="BrightBuy"
+            style={{ height: '54px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+          />
           <h1 className="st-auth-title">Welcome Back</h1>
           <p className="st-auth-subtitle">
             Sign in to track orders, manage analytics, and access role-specific dashboards.

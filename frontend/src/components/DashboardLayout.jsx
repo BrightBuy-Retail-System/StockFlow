@@ -215,10 +215,9 @@ export default function DashboardLayout() {
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
         <div className="navbar-inner">
-          {/* Left: Brand Logo & Typography */}
           <Link to="/" className="navbar-brand">
-            <div className="brand-logo-badge">
-              <ShoppingBagIcon className="brand-logo-icon" />
+            <div className="brand-logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
             </div>
             <span className="brand-text">
               Bright<span className="brand-text-accent">Buy</span>
@@ -563,8 +562,8 @@ export default function DashboardLayout() {
       <aside className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="mobile-drawer-header">
           <Link to="/" className="navbar-brand" onClick={() => setMobileMenuOpen(false)}>
-            <div className="brand-logo-badge">
-              <ShoppingBagIcon className="brand-logo-icon" />
+            <div className="brand-logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
             </div>
             <span className="brand-text">
               Bright<span className="brand-text-accent">Buy</span>
@@ -680,7 +679,7 @@ export default function DashboardLayout() {
         <div className="footer-inner">
           <div className="footer-col-brand">
             <div className="footer-brand-title">
-              <ShoppingBagIcon style={{ width: '22px', height: '22px', minWidth: '22px', color: 'var(--primary)', flexShrink: 0 }} />
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }} />
               <span>Bright Buy Retail Systems</span>
             </div>
             <p className="footer-brand-desc">

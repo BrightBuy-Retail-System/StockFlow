@@ -2205,14 +2205,14 @@ export default function AnalyticsPage() {
   // Reference: Lecture Note 4 (Views), Lecture Note 5 (Triggers), Lecture Note 8 (DCL), Lecture Note 9 (Windowing)
   // ==========================================================================
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Admin Header */}
-      <div className="card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="card" style={{ padding: '20px 24px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em', margin: 0 }}>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
             Enterprise Financial Intelligence &amp; DCL Security Suite
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
             Executive OLAP Analytics, Windowing Moving Averages, and DCL Role Authorization Management.
           </p>
         </div>
@@ -2224,9 +2224,9 @@ export default function AnalyticsPage() {
             disabled={loading}
             style={{
               padding: '8px 14px',
-              borderRadius: '8px',
+              borderRadius: '2px',
               fontSize: '0.8rem',
-              fontWeight: 600,
+              fontWeight: 500,
               cursor: 'pointer',
               border: '1px solid var(--primary-border)',
               background: 'var(--primary)',
@@ -2243,37 +2243,37 @@ export default function AnalyticsPage() {
       </div>
 
       {error && (
-        <div style={{ padding: '10px 16px', borderRadius: '8px', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', color: 'var(--warning-text)', fontSize: '0.825rem' }}>
+        <div style={{ padding: '10px 16px', borderRadius: '2px', background: 'var(--warning-bg)', border: '1px solid var(--warning-border)', color: 'var(--warning-text)', fontSize: '0.825rem' }}>
           <span><strong>Notice:</strong> {error}</span>
         </div>
       )}
 
       {/* Executive Financial KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Gross Revenue (OLAP)</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '8px' }}>
+        <div className="card" style={{ padding: '18px 20px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Gross Revenue (OLAP)</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '6px' }}>
             ${executiveKPIs.grossRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Net Collected Revenue</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--success)', marginTop: '8px' }}>
+        <div className="card" style={{ padding: '18px 20px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Net Collected Revenue</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--primary)', marginTop: '6px' }}>
             ${executiveKPIs.netCollected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Platform Orders</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '8px' }}>
+        <div className="card" style={{ padding: '18px 20px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Platform Orders</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '6px' }}>
             {executiveKPIs.totalOrders.toLocaleString('en-US')}
           </div>
         </div>
 
-        <div className="card" style={{ padding: '20px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Units Dispatched</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent)', marginTop: '8px' }}>
+        <div className="card" style={{ padding: '18px 20px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Units Dispatched</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--secondary)', marginTop: '6px' }}>
             {executiveKPIs.totalUnits.toLocaleString('en-US')}
           </div>
         </div>
@@ -2296,13 +2296,12 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => setAdminTab(tab.id)}
               style={{
-                padding: '9px 16px',
-                borderRadius: '8px',
-                border: isActive ? '1.5px solid var(--primary)' : '1px solid var(--border-color)',
-                background: 'var(--bg-card)',
-                color: isActive ? 'var(--text-main)' : 'var(--text-secondary)',
-                boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-                fontSize: '0.85rem',
+                padding: '8px 14px',
+                borderRadius: '2px',
+                border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                background: isActive ? 'var(--primary)' : 'var(--bg-subtle)',
+                color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                fontSize: '0.84rem',
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -2319,13 +2318,13 @@ export default function AnalyticsPage() {
 
       {/* Tab 1: Quarterly Sales Report (Lecture Note 9 Windowing) */}
       {adminTab === 'quarterly' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Quarterly Sales &amp; Moving Average Performance
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
                 View: <code>v_quarterly_sales_report</code> • Window Function: <code>AVG(...) OVER (ORDER BY sales_year, sales_quarter ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)</code>
               </p>
             </div>
@@ -2335,7 +2334,7 @@ export default function AnalyticsPage() {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', fontSize: '0.8rem' }}
+                style={{ padding: '6px 10px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', fontSize: '0.8rem' }}
               >
                 <option value="">All Years</option>
                 <option value="2026">2026</option>
@@ -2347,30 +2346,30 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Period</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Orders</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Units Sold</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Gross Revenue</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Net Collected</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Moving Avg Revenue</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Period</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Orders</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Units Sold</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Gross Revenue</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Net Collected</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Moving Avg Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {quarterlyData.map((q, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-main)' }}>
+                    <td style={{ padding: '11px 12px', fontWeight: 500, color: 'var(--text-main)' }}>
                       {q.sales_year} Q{q.sales_quarter}
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{q.total_orders}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{q.total_units_sold}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 600 }}>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{q.total_orders}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{q.total_units_sold}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                       ${Number(q.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--success)' }}>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--primary)', fontWeight: 500 }}>
                       ${Number(q.net_collected_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                       ${Number(q.moving_avg_quarterly_revenue || q.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -2383,12 +2382,12 @@ export default function AnalyticsPage() {
 
       {/* Tab 2: Top Selling Products (Lecture Note 9 DENSE_RANK) */}
       {adminTab === 'top-selling' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Top 10 Selling Products Leaderboard
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
               View: <code>v_top_selling_products</code> • Ranking: <code>DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code>
             </p>
           </div>
@@ -2396,33 +2395,33 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Rank</th>
-                  <th style={{ padding: '10px 8px' }}>Product Name</th>
-                  <th style={{ padding: '10px 8px' }}>Category</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Units Sold</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Total Revenue</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Rank</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Product Name</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Category</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Units Sold</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Total Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {topSellingData.map((p, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '12px 8px' }}>
+                    <td style={{ padding: '11px 12px' }}>
                       <span style={{
-                        fontWeight: 800,
+                        fontWeight: 500,
                         fontSize: '0.75rem',
                         padding: '2px 8px',
-                        borderRadius: '4px',
+                        borderRadius: '2px',
                         background: p.revenue_rank === 1 ? 'var(--warning-bg)' : 'var(--bg-subtle)',
                         color: p.revenue_rank === 1 ? 'var(--warning-text)' : 'var(--text-secondary)'
                       }}>
                         #{p.revenue_rank}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-main)' }}>{p.product_name}</td>
-                    <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{p.category_name}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 600 }}>{p.total_units_sold}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <td style={{ padding: '11px 12px', fontWeight: 500, color: 'var(--text-main)' }}>{p.product_name}</td>
+                    <td style={{ padding: '11px 12px', color: 'var(--text-secondary)' }}>{p.category_name}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{p.total_units_sold}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                       ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -2435,9 +2434,9 @@ export default function AnalyticsPage() {
 
       {/* Tab 3: Category Revenue & ROLLUP (Lecture Note 9 WITH ROLLUP) */}
       {adminTab === 'categories' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Category Order Totals &amp; Grand Summary
             </h3>
           </div>
@@ -2445,11 +2444,11 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Category Name</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Total Orders</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Units Sold</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Category Revenue</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Category Name</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Total Orders</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Units Sold</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Category Revenue</th>
                 </tr>
               </thead>
               <tbody>
@@ -2461,15 +2460,15 @@ export default function AnalyticsPage() {
                       style={{
                         borderBottom: '1px solid var(--border-light)',
                         background: isGrand ? 'var(--bg-subtle)' : 'transparent',
-                        fontWeight: isGrand ? 800 : 400
+                        fontWeight: isGrand ? 600 : 400
                       }}
                     >
-                      <td style={{ padding: '12px 8px', color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
+                      <td style={{ padding: '11px 12px', color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
                         {c.category_name}
                       </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 600 }}>{c.total_orders || 0}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right' }}>{c.total_units_sold || 0}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{c.total_orders || 0}</td>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{c.total_units_sold || 0}</td>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
                         ${Number(c.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -2483,13 +2482,13 @@ export default function AnalyticsPage() {
 
       {/* Tab 4: Customer Spending (Lecture Notes 3 & 4) */}
       {adminTab === 'customers' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Customer Lifetime Spending &amp; Settlement Leaderboard
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
                 View: <code>v_customer_order_summary</code> • Multi-Table Outer Joins with orders, shipments, and Texas hubs
               </p>
             </div>
@@ -2500,7 +2499,7 @@ export default function AnalyticsPage() {
                 placeholder="Search by customer or hub..."
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                style={{ padding: '6px 12px 6px 30px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
+                style={{ padding: '6px 12px 6px 30px', borderRadius: '2px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
               />
               <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
             </div>
@@ -2509,25 +2508,25 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Customer</th>
-                  <th style={{ padding: '10px 8px' }}>Texas Hub</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Total Orders</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Paid Orders</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Lifetime Spending</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Customer</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Texas Hub</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Total Orders</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Paid Orders</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Lifetime Spending</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCustomers.map((c, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '12px 8px' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{c.customer_name}</div>
+                    <td style={{ padding: '11px 12px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>{c.customer_name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.email}</div>
                     </td>
-                    <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{c.primary_city}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right' }}>{c.total_orders}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--success)', fontWeight: 600 }}>{c.paid_orders}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <td style={{ padding: '11px 12px', color: 'var(--text-secondary)' }}>{c.primary_city}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>{c.total_orders}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', color: 'var(--primary)', fontWeight: 500 }}>{c.paid_orders}</td>
+                    <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                       ${Number(c.lifetime_spending || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -2540,12 +2539,12 @@ export default function AnalyticsPage() {
 
       {/* Tab 5: Payment ACID Ledger (Lecture Notes 1, 2, 7) */}
       {adminTab === 'ledger' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Payment Transaction ACID Settlement Ledger
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
               Table: <code>PAYMENT_TRANSACTION</code> • Prepared Statements &amp; Pessimistic Row Locking (FOR UPDATE)
             </p>
           </div>
@@ -2553,14 +2552,14 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Payment ID</th>
-                  <th style={{ padding: '10px 8px' }}>Transaction Reference</th>
-                  <th style={{ padding: '10px 8px' }}>Customer</th>
-                  <th style={{ padding: '10px 8px' }}>Order #</th>
-                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '10px 8px' }}>Processed Date</th>
-                  <th style={{ padding: '10px 8px' }}>Status</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Payment ID</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Transaction Reference</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Customer</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Order #</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500 }}>Amount</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Processed Date</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -2573,18 +2572,18 @@ export default function AnalyticsPage() {
                 ) : (
                   transactionsData.map((t, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>#{t.payment_id}</td>
-                      <td style={{ padding: '12px 8px', fontFamily: 'monospace', color: 'var(--primary)' }}>{t.transaction_reference}</td>
-                      <td style={{ padding: '12px 8px' }}>{t.customer_name || 'Customer'}</td>
-                      <td style={{ padding: '12px 8px' }}>#{t.order_id}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 700, color: 'var(--text-main)' }}>
+                      <td style={{ padding: '11px 12px', fontWeight: 500, color: 'var(--text-main)' }}>#{t.payment_id}</td>
+                      <td style={{ padding: '11px 12px', fontFamily: 'monospace', color: 'var(--primary)' }}>{t.transaction_reference}</td>
+                      <td style={{ padding: '11px 12px', color: 'var(--text-main)' }}>{t.customer_name || 'Customer'}</td>
+                      <td style={{ padding: '11px 12px', color: 'var(--text-secondary)' }}>#{t.order_id}</td>
+                      <td style={{ padding: '11px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                         ${Number(t.amount || 0).toFixed(2)}
                       </td>
-                      <td style={{ padding: '12px 8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <td style={{ padding: '11px 12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         {t.processed_at ? String(t.processed_at).replace('T', ' ').split('.')[0] : ''}
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--success-bg)', color: 'var(--success-text)' }}>
+                      <td style={{ padding: '11px 12px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, padding: '2px 8px', borderRadius: '2px', background: 'var(--success-bg)', color: 'var(--success-text)' }}>
                           {t.payment_status || 'Paid'}
                         </span>
                       </td>
@@ -2599,12 +2598,12 @@ export default function AnalyticsPage() {
 
       {/* Tab 6: DCL Security & Roles Matrix (Lecture Note 8) */}
       {adminTab === 'dcl' && (
-        <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+        <div className="card" style={{ padding: '20px 24px', borderRadius: '2px', border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Data Control Language (DCL) Role &amp; Grant Matrix
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
               Reference: Lecture Note 8 (<code>CREATE ROLE</code>, <code>GRANT</code>, <code>REVOKE</code>) and Lecture Note 5 (Database Triggers)
             </p>
           </div>
@@ -2612,11 +2611,11 @@ export default function AnalyticsPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 8px' }}>Role Name</th>
-                  <th style={{ padding: '10px 8px' }}>Target Database Objects</th>
-                  <th style={{ padding: '10px 8px' }}>Granted Privileges (DCL)</th>
-                  <th style={{ padding: '10px 8px' }}>Lecture Reference</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Role Name</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Target Database Objects</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Granted Privileges (DCL)</th>
+                  <th style={{ padding: '10px 12px', fontWeight: 500 }}>Lecture Reference</th>
                 </tr>
               </thead>
               <tbody>
@@ -2627,10 +2626,10 @@ export default function AnalyticsPage() {
                   { role: "analytics_viewer (DB Role)", target_objects: "4 Virtual Views (05_analytics.sql)", privileges: "GRANT SELECT ON VIEWS", lecture_reference: "Lecture Note 8" },
                 ]).map((g, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: 700, color: 'var(--text-main)' }}>{g.role}</td>
-                    <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--primary)' }}>{g.target_objects}</td>
-                    <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}><code>{g.privileges}</code></td>
-                    <td style={{ padding: '12px 8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{g.lecture_reference}</td>
+                    <td style={{ padding: '11px 12px', fontWeight: 500, color: 'var(--text-main)' }}>{g.role}</td>
+                    <td style={{ padding: '11px 12px', fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--primary)' }}>{g.target_objects}</td>
+                    <td style={{ padding: '11px 12px', color: 'var(--text-secondary)' }}><code>{g.privileges}</code></td>
+                    <td style={{ padding: '11px 12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{g.lecture_reference}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2639,14 +2638,14 @@ export default function AnalyticsPage() {
 
           {dclData.recent_audit_logs?.length > 0 && (
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
                 Recent Security &amp; Payment Audit Trail (Lecture Note 5 Triggers):
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {dclData.recent_audit_logs.slice(0, 4).map((log, idx) => (
-                  <div key={idx} style={{ fontSize: '0.78rem', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={idx} style={{ fontSize: '0.78rem', padding: '6px 10px', background: 'var(--bg-subtle)', borderRadius: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontWeight: 700, color: 'var(--primary)', marginRight: '8px' }}>[{log.event_action}]</span>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)', marginRight: '8px' }}>[{log.event_action}]</span>
                       <span style={{ color: 'var(--text-main)' }}>{log.event_details}</span>
                     </div>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
@@ -2666,33 +2665,33 @@ export default function AnalyticsPage() {
       <div
         className="card"
         style={{
-          padding: '24px',
-          borderRadius: '16px',
+          padding: '20px 24px',
+          borderRadius: '2px',
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-sm)',
-          marginTop: '8px',
+          marginTop: '4px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px'
+          gap: '18px'
         }}
       >
         {/* Header & Master Actions */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '34px', height: '34px', borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
-                <FileTextIcon className="w-5 h-5" />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '2px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                <FileTextIcon className="w-4 h-4" />
               </div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
                 Administrator PDF Report Generator &amp; Multi-Store Export Suite
               </h2>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '3px 10px', borderRadius: '9999px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }} />
                 All Stores Ready
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
               Select reporting duration and store scope to generate official executive documents across all stores: comparative branch performance, cross-store catalog velocity, total revenue received, and full customer accounts ledger.
             </p>
           </div>
@@ -2703,13 +2702,13 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => handlePreviewReport(selectedReportType)}
               style={{
-                padding: '9px 16px',
-                borderRadius: '8px',
+                padding: '8px 14px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
+                fontSize: '0.82rem',
+                fontWeight: 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -2725,13 +2724,13 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => handleDownloadPDF(selectedReportType)}
               style={{
-                padding: '9px 18px',
-                borderRadius: '8px',
+                padding: '8px 16px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
+                fontSize: '0.82rem',
+                fontWeight: 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -2748,19 +2747,19 @@ export default function AnalyticsPage() {
         {/* Time Duration & Multi-Store Scope Filters Bar */}
         <div
           style={{
-            padding: '18px 20px',
-            borderRadius: '12px',
+            padding: '16px 18px',
+            borderRadius: '2px',
             background: 'var(--bg-subtle)',
             border: '1px solid var(--border-light)',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '16px',
+            gap: '14px',
             alignItems: 'flex-end'
           }}
         >
           {/* 1. Time Duration Dropdown */}
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
               <CalendarIcon className="w-3.5 h-3.5" />
               <span>Select Time Duration</span>
             </label>
@@ -2769,12 +2768,12 @@ export default function AnalyticsPage() {
               onChange={(e) => setReportDuration(e.target.value)}
               style={{
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 fontWeight: 500,
                 cursor: 'pointer'
               }}
@@ -2794,7 +2793,7 @@ export default function AnalyticsPage() {
           {reportDuration === 'custom' && (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
                   Start Date
                 </label>
                 <input
@@ -2804,16 +2803,16 @@ export default function AnalyticsPage() {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    borderRadius: '8px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
-                    fontSize: '0.85rem'
+                    fontSize: '0.84rem'
                   }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
                   End Date
                 </label>
                 <input
@@ -2823,11 +2822,11 @@ export default function AnalyticsPage() {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    borderRadius: '8px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
-                    fontSize: '0.85rem'
+                    fontSize: '0.84rem'
                   }}
                 />
               </div>
@@ -2836,7 +2835,7 @@ export default function AnalyticsPage() {
 
           {/* 2. Store Scope (Compare All Stores Records) */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
               Store Scope &amp; Branch Comparison
             </label>
             <select
@@ -2844,12 +2843,12 @@ export default function AnalyticsPage() {
               onChange={(e) => setAdminStoreBranch(e.target.value)}
               style={{
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 fontWeight: 500,
                 cursor: 'pointer'
               }}
@@ -2865,7 +2864,7 @@ export default function AnalyticsPage() {
 
           {/* 3. Primary Report Package */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
               Master Document Scope
             </label>
             <select
@@ -2873,12 +2872,12 @@ export default function AnalyticsPage() {
               onChange={(e) => setSelectedReportType(e.target.value)}
               style={{
                 width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 fontWeight: 500,
                 cursor: 'pointer'
               }}
@@ -2894,7 +2893,7 @@ export default function AnalyticsPage() {
 
         {/* 4 Essential Downloadable Reports for Shop Admin */}
         <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '14px', letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.03em' }}>
             Essential Shop Administrator Audit Documents:
           </div>
 
@@ -2903,30 +2902,30 @@ export default function AnalyticsPage() {
             <div
               className="card"
               style={{
-                padding: '18px',
-                borderRadius: '12px',
+                padding: '16px 18px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
+                gap: '12px',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)' }}>
                     Selling Products Report
                   </span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
                     PDF
                   </span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4 }}>
                   All-store product sales rankings, units sold, cross-branch velocity, and catalog contribution share.
                 </p>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '6px 10px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '5px 8px', borderRadius: '2px' }}>
                   Leader: {topSellingData[0]?.product_name ? `${topSellingData[0].product_name.slice(0, 20)}...` : 'Apex Pro Terminal'}
                 </div>
               </div>
@@ -2937,13 +2936,13 @@ export default function AnalyticsPage() {
                   onClick={() => handlePreviewReport('selling_products')}
                   style={{
                     flex: 1,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -2954,14 +2953,14 @@ export default function AnalyticsPage() {
                   onClick={() => handleDownloadPDF('selling_products')}
                   style={{
                     flex: 1.4,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     boxShadow: 'var(--shadow-sm)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -2979,30 +2978,30 @@ export default function AnalyticsPage() {
             <div
               className="card"
               style={{
-                padding: '18px',
-                borderRadius: '12px',
+                padding: '16px 18px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
+                gap: '12px',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)' }}>
                     Total Revenue Received
                   </span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
                     PDF
                   </span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4 }}>
                   Consolidated catalog revenue, cross-store comparisons, category ROLLUP totals, and settlement rates.
                 </p>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '6px 10px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '5px 8px', borderRadius: '2px' }}>
                   Gross: ${Number(executiveKPIs.grossRevenue).toLocaleString('en-US', { maximumFractionDigits: 0 })} Across All Stores
                 </div>
               </div>
@@ -3013,13 +3012,13 @@ export default function AnalyticsPage() {
                   onClick={() => handlePreviewReport('revenue_category')}
                   style={{
                     flex: 1,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -3030,14 +3029,14 @@ export default function AnalyticsPage() {
                   onClick={() => handleDownloadPDF('revenue_category')}
                   style={{
                     flex: 1.4,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     boxShadow: 'var(--shadow-sm)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -3055,30 +3054,30 @@ export default function AnalyticsPage() {
             <div
               className="card"
               style={{
-                padding: '18px',
-                borderRadius: '12px',
+                padding: '16px 18px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
+                gap: '12px',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)' }}>
                     Customer History List
                   </span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
                     PDF
                   </span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4 }}>
                   Accounts ledger across all 5 Texas fulfillment hubs, order frequency, settled vs outstanding balances.
                 </p>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '6px 10px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '5px 8px', borderRadius: '2px' }}>
                   Active Accounts: {customerData.length || 5} Logged Accounts
                 </div>
               </div>
@@ -3089,13 +3088,13 @@ export default function AnalyticsPage() {
                   onClick={() => handlePreviewReport('customer_history')}
                   style={{
                     flex: 1,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -3106,14 +3105,14 @@ export default function AnalyticsPage() {
                   onClick={() => handleDownloadPDF('customer_history')}
                   style={{
                     flex: 1.4,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     boxShadow: 'var(--shadow-sm)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -3131,30 +3130,30 @@ export default function AnalyticsPage() {
             <div
               className="card"
               style={{
-                padding: '18px',
-                borderRadius: '12px',
+                padding: '16px 18px',
+                borderRadius: '2px',
                 border: '1px solid var(--border-color)',
                 background: 'var(--bg-card)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: '14px',
+                gap: '12px',
                 boxShadow: 'var(--shadow-sm)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-main)' }}>
                     Shop Administrator Audit
                   </span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
                     All-In-One
                   </span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 8px', lineHeight: 1.4 }}>
                   Multi-store operations dossier: cross-store comparisons, branch benchmarks, fulfillment, and executive sign-off.
                 </p>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '6px 10px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-subtle)', padding: '5px 8px', borderRadius: '2px' }}>
                   Scope: Multi-Store Comparison &amp; Audit
                 </div>
               </div>
@@ -3165,13 +3164,13 @@ export default function AnalyticsPage() {
                   onClick={() => handlePreviewReport('admin_essential')}
                   style={{
                     flex: 1,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -3182,14 +3181,14 @@ export default function AnalyticsPage() {
                   onClick={() => handleDownloadPDF('admin_essential')}
                   style={{
                     flex: 1.4,
-                    padding: '8px',
-                    borderRadius: '6px',
+                    padding: '7px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     boxShadow: 'var(--shadow-sm)',
                     fontSize: '0.78rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -3215,7 +3214,7 @@ export default function AnalyticsPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backgroundColor: 'rgba(59, 47, 47, 0.45)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -3229,7 +3228,7 @@ export default function AnalyticsPage() {
               maxWidth: '920px',
               height: '88vh',
               backgroundColor: 'var(--bg-card)',
-              borderRadius: '16px',
+              borderRadius: '2px',
               border: '1px solid var(--border-color)',
               boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
               display: 'flex',
@@ -3240,7 +3239,7 @@ export default function AnalyticsPage() {
             {/* Modal Header */}
             <div
               style={{
-                padding: '16px 20px',
+                padding: '14px 18px',
                 borderBottom: '1px solid var(--border-color)',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -3250,10 +3249,10 @@ export default function AnalyticsPage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FileTextIcon className="w-5 h-5 text-secondary" />
-                <span style={{ fontWeight: 600, fontSize: '0.98rem', color: 'var(--text-main)' }}>
+                <span style={{ fontWeight: 600, fontSize: '0.94rem', color: 'var(--text-main)' }}>
                   Print &amp; PDF Document Preview
                 </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 500, padding: '2px 8px', borderRadius: '4px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 500, padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', color: 'var(--text-muted)' }}>
                   {getDurationLabel(reportDuration, customStartDate, customEndDate)}
                 </span>
               </div>
@@ -3263,13 +3262,13 @@ export default function AnalyticsPage() {
                   type="button"
                   onClick={() => handleSaveHtmlFile(selectedReportType)}
                   style={{
-                    padding: '7px 12px',
-                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     fontSize: '0.8rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -3282,14 +3281,14 @@ export default function AnalyticsPage() {
                     handleDownloadPDF(selectedReportType);
                   }}
                   style={{
-                    padding: '7px 14px',
-                    borderRadius: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '2px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-main)',
                     boxShadow: 'var(--shadow-sm)',
                     fontSize: '0.8rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -3304,7 +3303,7 @@ export default function AnalyticsPage() {
                   onClick={() => setPreviewModalOpen(false)}
                   style={{
                     padding: '6px',
-                    borderRadius: '6px',
+                    borderRadius: '2px',
                     border: 'none',
                     background: 'transparent',
                     color: 'var(--text-muted)',

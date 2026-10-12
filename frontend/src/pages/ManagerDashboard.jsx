@@ -284,7 +284,7 @@ export default function ManagerDashboard() {
             ${Number(summary.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            Net settled: <strong style={{ color: '#3b2f2f' }}>${Number(summary.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            Net settled: <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
         </div>
 
@@ -300,7 +300,7 @@ export default function ManagerDashboard() {
             {summary.total_orders || 0}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#3b2f2f' }}>{ordersBreakdown.confirmed || 0}</strong> confirmed · <strong style={{ color: '#3b2f2f' }}>{ordersBreakdown.shipped || 0}</strong> in transit
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{ordersBreakdown.confirmed || 0}</strong> confirmed · <strong style={{ color: '#1f2937', fontWeight: 500 }}>{ordersBreakdown.shipped || 0}</strong> in transit
           </div>
         </div>
 
@@ -316,7 +316,7 @@ export default function ManagerDashboard() {
             ${Number(summary.average_order_value || 0).toFixed(2)}
           </div>
           <div className="st-admin-kpi-foot">
-            Across <strong style={{ color: '#3b2f2f' }}>{summary.active_customers || 0}</strong> registered buyer accounts
+            Across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{summary.active_customers || 0}</strong> registered buyer accounts
           </div>
         </div>
 
@@ -332,7 +332,7 @@ export default function ManagerDashboard() {
             ${Number(invSummary.valuation || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#3b2f2f' }}>{invSummary.units_on_hand || 0}</strong> units across <strong style={{ color: '#3b2f2f' }}>{invSummary.total_skus || 0}</strong> SKUs
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.units_on_hand || 0}</strong> units across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.total_skus || 0}</strong> SKUs
           </div>
         </div>
       </div>
@@ -469,21 +469,21 @@ export default function ManagerDashboard() {
                       return (
                         <tr key={order.order_id}>
                           <td>
-                            <span style={{ fontWeight: 700, color: '#2a9d8f' }}>#{order.order_id}</span>
-                            <div style={{ fontSize: '0.74rem', color: '#826e6e' }}>
+                            <span style={{ fontWeight: 500, color: '#1f2937' }}>#{order.order_id}</span>
+                            <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>
                               {order.placed_at ? new Date(order.placed_at).toLocaleDateString() : 'Recent'}
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 600, color: '#3b2f2f' }}>{order.customer_name || 'Retail Guest'}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#826e6e' }}>{order.customer_email || '—'}</div>
+                            <div style={{ fontWeight: 500, color: '#1f2937' }}>{order.customer_name || 'Retail Guest'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{order.customer_email || '—'}</div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 500, color: '#5c4b4b' }}>{order.destination_city || 'Texas Central'}</div>
-                            <div style={{ fontSize: '0.74rem', color: '#826e6e' }}>{order.fulfillment_hub || 'Direct Dispatch'}</div>
+                            <div style={{ fontWeight: 500, color: '#4b5563' }}>{order.destination_city || 'Texas Central'}</div>
+                            <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>{order.fulfillment_hub || 'Direct Dispatch'}</div>
                           </td>
                           <td>
-                            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#5c4b4b' }}>
+                            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#4b5563' }}>
                               {order.tracking_number || 'Pending'}
                             </div>
                           </td>
@@ -507,7 +507,7 @@ export default function ManagerDashboard() {
                               {order.payment_status || 'PENDING'}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: '#3b2f2f' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
                             ${Number(order.total_amount || 0).toFixed(2)}
                           </td>
                         </tr>
@@ -567,29 +567,29 @@ export default function ManagerDashboard() {
                           height: '24px',
                           borderRadius: '2px',
                           background: idx === 0 ? '#fef8e7' : idx === 1 ? '#f7eee6' : idx === 2 ? '#e6f6f4' : '#faf7f2',
-                          color: idx === 0 ? '#b45309' : idx === 1 ? '#c08457' : idx === 2 ? '#2a9d8f' : '#826e6e',
+                          color: idx === 0 ? '#b45309' : idx === 1 ? '#c08457' : idx === 2 ? '#0f766e' : '#6b7280',
                           border: '1px solid #e7d7c1',
                           textAlign: 'center',
                           lineHeight: '22px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           fontSize: '0.78rem'
                         }}>
                           {idx + 1}
                         </span>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#3b2f2f' }}>{p.product_name}</div>
-                        <div style={{ fontSize: '0.74rem', color: '#826e6e' }}>ID #{p.product_id}</div>
+                        <div style={{ fontWeight: 500, color: '#1f2937' }}>{p.product_name}</div>
+                        <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>ID #{p.product_id}</div>
                       </td>
                       <td>
-                        <span style={{ background: '#fdfbf7', border: '1px solid #e7d7c1', padding: '2px 8px', borderRadius: '2px', fontSize: '0.76rem', color: '#5c4b4b' }}>
+                        <span style={{ background: '#fdfbf7', border: '1px solid #e7d7c1', padding: '2px 8px', borderRadius: '2px', fontSize: '0.76rem', color: '#4b5563' }}>
                           {p.category_name}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'center', fontWeight: 500, color: '#5c4b4b' }}>
+                      <td style={{ textAlign: 'center', fontWeight: 400, color: '#4b5563' }}>
                         {p.total_units_sold} units
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#2a9d8f' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
                         ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -618,10 +618,10 @@ export default function ManagerDashboard() {
                 return (
                   <div key={cat.category_id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
-                      <span style={{ fontWeight: 600, color: '#3b2f2f' }}>{cat.category_name}</span>
-                      <strong style={{ color: '#2a9d8f' }}>
+                      <span style={{ fontWeight: 500, color: '#1f2937' }}>{cat.category_name}</span>
+                      <span style={{ fontWeight: 500, color: '#1f2937' }}>
                         ${Number(cat.category_revenue || 0).toFixed(2)} ({percentage}%)
-                      </strong>
+                      </span>
                     </div>
 
                     <div
@@ -673,15 +673,15 @@ export default function ManagerDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Total Gross Merchandise Value</span>
-                <strong style={{ color: '#3b2f2f' }}>${Number(summary.gross_revenue || 0).toFixed(2)}</strong>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.gross_revenue || 0).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Successfully Settled Revenue</span>
-                <strong style={{ color: '#2a9d8f' }}>${Number(summary.settled_revenue || 0).toFixed(2)}</strong>
+                <strong style={{ color: '#2a9d8f', fontWeight: 500 }}>${Number(summary.settled_revenue || 0).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Average Ticket Size (AOV)</span>
-                <strong style={{ color: '#3b2f2f' }}>${Number(summary.average_order_value || 0).toFixed(2)}</strong>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.average_order_value || 0).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '4px' }}>
                 <span style={{ color: '#826e6e' }}>Financial Health Rating</span>
@@ -701,15 +701,15 @@ export default function ManagerDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Dispatched &amp; In Transit</span>
-                <strong style={{ color: '#2a9d8f' }}>{ordersBreakdown.shipped || 0} orders</strong>
+                <strong style={{ color: '#2a9d8f', fontWeight: 500 }}>{ordersBreakdown.shipped || 0} orders</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Warehouse Queue (Pending)</span>
-                <strong style={{ color: '#c08457' }}>{ordersBreakdown.pending || 0} orders</strong>
+                <strong style={{ color: '#c08457', fontWeight: 500 }}>{ordersBreakdown.pending || 0} orders</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
                 <span style={{ color: '#826e6e' }}>Order Cancellation Rate</span>
-                <strong style={{ color: '#3b2f2f' }}>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>
                   {summary.total_orders ? `${Math.round(((ordersBreakdown.cancelled || 0) / summary.total_orders) * 100)}%` : '0%'}
                 </strong>
               </div>
@@ -868,11 +868,11 @@ export default function ManagerDashboard() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '0.75rem',
-                                fontWeight: 700
+                                fontWeight: 600
                               }}>
                                 {initials}
                               </div>
-                              <span style={{ fontWeight: 600, color: '#3b2f2f' }}>{st.full_name}</span>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>{st.full_name}</span>
                             </div>
                           </td>
                           <td style={{ color: '#5c4b4b' }}>{st.email}</td>
@@ -905,7 +905,7 @@ export default function ManagerDashboard() {
         <div className="st-admin-modal-backdrop">
           <div className="st-admin-modal-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#3b2f2f', fontFamily: "'Outfit', sans-serif" }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 Onboard Staff Member
               </h3>
               <button
