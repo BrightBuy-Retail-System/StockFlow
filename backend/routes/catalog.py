@@ -63,27 +63,32 @@ def get_products():
     role = get_role()
     category_id = request.args.get('category_id')
     q = request.args.get('q', '').strip()
-    like = f"%{q}%"
 
     sql = """
         SELECT p.product_id, p.title, p.title AS name, p.description, p.image_url, p.base_price,
                p.is_active, c.category_id, c.name AS category_name
         FROM   products p
         JOIN   categories c ON c.category_id = p.category_id
-        """
+    """
+
+    conditions = []
+    params = []
 
     # Customers and guests only see active products
-    active_filter = "" if role in (2, 3, 4) else "AND p.is_active = 1 "
+    if role not in (2, 3, 4):
+        conditions.append("p.is_active = 1")
 
-    if category_id and q:
-        rows = query(sql + f"WHERE p.category_id = %s {active_filter}AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (category_id, like, like))
-    elif category_id:
-        rows = query(sql + f"WHERE p.category_id = %s {active_filter}ORDER BY p.title", (category_id,))
-    elif q:
-        rows = query(sql + f"WHERE 1=1 {active_filter}AND (p.title LIKE %s OR p.description LIKE %s) ORDER BY p.title", (like, like))
-    else:
-        rows = query(sql + f"WHERE 1=1 {active_filter}ORDER BY p.title")
+    if category_id:
+        conditions.append("p.category_id = %s")
+        params.append(category_id)
 
+    if q:
+        like = f"%{q}%"
+        conditions.append("(p.title LIKE %s OR p.description LIKE %s)")
+        params.extend([like, like])
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    rows = query(f"{sql} {where_clause} ORDER BY p.title", tuple(params))
     return jsonify(rows)
 
 
@@ -545,49 +550,6 @@ def reserve_cart_stock():
     finally:
         cursor.close()
         conn.close()
-
-
-# release stock when removed from cart
-@catalog_bp.route('/cart/release', methods=['POST'])
-def release_cart_stock():
-    """
-    Restore stock to inventory in the database if an item is removed from the cart.
-    Body: { "variant_id": <int>, "quantity": <int> }
-    """
-    data = request.get_json() or {}
-    variant_id = data.get('variant_id')
-    try:
-        qty = int(data.get('quantity', 1))
-    except (ValueError, TypeError):
-        qty = 1
-
-    if not variant_id or qty <= 0:
-        return jsonify({"error": "variant_id and positive quantity are required"}), 400
-
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
-            (qty, variant_id)
-        )
-        conn.commit()
-        cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s", (variant_id,))
-        row = cursor.fetchone()
-        new_stock = int(row['stock_quantity']) if row else 0
-        return jsonify({
-            "success": True,
-            "variant_id": variant_id,
-            "released": qty,
-            "new_stock": new_stock
-        })
-    except Exception as e:
-        conn.rollback()
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
 
 
 # add item to database cart (carts + cart_items tables)

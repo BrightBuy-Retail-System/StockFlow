@@ -22,34 +22,48 @@ export default function AuthCartPage() {
     setError(null);
 
     if (token) {
-      // 1. Sync any guest items in localStorage into the authenticated cart
+      // 1. Fetch authenticated cart from API first
+      let currentItems = [];
+      try {
+        const res = await api.get('/auth_cart/cart');
+        currentItems = res.data?.items || [];
+        setCart(res.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
+      }
+
+      // 2. Sync any genuine guest items in localStorage into the authenticated cart
       try {
         const rawLocal = localStorage.getItem('cart');
         if (rawLocal) {
           const localItems = JSON.parse(rawLocal);
           if (Array.isArray(localItems) && localItems.length > 0) {
+            const existingVariantIds = new Set(
+              currentItems.map((it) => it.variant_id || it.product_id)
+            );
+            let syncedAny = false;
             for (const item of localItems) {
-              const variantId = item.variant_id || item.product_id;
-              if (variantId) {
-                await api.post('/auth_cart/cart/add', {
-                  variant_id: variantId,
-                  quantity: item.quantity || 1,
-                }).catch(() => null);
+              const variantId = item.variant_id || null;
+              const productId = item.product_id || null;
+              const checkKey = variantId || productId;
+              // Only add if not already present in the user's database cart
+              if (checkKey && !existingVariantIds.has(checkKey)) {
+                const payload = { quantity: item.quantity || 1 };
+                if (variantId) payload.variant_id = variantId;
+                if (productId) payload.product_id = productId;
+                await api.post('/auth_cart/cart/add', payload).catch(() => null);
+                syncedAny = true;
               }
             }
             localStorage.removeItem('cart');
+            if (syncedAny) {
+              const updatedRes = await api.get('/auth_cart/cart');
+              setCart(updatedRes.data);
+            }
           }
         }
       } catch (err) {
         console.warn('Cart sync warning:', err);
-      }
-
-      // 2. Fetch authenticated cart from API
-      try {
-        const res = await api.get('/auth_cart/cart');
-        setCart(res.data);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to retrieve shopping cart items.');
       } finally {
         setLoading(false);
       }
@@ -73,8 +87,9 @@ export default function AuthCartPage() {
         price: it.unit_price,
         quantity: it.quantity,
       }));
-      if (user?.user_id) {
-        localStorage.setItem(`cart_${user.user_id}`, JSON.stringify(formatted));
+      const uid = user?.id || user?.user_id;
+      if (uid) {
+        localStorage.setItem(`cart_${uid}`, JSON.stringify(formatted));
       }
       localStorage.setItem('cart', JSON.stringify(formatted));
     } catch {
@@ -82,15 +97,55 @@ export default function AuthCartPage() {
     }
   };
 
-  const fetchCart = async () => {
+  const loadGuestCart = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/auth_cart/cart');
-      setCart(res.data);
-      syncLocalStorage(res.data.items);
+      const raw = localStorage.getItem('cart');
+      const list = raw ? JSON.parse(raw) : [];
+
+      if (!Array.isArray(list) || list.length === 0) {
+        setCart({ items: [], subtotal: 0, item_count: 0 });
+        setLoading(false);
+        return;
+      }
+
+      let subtotal = 0;
+      let totalCount = 0;
+
+      const formatted = list.map((it, idx) => {
+        const qty = Math.max(1, Number(it.quantity) || 1);
+        const price = Number(it.unit_price ?? it.price ?? it.base_price ?? 0);
+        const itemTotal = price * qty;
+        subtotal += itemTotal;
+        totalCount += qty;
+
+        const cartItemId = it.cart_item_id || `guest_${it.product_id || idx}_${it.variant_id || 0}`;
+
+        return {
+          cart_item_id: cartItemId,
+          product_id: it.product_id,
+          variant_id: it.variant_id || null,
+          product_name: it.product_name || it.name || 'Product',
+          name: it.name || it.product_name || 'Product',
+          sku: it.sku || `SKU-${it.product_id || idx}`,
+          attribute_name: it.attribute_name || null,
+          attribute_value: it.attribute_value || null,
+          unit_price: price,
+          quantity: qty,
+          total_price: itemTotal,
+          image: it.image || it.image_url || null,
+          image_url: it.image_url || it.image || null,
+        };
+      });
+
+      setCart({
+        items: formatted,
+        subtotal: subtotal,
+        item_count: totalCount,
+      });
     } catch (err) {
-      console.error('Error reading guest cart:', err);
+      console.error('Error loading guest cart from localStorage:', err);
       setCart({ items: [], subtotal: 0, item_count: 0 });
     } finally {
       setLoading(false);
@@ -102,26 +157,32 @@ export default function AuthCartPage() {
 
     if (!token) {
       // Guest update in localStorage
-      const raw = localStorage.getItem('cart');
-      const list = raw ? JSON.parse(raw) : [];
-      if (newQty <= 0) {
-        const updated = list.filter((it, idx) => {
-          const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
-          return id !== cartItemId;
-        });
+      try {
+        const raw = localStorage.getItem('cart');
+        const list = raw ? JSON.parse(raw) : [];
+        let updated;
+        if (newQty <= 0) {
+          updated = list.filter((it, idx) => {
+            const id = it.cart_item_id || `guest_${it.product_id || idx}_${it.variant_id || 0}`;
+            return id !== cartItemId;
+          });
+        } else {
+          updated = list.map((it, idx) => {
+            const id = it.cart_item_id || `guest_${it.product_id || idx}_${it.variant_id || 0}`;
+            if (id === cartItemId) {
+              return { ...it, quantity: newQty };
+            }
+            return it;
+          });
+        }
         localStorage.setItem('cart', JSON.stringify(updated));
-      } else {
-        const updated = list.map((it, idx) => {
-          const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
-          if (id === cartItemId) {
-            return { ...it, quantity: newQty };
-          }
-          return it;
-        });
-        localStorage.setItem('cart', JSON.stringify(updated));
+        window.dispatchEvent(new Event('cartUpdated'));
+        loadGuestCart();
+      } catch (err) {
+        console.error('Error updating guest item:', err);
+      } finally {
+        setUpdatingId(null);
       }
-      loadGuestCart();
-      setUpdatingId(null);
       return;
     }
 
@@ -135,6 +196,7 @@ export default function AuthCartPage() {
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
       syncLocalStorage(res.data.items);
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update item quantity.');
     } finally {
@@ -147,15 +209,21 @@ export default function AuthCartPage() {
 
     if (!token) {
       // Guest removal from localStorage
-      const raw = localStorage.getItem('cart');
-      const list = raw ? JSON.parse(raw) : [];
-      const updated = list.filter((it, idx) => {
-        const id = it.cart_item_id || `local_${it.product_id || idx}_${it.variant_id || 0}`;
-        return id !== cartItemId;
-      });
-      localStorage.setItem('cart', JSON.stringify(updated));
-      loadGuestCart();
-      setUpdatingId(null);
+      try {
+        const raw = localStorage.getItem('cart');
+        const list = raw ? JSON.parse(raw) : [];
+        const updated = list.filter((it, idx) => {
+          const id = it.cart_item_id || `guest_${it.product_id || idx}_${it.variant_id || 0}`;
+          return id !== cartItemId;
+        });
+        localStorage.setItem('cart', JSON.stringify(updated));
+        window.dispatchEvent(new Event('cartUpdated'));
+        loadGuestCart();
+      } catch (err) {
+        console.error('Error removing guest item:', err);
+      } finally {
+        setUpdatingId(null);
+      }
       return;
     }
 
@@ -164,6 +232,7 @@ export default function AuthCartPage() {
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
       syncLocalStorage(res.data.items);
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to remove item.');
     } finally {
@@ -177,6 +246,7 @@ export default function AuthCartPage() {
 
     if (!token) {
       localStorage.removeItem('cart');
+      window.dispatchEvent(new Event('cartUpdated'));
       loadGuestCart();
       return;
     }
@@ -186,6 +256,7 @@ export default function AuthCartPage() {
       const res = await api.get('/auth_cart/cart');
       setCart(res.data);
       syncLocalStorage(res.data.items);
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to clear cart.');
     } finally {
@@ -238,46 +309,7 @@ export default function AuthCartPage() {
         )}
       </div>
 
-      {/* Guest Notice Banner */}
-      {!isLoggedIn && cart.items.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-            padding: '14px 20px',
-            background: 'rgba(37, 99, 235, 0.08)',
-            border: '1px solid rgba(37, 99, 235, 0.25)',
-            borderRadius: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <UserIcon className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-            <div>
-              <strong style={{ color: 'var(--text-main)', fontSize: '0.925rem' }}>Guest Mode:</strong>{' '}
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Your cart is saved locally. Please sign in or register when you are ready to checkout.
-              </span>
-            </div>
-          </div>
-          <Link
-            to="/login?redirect=/auth-cart"
-            style={{
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              color: 'var(--primary)',
-              textDecoration: 'none',
-              background: 'rgba(37, 99, 235, 0.12)',
-              padding: '6px 14px',
-              borderRadius: '6px',
-            }}
-          >
-            Sign In &rarr;
-          </Link>
-        </div>
-      )}
+
 
       {error && (
         <div className="card" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
@@ -315,7 +347,7 @@ export default function AuthCartPage() {
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(300px, 1fr)', gap: '24px', alignItems: 'start' }}>
+        <div className="cart-layout-grid">
           {/* Cart Items List */}
           <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>

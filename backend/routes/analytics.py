@@ -53,6 +53,7 @@ def get_executive_overview():
                 SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending_orders,
                 SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed_orders,
                 SUM(CASE WHEN status = 'SHIPPED' THEN 1 ELSE 0 END) AS shipped_orders,
+                SUM(CASE WHEN status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_orders,
                 SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_orders
             FROM orders
         """)
@@ -97,6 +98,7 @@ def get_executive_overview():
                     "pending": order_metrics.get("pending_orders", 0),
                     "confirmed": order_metrics.get("confirmed_orders", 0),
                     "shipped": order_metrics.get("shipped_orders", 0),
+                    "delivered": order_metrics.get("delivered_orders", 0),
                     "cancelled": order_metrics.get("cancelled_orders", 0),
                 },
                 "inventory_summary": {
@@ -255,6 +257,110 @@ def get_category_performance():
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
+
+@analytics_bp.route('/reports/top-selling', methods=['GET'])
+def get_top_selling_report():
+    try:
+        try:
+            data = run_query("SELECT * FROM v_top_selling_products")
+        except Exception:
+            data = run_query("""
+                SELECT
+                    p.product_id,
+                    p.title AS product_name,
+                    COALESCE(c.name, 'Uncategorized') AS category_name,
+                    COALESCE(SUM(oi.quantity), 0) AS total_units_sold,
+                    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS total_revenue,
+                    DENSE_RANK() OVER (ORDER BY COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) DESC) AS revenue_rank
+                FROM products p
+                INNER JOIN product_variants pv ON pv.product_id = p.product_id
+                INNER JOIN order_items oi ON oi.variant_id = pv.variant_id
+                LEFT OUTER JOIN categories c ON c.category_id = p.category_id
+                GROUP BY p.product_id, p.title, c.name
+                ORDER BY total_revenue DESC
+            """)
+        return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@analytics_bp.route('/reports/category-orders', methods=['GET'])
+def get_category_orders_report():
+    try:
+        try:
+            data = run_query("SELECT * FROM v_category_order_totals")
+        except Exception:
+            data = run_query("""
+                SELECT
+                    COALESCE(c.name, 'ALL CATEGORIES (GRAND TOTAL)') AS category_name,
+                    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS total_category_revenue,
+                    COUNT(DISTINCT o.order_id) AS total_orders,
+                    COALESCE(SUM(oi.quantity), 0) AS total_units_sold
+                FROM categories c
+                LEFT OUTER JOIN products p ON p.category_id = c.category_id
+                LEFT OUTER JOIN product_variants pv ON pv.product_id = p.product_id
+                LEFT OUTER JOIN order_items oi ON oi.variant_id = pv.variant_id
+                LEFT OUTER JOIN orders o ON o.order_id = oi.order_id
+                GROUP BY c.name WITH ROLLUP
+            """)
+        return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@analytics_bp.route('/reports/customer-summary', methods=['GET'])
+def get_customer_summary_report():
+    try:
+        try:
+            data = run_query("SELECT * FROM v_customer_order_summary")
+        except Exception:
+            data = run_query("""
+                SELECT
+                    u.user_id AS customer_id,
+                    u.full_name AS customer_name,
+                    u.email,
+                    COALESCE(tc.city_name, 'Texas Regional') AS primary_city,
+                    COUNT(DISTINCT o.order_id) AS total_orders,
+                    COALESCE(SUM(o.total_amount), 0.00) AS lifetime_spending,
+                    COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
+                    COALESCE(SUM(CASE WHEN o.payment_status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending_orders,
+                    COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN o.total_amount ELSE 0.00 END), 0.00) AS paid_order_value,
+                    COALESCE(SUM(CASE WHEN o.payment_status = 'Pending' THEN o.total_amount ELSE 0.00 END), 0.00) AS pending_order_value
+                FROM users u
+                LEFT OUTER JOIN orders o ON o.user_id = u.user_id
+                LEFT OUTER JOIN shipments s ON s.shipment_id = o.shipment_id
+                LEFT OUTER JOIN texas_cities tc ON tc.city_id = s.destination_city_id
+                GROUP BY u.user_id, u.full_name, u.email, tc.city_name
+                ORDER BY lifetime_spending DESC
+            """)
+        return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@analytics_bp.route('/reports/quarterly-sales', methods=['GET'])
+def get_quarterly_sales_report():
+    try:
+        try:
+            data = run_query("SELECT * FROM v_quarterly_sales_report")
+        except Exception:
+            data = run_query("""
+                SELECT
+                    YEAR(o.placed_at) AS sales_year,
+                    QUARTER(o.placed_at) AS sales_quarter,
+                    COUNT(DISTINCT o.order_id) AS total_orders,
+                    COALESCE(SUM(oi.quantity * oi.unit_price), 0.00) AS gross_revenue,
+                    COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN oi.quantity * oi.unit_price ELSE 0.00 END), 0.00) AS net_collected_revenue,
+                    COALESCE(SUM(oi.quantity), 0) AS total_units_sold,
+                    AVG(COALESCE(SUM(oi.quantity * oi.unit_price), 0.00)) OVER (
+                        ORDER BY YEAR(o.placed_at), QUARTER(o.placed_at)
+                        ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
+                    ) AS moving_avg_quarterly_revenue
+                FROM orders o
+                LEFT OUTER JOIN order_items oi ON oi.order_id = o.order_id
+                GROUP BY YEAR(o.placed_at), QUARTER(o.placed_at)
+                ORDER BY sales_year, sales_quarter
+            """)
+        return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def serialize_row(row):
     """

@@ -66,92 +66,22 @@ const CATEGORY_THUMBNAILS = {
   },
 };
 
-// ─── smart product image resolver ─────────────────────────────────────────────
+// ─── product image & gallery resolvers ─────────────────────────────────────────
+const DEFAULT_PRODUCT_IMG = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&auto=format&fit=crop&q=80';
+
 function getProductPhoto(product) {
-  if (product?.image_url) return product.image_url;
-  const name = (product?.name || product?.title || '').toLowerCase();
-  if (name.includes('soundcore r50i nc') || (name.includes('soundcore') && name.includes('nc'))) {
-    return 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone') || name.includes('tws')) {
-    return 'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('apple') || name.includes('adapter') || name.includes('charger') || name.includes('20w')) {
-    return 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('aspor') || name.includes('power bank') || name.includes('battery') || name.includes('mah')) {
-    return 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('speaker') || name.includes('jbl') || name.includes('audio') || name.includes('sound')) {
-    return 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('projector') || name.includes('cinema') || name.includes('display')) {
-    return 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('car') || name.includes('mount') || name.includes('holder')) {
-    return 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('phone') || name.includes('iphone') || name.includes('samsung') || name.includes('galaxy') || name.includes('pixel')) {
-    return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('watch') || name.includes('smartwatch')) {
-    return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=700&auto=format&fit=crop&q=80';
-  }
-  if (name.includes('cable') || name.includes('type-c') || name.includes('lightning')) {
-    return 'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=700&auto=format&fit=crop&q=80';
-  }
-  return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&auto=format&fit=crop&q=80';
+  return product?.image_url || DEFAULT_PRODUCT_IMG;
 }
 
 function getProductGallery(product) {
-  if (product?.image_url) {
-    return [
-      product.image_url,
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  const name = (product?.name || product?.title || '').toLowerCase();
-  if (name.includes('soundcore') || name.includes('earbuds') || name.includes('airpods') || name.includes('headphone')) {
-    return [
-      'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('power bank') || name.includes('battery') || name.includes('aspor')) {
-    return [
-      'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1608755728617-aefab37d2edd?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('speaker') || name.includes('jbl') || name.includes('audio')) {
-    return [
-      'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1543512214-318c7553f230?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
-  if (name.includes('phone') || name.includes('iphone') || name.includes('samsung')) {
-    return [
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=900&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=900&auto=format&fit=crop&q=80',
-    ];
-  }
+  const photo = getProductPhoto(product);
   return [
-    getProductPhoto(product),
+    photo,
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=900&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=900&auto=format&fit=crop&q=80',
   ];
 }
+
 
 function getDeliveryDateRange() {
   const now = new Date();
@@ -270,6 +200,7 @@ export default function CatalogPage() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [cardAdding, setCardAdding] = useState({});
   const [cartVersion, setCartVersion] = useState(0);
   const [shortDescOpen, setShortDescOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
@@ -283,7 +214,8 @@ export default function CatalogPage() {
   const getVariantInCart = useCallback((vId) => {
     if (!productDetail) return 0;
     try {
-      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
       const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const list = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(list)) return 0;
@@ -294,7 +226,7 @@ export default function CatalogPage() {
     } catch {
       return 0;
     }
-  }, [productDetail, currentUser?.user_id, cartVersion]);
+  }, [productDetail, currentUser?.id, currentUser?.user_id, cartVersion]);
 
   // In-cart quantity for current variant
   const inCartQuantity = useMemo(() => {
@@ -414,6 +346,30 @@ export default function CatalogPage() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // Sync authenticated user cart from backend on mount so in-cart badges are 100% accurate
+  useEffect(() => {
+    if (isLoggedIn) {
+      api.get('/auth_cart/cart')
+        .then((res) => {
+          const items = res.data?.items || [];
+          const currentUid = currentUser?.id || currentUser?.user_id;
+          const formatted = items.map((it) => ({
+            product_id: it.product_id,
+            name: it.product_name || it.name,
+            variant_id: it.variant_id,
+            sku: it.sku,
+            quantity: it.quantity,
+            price: it.unit_price,
+          }));
+          if (currentUid) {
+            localStorage.setItem(`cart_${currentUid}`, JSON.stringify(formatted));
+          }
+          setCartVersion((v) => v + 1);
+        })
+        .catch(() => null);
+    }
+  }, [isLoggedIn, currentUser?.id, currentUser?.user_id]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -644,15 +600,6 @@ export default function CatalogPage() {
   const handleAddToCart = async () => {
     if (addingToCart) return;
 
-    if (!isLoggedIn) {
-      setToastMessage('🔒 Please log in to add items to your cart.');
-      setTimeout(() => {
-        setToastMessage(null);
-        navigate('/login');
-      }, 1200);
-      return;
-    }
-
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
@@ -689,25 +636,30 @@ export default function CatalogPage() {
         ? Number(selectedVariant.price)
         : Number(productDetail.base_price) || 0;
 
+      const photo = getProductPhoto(productDetail);
       const cartItem = {
         product_id: productDetail.product_id,
         name: productDetail.name || productDetail.title,
+        product_name: productDetail.name || productDetail.title,
         variant_id: selectedVariant?.variant_id || null,
         sku: selectedVariant?.sku || 'STD',
         attribute_name: selectedVariant?.attribute_name || null,
         attribute_value: selectedVariant?.attribute_value || 'Default',
         price: itemPrice,
+        unit_price: itemPrice,
         quantity: qtyToAdd,
         available_stock: availableStock - qtyToAdd,
-        image: getProductPhoto(productDetail),
+        image: photo,
+        image_url: photo,
       };
 
-      const userCartKey = currentUser?.user_id ? `cart_${currentUser.user_id}` : 'cart';
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
       const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const existing = raw ? JSON.parse(raw) : [];
       const list = Array.isArray(existing) ? existing : [];
       const matchIndex = list.findIndex(
-        (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
+        (i) => i.product_id === cartItem.product_id && (cartItem.variant_id ? i.variant_id === cartItem.variant_id : true)
       );
 
       if (matchIndex > -1) {
@@ -716,33 +668,132 @@ export default function CatalogPage() {
         list.push(cartItem);
       }
       localStorage.setItem(userCartKey, JSON.stringify(list));
-      localStorage.setItem('cart', JSON.stringify(list));
+      if (!isLoggedIn) {
+        localStorage.setItem('cart', JSON.stringify(list));
+      } else {
+        localStorage.removeItem('cart');
+      }
+      window.dispatchEvent(new Event('cartUpdated'));
       setCartVersion((v) => v + 1);
       setQuantity(1);
 
-      // 2. Persist reservation to database catalog
-      try {
-        if (selectedVariant?.variant_id) {
-          await api.post('/catalog/cart/reserve', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
-          // 3. Save item to database cart (carts + cart_items tables)
-          await api.post('/catalog/cart/add', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
+      // 2. Persist reservation to database catalog (only if authenticated user)
+      if (isLoggedIn) {
+        try {
+          if (selectedVariant?.variant_id) {
+            await api.post('/catalog/cart/reserve', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+            // 3. Save item to database cart (carts + cart_items tables)
+            await api.post('/catalog/cart/add', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+          }
+          refreshDetail(true);
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart note:', err);
         }
-        refreshDetail(true);
-        refreshProducts();
-      } catch (err) {
-        console.warn('Backend cart note:', err);
       }
 
-      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
+      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name || productDetail.title} to cart!`);
       setTimeout(() => setToastMessage(null), 3500);
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleAddProductToCart = async (p, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!p || p.is_active === 0) return;
+    if (cardAdding[p.product_id]) return;
+
+    setCardAdding((prev) => ({ ...prev, [p.product_id]: true }));
+
+    try {
+      const photo = getProductPhoto(p);
+      const itemPrice = Number(p.base_price) || 0;
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
+
+      let resolvedVariantId = null;
+
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + 1;
+        resolvedVariantId = list[matchIndex].variant_id || null;
+      } else {
+        const cartItem = {
+          product_id: p.product_id,
+          name: p.name || p.title,
+          product_name: p.name || p.title,
+          variant_id: null,
+          sku: `SKU-${p.product_id}`,
+          attribute_name: null,
+          attribute_value: 'Default',
+          price: itemPrice,
+          unit_price: itemPrice,
+          quantity: 1,
+          available_stock: 99,
+          image: photo,
+          image_url: photo,
+        };
+        list.push(cartItem);
+      }
+
+      localStorage.setItem(userCartKey, JSON.stringify(list));
+      if (!isLoggedIn) {
+        localStorage.setItem('cart', JSON.stringify(list));
+      } else {
+        localStorage.removeItem('cart');
+      }
+
+      window.dispatchEvent(new Event('cartUpdated'));
+      setCartVersion((v) => v + 1);
+
+      // If user is authenticated, sync with backend database cart
+      if (isLoggedIn) {
+        try {
+          const res = await api.post('/auth_cart/cart/add', {
+            product_id: p.product_id,
+            quantity: 1,
+          });
+          if (res.data?.variant_id) {
+            resolvedVariantId = res.data.variant_id;
+            const updatedList = list.map((item) =>
+              item.product_id === p.product_id && !item.variant_id
+                ? { ...item, variant_id: resolvedVariantId }
+                : item
+            );
+            localStorage.setItem(userCartKey, JSON.stringify(updatedList));
+            // Reserve stock
+            await api.post('/catalog/cart/reserve', {
+              variant_id: resolvedVariantId,
+              quantity: 1,
+            }).catch(() => null);
+          }
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart add note:', err);
+        }
+      }
+
+      setToastMessage(`✓ Added 1x ${p.name || p.title} to cart!`);
+      setTimeout(() => setToastMessage(null), 3200);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setToastMessage('❌ Could not add item to cart. Please try again.');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setCardAdding((prev) => ({ ...prev, [p.product_id]: false }));
     }
   };
 
@@ -868,7 +919,7 @@ export default function CatalogPage() {
   const renderFilterAccordions = () => (
     <>
       {/* Availability Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('availability')}
           style={{
@@ -880,34 +931,34 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Availability</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.availability && (
           <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
               <input
                 type="checkbox"
                 checked={availabilityFilter.inStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
-                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span>In stock</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#57534e', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
               <input
                 type="checkbox"
                 checked={availabilityFilter.outOfStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
-                style={{ accentColor: '#1a1917', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span>Out of stock</span>
             </label>
@@ -916,7 +967,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Price Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('price')}
           style={{
@@ -928,15 +979,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Price</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.price && (
@@ -951,13 +1002,13 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid rgba(0,0,0,0.12)',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '0.82rem',
                   outline: 'none',
                 }}
               />
-              <span style={{ color: '#a8a29e' }}>–</span>
+              <span style={{ color: '#94a3b8' }}>–</span>
               <input
                 type="number"
                 placeholder="Rs Max"
@@ -967,7 +1018,7 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid rgba(0,0,0,0.12)',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '8px',
                   fontSize: '0.82rem',
                   outline: 'none',
@@ -980,7 +1031,7 @@ export default function CatalogPage() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#1a1917',
+                  color: '#2563eb',
                   fontSize: '0.78rem',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -996,7 +1047,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Color Accordion */}
-      <div style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
         <button
           onClick={() => toggleAccordion('color')}
           style={{
@@ -1008,15 +1059,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Color</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.color && (
@@ -1043,12 +1094,13 @@ export default function CatalogPage() {
                     gap: '6px',
                     padding: '5px 10px',
                     borderRadius: '9999px',
-                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
-                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     fontSize: '0.8rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 400,
+                    fontWeight: isSel ? 600 : 500,
                   }}
                 >
                   <span
@@ -1081,15 +1133,15 @@ export default function CatalogPage() {
             border: 'none',
             padding: 0,
             fontSize: '0.98rem',
-            fontWeight: 600,
-            color: '#1a1917',
+            fontWeight: 700,
+            color: '#0f172a',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
           <span>Storage</span>
-          <span style={{ fontSize: '0.75rem', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-            ▼
+          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            ▲
           </span>
         </button>
         {openAccordions.storage && (
@@ -1107,12 +1159,13 @@ export default function CatalogPage() {
                   style={{
                     padding: '5px 10px',
                     borderRadius: '8px',
-                    border: isSel ? '1.5px solid #1a1917' : '1px solid rgba(0,0,0,0.12)',
-                    backgroundColor: isSel ? '#1a1917' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#1c1917',
+                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#334155',
+                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     fontSize: '0.78rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 400,
+                    fontWeight: isSel ? 600 : 500,
                   }}
                 >
                   {cap}
@@ -1319,43 +1372,6 @@ export default function CatalogPage() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', maxWidth: '1680px', margin: '0 auto', boxSizing: 'border-box' }}>
-        {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: '28px',
-              right: '28px',
-              zIndex: 9999,
-              background: toastMessage.startsWith('⚠️')
-                ? '#d97706'
-                : toastMessage.startsWith('❌')
-                  ? '#dc2626'
-                  : toastMessage.startsWith('🔒')
-                    ? '#1e293b'
-                    : '#10b981',
-              color: '#ffffff',
-              padding: '14px 22px',
-              borderRadius: '12px',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              boxShadow: toastMessage.startsWith('⚠️')
-                ? '0 10px 30px rgba(217, 119, 6, 0.4)'
-                : toastMessage.startsWith('❌')
-                  ? '0 10px 30px rgba(220, 38, 38, 0.4)'
-                  : toastMessage.startsWith('🔒')
-                    ? '0 10px 30px rgba(30, 41, 59, 0.4)'
-                    : '0 10px 30px rgba(16, 185, 129, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              animation: 'fadeInUp 0.3s ease-out',
-            }}
-          >
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* ── Breadcrumb & Navigation Bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <button
@@ -1385,19 +1401,9 @@ export default function CatalogPage() {
         <div className="product-top-grid">
           {/* LEFT: GALLERY & PROMO BADGES */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              {/* Vertical Thumbnail Strip */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  maxHeight: '520px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
-                  scrollbarWidth: 'none',
-                }}
-              >
+            <div className="product-gallery-layout">
+              {/* Thumbnail Strip */}
+              <div className="product-thumbnails-strip">
                 {gallery.map((imgUrl, idx) => (
                   <button
                     key={idx}
@@ -1422,21 +1428,7 @@ export default function CatalogPage() {
               </div>
 
               {/* Large Main Photo */}
-              <div
-                style={{
-                  flex: 1,
-                  background: '#ffffff',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  padding: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  minHeight: '420px',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
-                }}
-              >
+              <div className="product-main-photo-card">
                 <img
                   src={gallery[activePhotoIndex] || getProductPhoto(productDetail)}
                   alt={productDetail.name}
@@ -1471,16 +1463,7 @@ export default function CatalogPage() {
           {/* RIGHT: DETAILS, PRICING, VARIANTS, ACTIONS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Title */}
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 800,
-                color: '#1a1917',
-                lineHeight: 1.2,
-                margin: 0,
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <h1 className="product-detail-title">
               {productDetail.name}
             </h1>
 
@@ -1627,13 +1610,14 @@ export default function CatalogPage() {
 
             {/* Quantity Selector & Add to Cart Button */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: '10px',
+                    borderRadius: '9999px',
+                    padding: '4px 8px',
                     background: '#ffffff',
                     height: '46px',
                   }}
@@ -1641,32 +1625,40 @@ export default function CatalogPage() {
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={addingToCart || quantity <= 1 || availableStock <= 0}
+                    disabled={addingToCart || quantity <= 1}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
-                      cursor: (addingToCart || quantity <= 1 || availableStock <= 0) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || quantity <= 1 || availableStock <= 0) ? '#cbd5e1' : '#44403c',
+                      cursor: (addingToCart || quantity <= 1) ? 'not-allowed' : 'pointer',
+                      color: (addingToCart || quantity <= 1) ? '#cbd5e1' : '#44403c',
                       fontWeight: 600,
                     }}
                   >
                     −
                   </button>
-                  <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: '#1c1917' }}>
-                    {availableStock <= 0 ? 0 : Math.min(quantity, availableStock)}
+                  <span
+                    style={{
+                      minWidth: '32px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#1a1917',
+                    }}
+                  >
+                    {quantity}
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setQuantity((q) => Math.min(availableStock, q + 1));
-                    }}
+                    onClick={() => setQuantity((q) => q + 1)}
                     disabled={addingToCart || availableStock <= 0 || quantity >= availableStock}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
@@ -1682,27 +1674,23 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={addingToCart || (isLoggedIn && !inStock)}
+                  disabled={addingToCart || !inStock}
                   style={{
                     flex: 1,
                     height: '46px',
                     borderRadius: '9999px',
                     border: 'none',
-                    background: !isLoggedIn
-                      ? '#0f172a'
-                      : inStock
-                        ? (addingToCart ? '#6366f1' : '#3b5bcf')
-                        : '#a8a29e',
+                    background: inStock
+                      ? (addingToCart ? '#1d4ed8' : '#2563eb')
+                      : '#a8a29e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    cursor: (addingToCart || (isLoggedIn && !inStock)) ? 'not-allowed' : 'pointer',
+                    cursor: (addingToCart || !inStock) ? 'not-allowed' : 'pointer',
                     opacity: addingToCart ? 0.85 : 1,
-                    boxShadow: !isLoggedIn
-                      ? '0 4px 14px rgba(15,23,42,0.25)'
-                      : inStock
-                        ? '0 4px 14px rgba(59,91,207,0.35)'
-                        : 'none',
+                    boxShadow: inStock
+                      ? '0 4px 14px rgba(37,99,235,0.35)'
+                      : 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1710,12 +1698,7 @@ export default function CatalogPage() {
                     gap: '8px',
                   }}
                 >
-                  {!isLoggedIn ? (
-                    <>
-                      <span>🔒</span>
-                      <span>Sign in to add to cart</span>
-                    </>
-                  ) : addingToCart ? (
+                  {addingToCart ? (
                     <>
                       <span>⏳</span>
                       <span>Adding to cart...</span>
@@ -2317,6 +2300,7 @@ export default function CatalogPage() {
               {relatedProducts.map((p) => {
                 const photo = getProductPhoto(p);
                 const price = Number(p.base_price) || 0;
+                const isInStock = p.is_active !== 0;
                 return (
                   <div
                     key={p.product_id}
@@ -2342,9 +2326,71 @@ export default function CatalogPage() {
                     <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a1917', margin: '0 0 6px 0', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {p.name}
                     </h3>
-                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto' }}>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto', marginBottom: '10px' }}>
                       {formatRs(price)}
                     </div>
+                    <button
+                      type="button"
+                      disabled={!isInStock || cardAdding[p.product_id]}
+                      onClick={(e) => handleAddProductToCart(p, e)}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        borderRadius: '9px',
+                        border: 'none',
+                        background: isInStock
+                          ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
+                          : '#f1f5f9',
+                        color: isInStock ? '#ffffff' : '#94a3b8',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.18s ease',
+                        boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#1d4ed8';
+                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(37,99,235,0.3)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#2563eb';
+                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {cardAdding[p.product_id] ? (
+                        <span>Adding...</span>
+                      ) : isInStock ? (
+                        <>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <path d="M16 10a4 4 0 0 1-8 0" />
+                          </svg>
+                          <span>Add to cart</span>
+                        </>
+                      ) : (
+                        <span>Out of stock</span>
+                      )}
+                    </button>
                   </div>
                 );
               })}
@@ -2391,6 +2437,42 @@ export default function CatalogPage() {
           gap: 36px;
           align-items: flex-start;
         }
+        .product-gallery-layout {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+          width: 100%;
+        }
+        .product-thumbnails-strip {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 520px;
+          overflow-y: auto;
+          padding-right: 4px;
+          scrollbar-width: none;
+        }
+        .product-main-photo-card {
+          flex: 1;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 1px solid rgba(0,0,0,0.08);
+          padding: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          min-height: 420px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .product-detail-title {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #1a1917;
+          line-height: 1.2;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
         .catalog-product-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2430,6 +2512,27 @@ export default function CatalogPage() {
           display: none;
         }
         @media (max-width: 640px) {
+          .product-gallery-layout {
+            flex-direction: column-reverse;
+            gap: 12px;
+          }
+          .product-thumbnails-strip {
+            flex-direction: row;
+            overflow-x: auto;
+            overflow-y: visible;
+            max-height: none;
+            width: 100%;
+            padding-bottom: 6px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .product-main-photo-card {
+            padding: 16px;
+            min-height: 260px;
+            border-radius: 16px;
+          }
+          .product-detail-title {
+            font-size: 1.45rem;
+          }
           .catalog-product-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
@@ -2476,6 +2579,43 @@ export default function CatalogPage() {
         }
       `}</style>
 
+      {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            right: '28px',
+            zIndex: 9999,
+            background: toastMessage.startsWith('⚠️')
+              ? '#d97706'
+              : toastMessage.startsWith('❌')
+                ? '#dc2626'
+                : toastMessage.startsWith('🔒')
+                  ? '#1e293b'
+                  : '#10b981',
+            color: '#ffffff',
+            padding: '14px 22px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.92rem',
+            boxShadow: toastMessage.startsWith('⚠️')
+              ? '0 10px 30px rgba(217, 119, 6, 0.4)'
+              : toastMessage.startsWith('❌')
+                ? '0 10px 30px rgba(220, 38, 38, 0.4)'
+                : toastMessage.startsWith('🔒')
+                  ? '0 10px 30px rgba(30, 41, 59, 0.4)'
+                  : '0 10px 30px rgba(16, 185, 129, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            animation: 'fadeInUp 0.3s ease-out',
+          }}
+        >
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ── CONDITIONAL RENDER: PRODUCT DETAILS PAGE vs CATALOG BROWSE GRID ── */}
       {selectedProductId ? (
         renderProductDetailPage()
@@ -2487,10 +2627,10 @@ export default function CatalogPage() {
               className="catalog-page-title"
               style={{
                 fontSize: '2.6rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 letterSpacing: '-0.025em',
                 margin: '0 0 16px 0',
-                color: '#1a1917',
+                color: '#0f172a',
                 lineHeight: 1.1,
               }}
             >
@@ -2520,16 +2660,16 @@ export default function CatalogPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#1a1917' : '#ffffff',
-                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#1c1917',
-                  border: '1px solid rgba(0,0,0,0.08)',
+                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2563eb' : '#ffffff',
+                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#334155',
+                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                   borderRadius: '9999px',
                   padding: '7px 16px 7px 12px',
                   fontSize: '0.86rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
                 }}
@@ -2539,7 +2679,7 @@ export default function CatalogPage() {
                     width: '24px',
                     height: '24px',
                     borderRadius: '8px',
-                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2576,16 +2716,16 @@ export default function CatalogPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '10px',
-                      backgroundColor: isSelected ? '#1a1917' : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#1c1917',
-                      border: '1px solid rgba(0,0,0,0.08)',
+                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#334155',
+                      border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
                       borderRadius: '9999px',
                       padding: '7px 16px 7px 10px',
                       fontSize: '0.86rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
                       transition: 'all 0.2s ease',
                       flexShrink: 0,
                     }}
@@ -2596,7 +2736,7 @@ export default function CatalogPage() {
                         height: '26px',
                         borderRadius: '8px',
                         overflow: 'hidden',
-                        background: 'rgba(0,0,0,0.04)',
+                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2694,15 +2834,16 @@ export default function CatalogPage() {
                     style={{
                       padding: '8px 16px',
                       borderRadius: '9999px',
-                      border: '1px solid rgba(0,0,0,0.14)',
-                      background: mobileFiltersOpen ? '#1a1917' : '#ffffff',
-                      color: mobileFiltersOpen ? '#ffffff' : '#1a1917',
+                      border: mobileFiltersOpen ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: mobileFiltersOpen ? '#2563eb' : '#ffffff',
+                      color: mobileFiltersOpen ? '#ffffff' : '#2563eb',
                       fontSize: '0.84rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       alignItems: 'center',
                       gap: '6px',
                       whiteSpace: 'nowrap',
+                      boxShadow: mobileFiltersOpen ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
                     }}
                   >
                     <span>⚙️ Filters</span>
@@ -3082,6 +3223,71 @@ export default function CatalogPage() {
                               {isInStock ? 'In stock' : 'Out of stock'}
                             </span>
                           </div>
+
+                          {/* Direct Add to Cart Button */}
+                          <button
+                            type="button"
+                            disabled={!isInStock || cardAdding[p.product_id]}
+                            onClick={(e) => handleAddProductToCart(p, e)}
+                            style={{
+                              marginTop: '12px',
+                              width: '100%',
+                              height: '38px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              background: isInStock
+                                ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
+                                : '#f1f5f9',
+                              color: isInStock ? '#ffffff' : '#94a3b8',
+                              fontSize: '0.84rem',
+                              fontWeight: 600,
+                              cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '7px',
+                              transition: 'all 0.18s ease',
+                              boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#1d4ed8';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.3)';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#2563eb';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }
+                            }}
+                          >
+                            {cardAdding[p.product_id] ? (
+                              <span>Adding...</span>
+                            ) : isInStock ? (
+                              <>
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                  <line x1="3" y1="6" x2="21" y2="6" />
+                                  <path d="M16 10a4 4 0 0 1-8 0" />
+                                </svg>
+                                <span>Add to cart</span>
+                              </>
+                            ) : (
+                              <span>Out of stock</span>
+                            )}
+                          </button>
 
                           {/* Manager Hover Controls */}
                           {isManager && (
