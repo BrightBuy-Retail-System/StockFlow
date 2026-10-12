@@ -24,6 +24,9 @@ import {
   HeartIcon,
   SearchIcon,
   XIcon,
+  BoxIcon,
+  SparklesIcon,
+  LayersIcon,
 } from '../components/Icons';
 
 /* -------------------------------------------------------------------------
@@ -565,6 +568,116 @@ export default function OverviewPage() {
             <span>View full catalog</span>
             <ArrowRightIcon className="w-3.5 h-3.5" />
           </Link>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          Platform Description & Architecture Section
+          ===================================================================== */}
+      <section className="platform-about-section">
+        <div className="platform-about-header">
+          <div className="platform-pill">
+            <SparklesIcon className="w-3.5 h-3.5" />
+            <span>Engineered Retail &amp; Supply Chain Engine</span>
+          </div>
+          <h2 className="platform-title">
+            BrightBuy &bull; Next-Gen Retail Commerce &amp; Distributed Fulfillment
+          </h2>
+          <p className="platform-subtitle">
+            StockFlow is an enterprise-grade retail platform combining real-time inventory synchronization, 
+            automated regional logistics across Texas distribution hubs, and high-concurrency transactional pipelines 
+            for customers, store managers, and system administrators.
+          </p>
+        </div>
+
+        <div className="platform-grid">
+          {/* Card 1: Multi-Variant Catalog */}
+          <div className="platform-card">
+            <div>
+              <div className="platform-card-icon-wrap">
+                <BoxIcon className="w-5 h-5" />
+              </div>
+              <h3 className="platform-card-title" style={{ marginTop: '16px' }}>
+                Multi-Variant Catalog &amp; Live Stock
+              </h3>
+              <p className="platform-card-desc">
+                Browse genuine tech hardware with real-time SKU variant tracking, dynamic pricing, and stock validation before checkout to prevent overselling.
+              </p>
+            </div>
+            <span className="platform-card-tag">Real-Time Sync</span>
+          </div>
+
+          {/* Card 2: Texas Regional Logistics */}
+          <div className="platform-card">
+            <div>
+              <div className="platform-card-icon-wrap">
+                <TruckIcon className="w-5 h-5" />
+              </div>
+              <h3 className="platform-card-title" style={{ marginTop: '16px' }}>
+                Texas Regional Logistics Hubs
+              </h3>
+              <p className="platform-card-desc">
+                Automated multi-hub shipment routing across 8 major Texas distribution centers with live carrier tracking and estimated delivery calculation.
+              </p>
+            </div>
+            <span className="platform-card-tag">8 Regional Hubs</span>
+          </div>
+
+          {/* Card 3: ACID Transactional Security */}
+          <div className="platform-card">
+            <div>
+              <div className="platform-card-icon-wrap">
+                <ShieldCheckIcon className="w-5 h-5" />
+              </div>
+              <h3 className="platform-card-title" style={{ marginTop: '16px' }}>
+                ACID Transactional Security
+              </h3>
+              <p className="platform-card-desc">
+                Reliable payment recording and order state transitions backed by row-level locking, idempotency guarantees, and comprehensive audit logs.
+              </p>
+            </div>
+            <span className="platform-card-tag">ACID Guaranteed</span>
+          </div>
+
+          {/* Card 4: Multi-Tier RBAC */}
+          <div className="platform-card">
+            <div>
+              <div className="platform-card-icon-wrap">
+                <LayersIcon className="w-5 h-5" />
+              </div>
+              <h3 className="platform-card-title" style={{ marginTop: '16px' }}>
+                Role-Based Portals &amp; Analytics
+              </h3>
+              <p className="platform-card-desc">
+                Tailored workflows for Customers, Branch Managers, and System Administrators with OLAP reports, moving averages, and DCL access controls.
+              </p>
+            </div>
+            <span className="platform-card-tag">Multi-Tier RBAC</span>
+          </div>
+        </div>
+
+        {/* Platform Core Metrics & Highlights */}
+        <div className="platform-stats-row">
+          <div className="platform-stat-item">
+            <span className="platform-stat-number">40+</span>
+            <span className="platform-stat-label">Enterprise SKUs</span>
+            <span className="platform-stat-sub">Across 12 curated tech categories</span>
+          </div>
+          <div className="platform-stat-item">
+            <span className="platform-stat-number">8 Hubs</span>
+            <span className="platform-stat-label">Texas Logistics</span>
+            <span className="platform-stat-sub">Dallas, Houston, Austin &amp; more</span>
+          </div>
+          <div className="platform-stat-item">
+            <span className="platform-stat-number">100%</span>
+            <span className="platform-stat-label">Stock Accuracy</span>
+            <span className="platform-stat-sub">Central warehouse ledger sync</span>
+          </div>
+          <div className="platform-stat-item">
+            <span className="platform-stat-number">&lt; 1.2s</span>
+            <span className="platform-stat-label">Order Processing</span>
+            <span className="platform-stat-sub">Instant transactional settlement</span>
+          </div>
         </div>
       </section>
 

@@ -200,6 +200,7 @@ export default function CatalogPage() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [cardAdding, setCardAdding] = useState({});
   const [cartVersion, setCartVersion] = useState(0);
   const [shortDescOpen, setShortDescOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
@@ -599,15 +600,6 @@ export default function CatalogPage() {
   const handleAddToCart = async () => {
     if (addingToCart) return;
 
-    if (!isLoggedIn) {
-      setToastMessage('🔒 Please log in to add items to your cart.');
-      setTimeout(() => {
-        setToastMessage(null);
-        navigate('/login');
-      }, 1200);
-      return;
-    }
-
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
@@ -644,26 +636,30 @@ export default function CatalogPage() {
         ? Number(selectedVariant.price)
         : Number(productDetail.base_price) || 0;
 
+      const photo = getProductPhoto(productDetail);
       const cartItem = {
         product_id: productDetail.product_id,
         name: productDetail.name || productDetail.title,
+        product_name: productDetail.name || productDetail.title,
         variant_id: selectedVariant?.variant_id || null,
         sku: selectedVariant?.sku || 'STD',
         attribute_name: selectedVariant?.attribute_name || null,
         attribute_value: selectedVariant?.attribute_value || 'Default',
         price: itemPrice,
+        unit_price: itemPrice,
         quantity: qtyToAdd,
         available_stock: availableStock - qtyToAdd,
-        image: getProductPhoto(productDetail),
+        image: photo,
+        image_url: photo,
       };
 
       const currentUid = currentUser?.id || currentUser?.user_id;
       const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
-      const raw = localStorage.getItem(userCartKey) || (!isLoggedIn ? localStorage.getItem('cart') : null);
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const existing = raw ? JSON.parse(raw) : [];
       const list = Array.isArray(existing) ? existing : [];
       const matchIndex = list.findIndex(
-        (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
+        (i) => i.product_id === cartItem.product_id && (cartItem.variant_id ? i.variant_id === cartItem.variant_id : true)
       );
 
       if (matchIndex > -1) {
@@ -677,32 +673,127 @@ export default function CatalogPage() {
       } else {
         localStorage.removeItem('cart');
       }
+      window.dispatchEvent(new Event('cartUpdated'));
       setCartVersion((v) => v + 1);
       setQuantity(1);
 
-      // 2. Persist reservation to database catalog
-      try {
-        if (selectedVariant?.variant_id) {
-          await api.post('/catalog/cart/reserve', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
-          // 3. Save item to database cart (carts + cart_items tables)
-          await api.post('/catalog/cart/add', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
+      // 2. Persist reservation to database catalog (only if authenticated user)
+      if (isLoggedIn) {
+        try {
+          if (selectedVariant?.variant_id) {
+            await api.post('/catalog/cart/reserve', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+            // 3. Save item to database cart (carts + cart_items tables)
+            await api.post('/catalog/cart/add', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+          }
+          refreshDetail(true);
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart note:', err);
         }
-        refreshDetail(true);
-        refreshProducts();
-      } catch (err) {
-        console.warn('Backend cart note:', err);
       }
 
-      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
+      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name || productDetail.title} to cart!`);
       setTimeout(() => setToastMessage(null), 3500);
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleAddProductToCart = async (p, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!p || p.is_active === 0) return;
+    if (cardAdding[p.product_id]) return;
+
+    setCardAdding((prev) => ({ ...prev, [p.product_id]: true }));
+
+    try {
+      const photo = getProductPhoto(p);
+      const itemPrice = Number(p.base_price) || 0;
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
+
+      let resolvedVariantId = null;
+
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + 1;
+        resolvedVariantId = list[matchIndex].variant_id || null;
+      } else {
+        const cartItem = {
+          product_id: p.product_id,
+          name: p.name || p.title,
+          product_name: p.name || p.title,
+          variant_id: null,
+          sku: `SKU-${p.product_id}`,
+          attribute_name: null,
+          attribute_value: 'Default',
+          price: itemPrice,
+          unit_price: itemPrice,
+          quantity: 1,
+          available_stock: 99,
+          image: photo,
+          image_url: photo,
+        };
+        list.push(cartItem);
+      }
+
+      localStorage.setItem(userCartKey, JSON.stringify(list));
+      if (!isLoggedIn) {
+        localStorage.setItem('cart', JSON.stringify(list));
+      } else {
+        localStorage.removeItem('cart');
+      }
+
+      window.dispatchEvent(new Event('cartUpdated'));
+      setCartVersion((v) => v + 1);
+
+      // If user is authenticated, sync with backend database cart
+      if (isLoggedIn) {
+        try {
+          const res = await api.post('/auth_cart/cart/add', {
+            product_id: p.product_id,
+            quantity: 1,
+          });
+          if (res.data?.variant_id) {
+            resolvedVariantId = res.data.variant_id;
+            const updatedList = list.map((item) =>
+              item.product_id === p.product_id && !item.variant_id
+                ? { ...item, variant_id: resolvedVariantId }
+                : item
+            );
+            localStorage.setItem(userCartKey, JSON.stringify(updatedList));
+            // Reserve stock
+            await api.post('/catalog/cart/reserve', {
+              variant_id: resolvedVariantId,
+              quantity: 1,
+            }).catch(() => null);
+          }
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart add note:', err);
+        }
+      }
+
+      setToastMessage(`✓ Added 1x ${p.name || p.title} to cart!`);
+      setTimeout(() => setToastMessage(null), 3200);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setToastMessage('❌ Could not add item to cart. Please try again.');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setCardAdding((prev) => ({ ...prev, [p.product_id]: false }));
     }
   };
 
@@ -1281,43 +1372,6 @@ export default function CatalogPage() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', maxWidth: '1680px', margin: '0 auto', boxSizing: 'border-box' }}>
-        {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: '28px',
-              right: '28px',
-              zIndex: 9999,
-              background: toastMessage.startsWith('⚠️')
-                ? '#d97706'
-                : toastMessage.startsWith('❌')
-                  ? '#dc2626'
-                  : toastMessage.startsWith('🔒')
-                    ? '#1e293b'
-                    : '#10b981',
-              color: '#ffffff',
-              padding: '14px 22px',
-              borderRadius: '12px',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              boxShadow: toastMessage.startsWith('⚠️')
-                ? '0 10px 30px rgba(217, 119, 6, 0.4)'
-                : toastMessage.startsWith('❌')
-                  ? '0 10px 30px rgba(220, 38, 38, 0.4)'
-                  : toastMessage.startsWith('🔒')
-                    ? '0 10px 30px rgba(30, 41, 59, 0.4)'
-                    : '0 10px 30px rgba(16, 185, 129, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              animation: 'fadeInUp 0.3s ease-out',
-            }}
-          >
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* ── Breadcrumb & Navigation Bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <button
@@ -1347,19 +1401,9 @@ export default function CatalogPage() {
         <div className="product-top-grid">
           {/* LEFT: GALLERY & PROMO BADGES */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              {/* Vertical Thumbnail Strip */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  maxHeight: '520px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
-                  scrollbarWidth: 'none',
-                }}
-              >
+            <div className="product-gallery-layout">
+              {/* Thumbnail Strip */}
+              <div className="product-thumbnails-strip">
                 {gallery.map((imgUrl, idx) => (
                   <button
                     key={idx}
@@ -1384,21 +1428,7 @@ export default function CatalogPage() {
               </div>
 
               {/* Large Main Photo */}
-              <div
-                style={{
-                  flex: 1,
-                  background: '#ffffff',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  padding: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  minHeight: '420px',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
-                }}
-              >
+              <div className="product-main-photo-card">
                 <img
                   src={gallery[activePhotoIndex] || getProductPhoto(productDetail)}
                   alt={productDetail.name}
@@ -1433,16 +1463,7 @@ export default function CatalogPage() {
           {/* RIGHT: DETAILS, PRICING, VARIANTS, ACTIONS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Title */}
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 800,
-                color: '#1a1917',
-                lineHeight: 1.2,
-                margin: 0,
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <h1 className="product-detail-title">
               {productDetail.name}
             </h1>
 
@@ -1589,13 +1610,14 @@ export default function CatalogPage() {
 
             {/* Quantity Selector & Add to Cart Button */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: '10px',
+                    borderRadius: '9999px',
+                    padding: '4px 8px',
                     background: '#ffffff',
                     height: '46px',
                   }}
@@ -1603,32 +1625,40 @@ export default function CatalogPage() {
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={addingToCart || quantity <= 1 || availableStock <= 0}
+                    disabled={addingToCart || quantity <= 1}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
-                      cursor: (addingToCart || quantity <= 1 || availableStock <= 0) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || quantity <= 1 || availableStock <= 0) ? '#cbd5e1' : '#44403c',
+                      cursor: (addingToCart || quantity <= 1) ? 'not-allowed' : 'pointer',
+                      color: (addingToCart || quantity <= 1) ? '#cbd5e1' : '#44403c',
                       fontWeight: 600,
                     }}
                   >
                     −
                   </button>
-                  <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: '#1c1917' }}>
-                    {availableStock <= 0 ? 0 : Math.min(quantity, availableStock)}
+                  <span
+                    style={{
+                      minWidth: '32px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#1a1917',
+                    }}
+                  >
+                    {quantity}
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setQuantity((q) => Math.min(availableStock, q + 1));
-                    }}
+                    onClick={() => setQuantity((q) => q + 1)}
                     disabled={addingToCart || availableStock <= 0 || quantity >= availableStock}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
@@ -1644,27 +1674,23 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  disabled={addingToCart || (isLoggedIn && !inStock)}
+                  disabled={addingToCart || !inStock}
                   style={{
                     flex: 1,
                     height: '46px',
                     borderRadius: '9999px',
                     border: 'none',
-                    background: !isLoggedIn
-                      ? '#0f172a'
-                      : inStock
-                        ? (addingToCart ? '#6366f1' : '#3b5bcf')
-                        : '#a8a29e',
+                    background: inStock
+                      ? (addingToCart ? '#1d4ed8' : '#2563eb')
+                      : '#a8a29e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    cursor: (addingToCart || (isLoggedIn && !inStock)) ? 'not-allowed' : 'pointer',
+                    cursor: (addingToCart || !inStock) ? 'not-allowed' : 'pointer',
                     opacity: addingToCart ? 0.85 : 1,
-                    boxShadow: !isLoggedIn
-                      ? '0 4px 14px rgba(15,23,42,0.25)'
-                      : inStock
-                        ? '0 4px 14px rgba(59,91,207,0.35)'
-                        : 'none',
+                    boxShadow: inStock
+                      ? '0 4px 14px rgba(37,99,235,0.35)'
+                      : 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1672,12 +1698,7 @@ export default function CatalogPage() {
                     gap: '8px',
                   }}
                 >
-                  {!isLoggedIn ? (
-                    <>
-                      <span>🔒</span>
-                      <span>Sign in to add to cart</span>
-                    </>
-                  ) : addingToCart ? (
+                  {addingToCart ? (
                     <>
                       <span>⏳</span>
                       <span>Adding to cart...</span>
@@ -2279,6 +2300,7 @@ export default function CatalogPage() {
               {relatedProducts.map((p) => {
                 const photo = getProductPhoto(p);
                 const price = Number(p.base_price) || 0;
+                const isInStock = p.is_active !== 0;
                 return (
                   <div
                     key={p.product_id}
@@ -2304,9 +2326,71 @@ export default function CatalogPage() {
                     <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a1917', margin: '0 0 6px 0', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {p.name}
                     </h3>
-                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto' }}>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto', marginBottom: '10px' }}>
                       {formatRs(price)}
                     </div>
+                    <button
+                      type="button"
+                      disabled={!isInStock || cardAdding[p.product_id]}
+                      onClick={(e) => handleAddProductToCart(p, e)}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        borderRadius: '9px',
+                        border: 'none',
+                        background: isInStock
+                          ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
+                          : '#f1f5f9',
+                        color: isInStock ? '#ffffff' : '#94a3b8',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.18s ease',
+                        boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#1d4ed8';
+                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(37,99,235,0.3)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#2563eb';
+                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {cardAdding[p.product_id] ? (
+                        <span>Adding...</span>
+                      ) : isInStock ? (
+                        <>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <path d="M16 10a4 4 0 0 1-8 0" />
+                          </svg>
+                          <span>Add to cart</span>
+                        </>
+                      ) : (
+                        <span>Out of stock</span>
+                      )}
+                    </button>
                   </div>
                 );
               })}
@@ -2353,6 +2437,42 @@ export default function CatalogPage() {
           gap: 36px;
           align-items: flex-start;
         }
+        .product-gallery-layout {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+          width: 100%;
+        }
+        .product-thumbnails-strip {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 520px;
+          overflow-y: auto;
+          padding-right: 4px;
+          scrollbar-width: none;
+        }
+        .product-main-photo-card {
+          flex: 1;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 1px solid rgba(0,0,0,0.08);
+          padding: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          min-height: 420px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .product-detail-title {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #1a1917;
+          line-height: 1.2;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
         .catalog-product-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2392,6 +2512,27 @@ export default function CatalogPage() {
           display: none;
         }
         @media (max-width: 640px) {
+          .product-gallery-layout {
+            flex-direction: column-reverse;
+            gap: 12px;
+          }
+          .product-thumbnails-strip {
+            flex-direction: row;
+            overflow-x: auto;
+            overflow-y: visible;
+            max-height: none;
+            width: 100%;
+            padding-bottom: 6px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .product-main-photo-card {
+            padding: 16px;
+            min-height: 260px;
+            border-radius: 16px;
+          }
+          .product-detail-title {
+            font-size: 1.45rem;
+          }
           .catalog-product-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
@@ -2437,6 +2578,43 @@ export default function CatalogPage() {
           40% { opacity: 1; transform: translateY(-3px); }
         }
       `}</style>
+
+      {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            right: '28px',
+            zIndex: 9999,
+            background: toastMessage.startsWith('⚠️')
+              ? '#d97706'
+              : toastMessage.startsWith('❌')
+                ? '#dc2626'
+                : toastMessage.startsWith('🔒')
+                  ? '#1e293b'
+                  : '#10b981',
+            color: '#ffffff',
+            padding: '14px 22px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.92rem',
+            boxShadow: toastMessage.startsWith('⚠️')
+              ? '0 10px 30px rgba(217, 119, 6, 0.4)'
+              : toastMessage.startsWith('❌')
+                ? '0 10px 30px rgba(220, 38, 38, 0.4)'
+                : toastMessage.startsWith('🔒')
+                  ? '0 10px 30px rgba(30, 41, 59, 0.4)'
+                  : '0 10px 30px rgba(16, 185, 129, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            animation: 'fadeInUp 0.3s ease-out',
+          }}
+        >
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* ── CONDITIONAL RENDER: PRODUCT DETAILS PAGE vs CATALOG BROWSE GRID ── */}
       {selectedProductId ? (
@@ -3045,6 +3223,71 @@ export default function CatalogPage() {
                               {isInStock ? 'In stock' : 'Out of stock'}
                             </span>
                           </div>
+
+                          {/* Direct Add to Cart Button */}
+                          <button
+                            type="button"
+                            disabled={!isInStock || cardAdding[p.product_id]}
+                            onClick={(e) => handleAddProductToCart(p, e)}
+                            style={{
+                              marginTop: '12px',
+                              width: '100%',
+                              height: '38px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              background: isInStock
+                                ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
+                                : '#f1f5f9',
+                              color: isInStock ? '#ffffff' : '#94a3b8',
+                              fontSize: '0.84rem',
+                              fontWeight: 600,
+                              cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '7px',
+                              transition: 'all 0.18s ease',
+                              boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#1d4ed8';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.3)';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#2563eb';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }
+                            }}
+                          >
+                            {cardAdding[p.product_id] ? (
+                              <span>Adding...</span>
+                            ) : isInStock ? (
+                              <>
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                  <line x1="3" y1="6" x2="21" y2="6" />
+                                  <path d="M16 10a4 4 0 0 1-8 0" />
+                                </svg>
+                                <span>Add to cart</span>
+                              </>
+                            ) : (
+                              <span>Out of stock</span>
+                            )}
+                          </button>
 
                           {/* Manager Hover Controls */}
                           {isManager && (
