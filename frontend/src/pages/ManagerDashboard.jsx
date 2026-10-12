@@ -526,7 +526,7 @@ export default function ManagerDashboard() {
       {/* TAB 2: BUSINESS INTELLIGENCE & ANALYTICAL REPORTS                    */}
       {/* ==================================================================== */}
       {activeTab === 'analytics' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '20px' }}>
+        <div className="manager-bi-grid">
           
           {/* Top Selling Products */}
           <div className="st-admin-card">

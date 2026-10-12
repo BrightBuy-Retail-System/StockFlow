@@ -155,7 +155,7 @@ export default function CustomerDashboard() {
       <section
         style={{
           background: '#ffffff',
-          borderRadius: '24px',
+          borderRadius: '2px',
           padding: '32px 36px',
           color: '#0f172a',
           marginBottom: '32px',
@@ -181,7 +181,7 @@ export default function CustomerDashboard() {
               style={{
                 width: '64px',
                 height: '64px',
-                borderRadius: '18px',
+                borderRadius: '2px',
                 background: '#ffffff',
                 color: '#2563eb',
                 display: 'flex',
@@ -229,7 +229,7 @@ export default function CustomerDashboard() {
                 border: '1.5px solid #e2e8f0',
                 color: '#0f172a',
                 padding: '10px 18px',
-                borderRadius: '9999px',
+                borderRadius: '2px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -253,7 +253,7 @@ export default function CustomerDashboard() {
                 border: '1.5px solid #2563eb',
                 color: '#2563eb',
                 padding: '10px 22px',
-                borderRadius: '9999px',
+                borderRadius: '2px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 textDecoration: 'none',
@@ -281,7 +281,7 @@ export default function CustomerDashboard() {
                 border: '1.5px solid #fecaca',
                 color: '#ef4444',
                 padding: '10px 18px',
-                borderRadius: '9999px',
+                borderRadius: '2px',
                 fontSize: '0.85rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -316,7 +316,7 @@ export default function CustomerDashboard() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
+            borderRadius: '2px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
@@ -341,7 +341,7 @@ export default function CustomerDashboard() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
+            borderRadius: '2px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
@@ -365,7 +365,7 @@ export default function CustomerDashboard() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
+            borderRadius: '2px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
@@ -390,7 +390,7 @@ export default function CustomerDashboard() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
+            borderRadius: '2px',
             border: '1.5px solid #e2e8f0',
             padding: '24px',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.06)',
@@ -482,8 +482,9 @@ export default function CustomerDashboard() {
               flexWrap: 'wrap',
               background: '#ffffff',
               padding: '16px 20px',
-              borderRadius: '16px',
+              borderRadius: '2px',
               border: '1px solid #e2e8f0',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
             }}
           >
             <div style={{ position: 'relative', flexGrow: 1, minWidth: '240px', maxWidth: '420px' }}>
@@ -498,7 +499,7 @@ export default function CustomerDashboard() {
                 style={{
                   width: '100%',
                   padding: '9px 16px 9px 40px',
-                  borderRadius: '9999px',
+                  borderRadius: '2px',
                   border: '1.5px solid #e2e8f0',
                   fontSize: '0.875rem',
                   outline: 'none',
@@ -536,7 +537,7 @@ export default function CustomerDashboard() {
                   onClick={() => setStatusFilter(st)}
                   style={{
                     padding: '6px 14px',
-                    borderRadius: '9999px',
+                    borderRadius: '2px',
                     fontSize: '0.775rem',
                     fontWeight: 700,
                     border: statusFilter === st ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
@@ -564,9 +565,10 @@ export default function CustomerDashboard() {
               style={{
                 background: '#ffffff',
                 border: '1.5px dashed #cbd5e1',
-                borderRadius: '24px',
+                borderRadius: '2px',
                 padding: '64px 32px',
                 textAlign: 'center',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
               }}
             >
               <div
@@ -629,10 +631,10 @@ export default function CustomerDashboard() {
                     key={order.order_id}
                     style={{
                       background: '#ffffff',
-                      borderRadius: '20px',
+                      borderRadius: '2px',
                       border: '1.5px solid #e2e8f0',
                       padding: '24px',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.02)',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
                       transition: 'all 0.25s ease',
                     }}
                   >
@@ -667,7 +669,7 @@ export default function CustomerDashboard() {
                               color: statusColor,
                               border: `1.5px solid ${statusColor}60`,
                               padding: '3px 10px',
-                              borderRadius: '9999px',
+                              borderRadius: '2px',
                               fontSize: '0.75rem',
                               fontWeight: 700,
                               textTransform: 'uppercase',
@@ -714,7 +716,7 @@ export default function CustomerDashboard() {
                                 justifyContent: 'space-between',
                                 background: '#f8fafc',
                                 padding: '10px 14px',
-                                borderRadius: '10px',
+                                borderRadius: '2px',
                                 fontSize: '0.875rem',
                               }}
                             >
@@ -775,7 +777,7 @@ export default function CustomerDashboard() {
                             color: '#334155',
                             border: '1.5px solid #cbd5e1',
                             padding: '8px 16px',
-                            borderRadius: '9999px',
+                            borderRadius: '2px',
                             fontSize: '0.825rem',
                             fontWeight: 700,
                             cursor: 'pointer',
@@ -806,7 +808,7 @@ export default function CustomerDashboard() {
                             color: '#0f172a',
                             border: '1px solid #e2e8f0',
                             padding: '8px 16px',
-                            borderRadius: '9999px',
+                            borderRadius: '2px',
                             fontSize: '0.825rem',
                             fontWeight: 700,
                             cursor: 'pointer',

@@ -1,16 +1,48 @@
 import { useEffect, useState, useRef } from 'react';
 import { NavLink, Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import { ShoppingBagIcon, UserIcon } from './Icons';
+import { ShoppingBagIcon, UserIcon, AuthCartIcon } from './Icons';
 
 export default function DashboardLayout() {
   const [isOnline, setIsOnline] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Update cart count from local storage
+  const updateCartCount = () => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      const u = savedUser ? JSON.parse(savedUser) : null;
+      const uid = u?.id || u?.user_id;
+      const raw = (uid ? localStorage.getItem(`cart_${uid}`) : null) || localStorage.getItem('cart');
+      if (raw) {
+        const items = JSON.parse(raw);
+        if (Array.isArray(items)) {
+          const total = items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
+          setCartCount(total);
+          return;
+        }
+      }
+      setCartCount(0);
+    } catch {
+      setCartCount(0);
+    }
+  };
+
+  useEffect(() => {
+    updateCartCount();
+    window.addEventListener('storage', updateCartCount);
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, [location.pathname]);
 
   // Close dropdown when clicking anywhere outside
   useEffect(() => {
@@ -89,8 +121,6 @@ export default function DashboardLayout() {
       return [
         { label: 'Home', to: '/', end: true },
         { label: 'Products', to: '/catalog' },
-        { label: 'Cart', to: '/auth-cart' },
-        { label: 'Track Order', to: '/orders' },
       ];
     }
 
@@ -99,8 +129,8 @@ export default function DashboardLayout() {
       return [
         { label: 'Home', to: '/', end: true },
         { label: 'Products', to: '/catalog' },
-        { label: 'Cart', to: '/auth-cart' },
         { label: 'My Orders', to: '/orders' },
+        { label: 'Logistics', to: '/logistics' },
         { label: 'Dashboard', to: '/customer-dashboard' },
       ];
     }
@@ -195,8 +225,8 @@ export default function DashboardLayout() {
             </span>
           </Link>
 
-          {/* Center: Dynamic Role-Based Navigation Links */}
-          <nav className={`navbar-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+          {/* Center: Dynamic Role-Based Navigation Links (Desktop) */}
+          <nav className="navbar-nav desktop-nav">
             {getNavLinks().map((link) => (
               <NavLink
                 key={link.to}
@@ -211,30 +241,42 @@ export default function DashboardLayout() {
 
           {/* Right: Actions & Connectivity Status */}
           <div className="navbar-actions">
-            {/* Discrete Connectivity Badge */}
+            {/* Discrete Connectivity Badge (Desktop) */}
             <div
-              className={`connection-badge ${isOnline ? 'online' : 'offline'}`}
+              className={`connection-badge desktop-only ${isOnline ? 'online' : 'offline'}`}
               title={isOnline ? 'Backend Connected (Port 5000)' : 'Backend Offline'}
             >
               <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
               <span className="badge-text">{isOnline ? 'Online' : 'Offline'}</span>
             </div>
 
+            {/* Shopping Cart Button with Real-time Count Badge (Always Available) */}
+            <Link
+              to="/auth-cart"
+              className="navbar-cart-btn"
+              title="Shopping Cart"
+              aria-label={`Shopping Cart with ${cartCount} items`}
+            >
+              <AuthCartIcon className="navbar-cart-icon" />
+              {cartCount > 0 && <span className="navbar-cart-badge">{cartCount}</span>}
+            </Link>
+
             {/* Retail Action Buttons */}
             {user ? (
-              <div ref={dropdownRef} style={{ position: 'relative' }}>
+              <div ref={dropdownRef} className="desktop-only" style={{ position: 'relative' }}>
                 <button
                   type="button"
                   className="btn-ghost"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent', }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
+                >
                   <UserIcon className="btn-icon" />
                   <span>{user.username || user.full_name}</span>
                   <span style={{
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     padding: '2px 6px',
-                    borderRadius: '4px',
+                    borderRadius: '2px',
                     background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
                     color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
                   }}>
@@ -252,7 +294,7 @@ export default function DashboardLayout() {
                       minWidth: '220px',
                       background: 'var(--bg-card, #1e222d)',
                       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
-                      borderRadius: '10px',
+                      borderRadius: '2px',
                       padding: '8px',
                       boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
                       zIndex: 1000,
@@ -285,6 +327,14 @@ export default function DashboardLayout() {
                           onClick={() => setDropdownOpen(false)}
                         >
                           <span>My Orders</span>
+                        </Link>
+                        <Link
+                          to="/analytics"
+                          className="btn-ghost"
+                          style={{ justifyContent: 'flex-start', padding: '8px 12px', width: '100%', borderRadius: '6px' }}
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <span>Analytics</span>
                         </Link>
                         <Link
                           to="/auth-cart"
@@ -415,14 +465,13 @@ export default function DashboardLayout() {
                         cursor: 'pointer',
                       }}
                     >
-                      {/*<LogoutIcon className="btn-icon" />*/}
                       Logout
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <>
+              <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Link to="/login" className="btn-ghost">
                   <UserIcon className="btn-icon" />
                   <span>Login</span>
@@ -430,16 +479,17 @@ export default function DashboardLayout() {
                 <Link to="/register" className="btn-register">
                   <span>Register</span>
                 </Link>
-              </>
+              </div>
             )}
 
+            {/* Mobile Hamburger Toggle */}
             <button
               type="button"
               className="mobile-toggle"
               aria-label="Toggle navigation menu"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 {mobileMenuOpen ? (
                   <>
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -457,6 +507,122 @@ export default function DashboardLayout() {
           </div>
         </div>
       </header>
+
+      {/* Modern Slide-In Mobile Navigation Drawer */}
+      <div
+        className={`mobile-drawer-backdrop ${mobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+      <aside className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-drawer-header">
+          <Link to="/" className="navbar-brand" onClick={() => setMobileMenuOpen(false)}>
+            <div className="brand-logo-badge">
+              <ShoppingBagIcon className="brand-logo-icon" />
+            </div>
+            <span className="brand-text">
+              Bright<span className="brand-text-accent">Buy</span>
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="mobile-drawer-close"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close navigation menu"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* User Account / Guest Card in Drawer */}
+        <div className="mobile-drawer-account">
+          {user ? (
+            <div className="mobile-user-card">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="mobile-user-avatar">
+                  <UserIcon style={{ width: '18px', height: '18px' }} />
+                </div>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                    {user.username || user.full_name}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    {getRoleLabel()}
+                  </div>
+                </div>
+              </div>
+              <Link
+                to={getDashboardRoute()}
+                className="mobile-dashboard-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Go to Dashboard &rarr;
+              </Link>
+            </div>
+          ) : (
+            <div className="mobile-guest-card">
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
+                Welcome to BrightBuy
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <Link
+                  to="/login"
+                  className="mobile-auth-btn mobile-auth-login"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="mobile-auth-btn mobile-auth-register"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Links in Drawer */}
+        <nav className="mobile-drawer-nav">
+          <div className="mobile-nav-group-label">Navigation</div>
+          {getNavLinks().map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span>{link.label}</span>
+              {link.to === '/auth-cart' && cartCount > 0 && (
+                <span className="mobile-nav-cart-pill">{cartCount}</span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Footer / System status in Drawer */}
+        <div className="mobile-drawer-footer">
+          <div className="mobile-cluster-indicator">
+            <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
+            <span>{isOnline ? 'TiDB Backend Connected' : 'Offline / Reconnecting'}</span>
+          </div>
+          {user && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="mobile-logout-btn"
+            >
+              Log Out
+            </button>
+          )}
+        </div>
+      </aside>
 
       {/* Main Outlet Container */}
       <main className="storefront-main">

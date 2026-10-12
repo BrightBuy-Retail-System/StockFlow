@@ -236,7 +236,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   background: isStaff ? '#eff6ff' : '#f1f5f9',
                   color: isStaff ? '#1e40af' : '#475569',
                   padding: '2px 8px',
-                  borderRadius: '9999px',
+                  borderRadius: '2px',
                   fontSize: '0.7rem',
                   fontWeight: 600,
                 }}
@@ -252,7 +252,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
               display: 'flex',
               background: '#f1f5f9',
               padding: '4px',
-              borderRadius: '10px',
+              borderRadius: '2px',
               gap: '4px',
             }}
           >
@@ -268,7 +268,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                     alignItems: 'center',
                     gap: '8px',
                     padding: '8px 16px',
-                    borderRadius: '8px',
+                    borderRadius: '2px',
                     border: 'none',
                     background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
                     color: activeTab === 'checkout' ? '#0264d6' : '#64748b',
@@ -292,7 +292,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                         fontSize: '0.7rem',
                         fontWeight: 700,
                         padding: '1px 6px',
-                        borderRadius: '9999px',
+                        borderRadius: '2px',
                       }}
                     >
                       {cartItemCount}
@@ -309,7 +309,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                     alignItems: 'center',
                     gap: '8px',
                     padding: '8px 16px',
-                    borderRadius: '8px',
+                    borderRadius: '2px',
                     border: 'none',
                     background: activeTab === 'history' ? '#ffffff' : 'transparent',
                     color: activeTab === 'history' ? '#0264d6' : '#64748b',
@@ -340,7 +340,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 16px',
-                  borderRadius: '8px',
+                  borderRadius: '2px',
                   border: 'none',
                   background: activeTab === 'lookup' ? '#ffffff' : 'transparent',
                   color: activeTab === 'lookup' ? '#0264d6' : '#64748b',
@@ -368,7 +368,7 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 16px',
-                  borderRadius: '8px',
+                  borderRadius: '2px',
                   border: 'none',
                   background: activeTab === 'fulfillment' ? '#ffffff' : 'transparent',
                   color: activeTab === 'fulfillment' ? '#0264d6' : '#64748b',
