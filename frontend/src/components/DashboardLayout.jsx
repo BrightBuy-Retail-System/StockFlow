@@ -245,9 +245,39 @@ export default function DashboardLayout() {
             <div
               className={`connection-badge desktop-only ${isOnline ? 'online' : 'offline'}`}
               title={isOnline ? 'Backend Connected (Port 5000)' : 'Backend Offline'}
+              style={{
+                height: '38px',
+                minHeight: '38px',
+                maxHeight: '38px',
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0 14px',
+                border: '1.5px solid #e7d7c1',
+                borderRadius: 'var(--radius-btn, 2px)',
+                background: '#ffffff',
+                color: '#3b2f2f',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
             >
-              <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
-              <span className="badge-text">{isOnline ? 'Online' : 'Offline'}</span>
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  minWidth: '8px',
+                  minHeight: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isOnline ? '#16a34a' : '#dc2626',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                  boxShadow: 'none',
+                  animation: 'none',
+                }}
+              />
+              <span className="badge-text" style={{ lineHeight: 1 }}>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
             </div>
 
             {/* Shopping Cart Button with Real-time Count Badge (Always Available) */}
@@ -256,8 +286,24 @@ export default function DashboardLayout() {
               className="navbar-cart-btn"
               title="Shopping Cart"
               aria-label={`Shopping Cart with ${cartCount} items`}
+              style={{
+                width: '38px',
+                height: '38px',
+                minHeight: '38px',
+                maxHeight: '38px',
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px solid #e7d7c1',
+                borderRadius: 'var(--radius-btn, 2px)',
+                background: '#ffffff',
+                color: '#3b2f2f',
+                position: 'relative',
+                flexShrink: 0,
+              }}
             >
-              <AuthCartIcon className="navbar-cart-icon" />
+              <AuthCartIcon className="navbar-cart-icon" style={{ width: '18px', height: '18px' }} />
               {cartCount > 0 && <span className="navbar-cart-badge">{cartCount}</span>}
             </Link>
 
@@ -607,7 +653,7 @@ export default function DashboardLayout() {
         <div className="mobile-drawer-footer">
           <div className="mobile-cluster-indicator">
             <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
-            <span>{isOnline ? 'TiDB Backend Connected' : 'Offline / Reconnecting'}</span>
+            <span>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
           </div>
           {user && (
             <button

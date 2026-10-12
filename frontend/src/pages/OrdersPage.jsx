@@ -199,16 +199,16 @@ export default function OrdersPage({ defaultTab = 'history' }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: '#faf7f2', display: 'flex', flexDirection: 'column' }}>
       {/* Top Storefront Orders Hub Bar */}
       <div
         style={{
           background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid #e7d7c1',
           position: 'sticky',
           top: 0,
           zIndex: 40,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxShadow: '0 1px 4px rgba(59, 47, 47, 0.03)',
         }}
       >
         <div
@@ -225,20 +225,23 @@ export default function OrdersPage({ defaultTab = 'history' }) {
         >
           {/* Page Title & User Context */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
+            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, color: '#3b2f2f', margin: 0, letterSpacing: '-0.01em' }}>
               Orders &amp; Checkout
             </h1>
-            <span style={{ color: '#cbd5e1' }}>•</span>
-            <div style={{ fontSize: '0.8125rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#334155', fontWeight: 600 }}>{userName}</span>
+            <span style={{ color: '#e7d7c1' }}>•</span>
+            <div style={{ fontSize: '0.8125rem', color: '#826e6e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#3b2f2f', fontWeight: 600 }}>{userName}</span>
               <span
                 style={{
-                  background: isStaff ? '#eff6ff' : '#f1f5f9',
-                  color: isStaff ? '#1e40af' : '#475569',
+                  background: isStaff ? '#e6f6f4' : '#f7eee6',
+                  color: isStaff ? '#2a9d8f' : '#c08457',
+                  border: isStaff ? '1px solid #a4dbd4' : '1px solid #e7d7c1',
                   padding: '2px 8px',
                   borderRadius: '2px',
                   fontSize: '0.7rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
                 }}
               >
                 {activeRoleId === 3 ? 'Admin' : activeRoleId === 2 ? 'Store Manager' : 'Customer'}
@@ -250,10 +253,11 @@ export default function OrdersPage({ defaultTab = 'history' }) {
           <div
             style={{
               display: 'flex',
-              background: '#f1f5f9',
+              background: '#faf7f2',
+              border: '1px solid #e7d7c1',
               padding: '4px',
               borderRadius: '2px',
-              gap: '4px',
+              gap: '6px',
             }}
           >
             {/* Customer Only: Tab 1 Checkout & Tab 2 Order History */}
@@ -270,13 +274,23 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                     padding: '8px 16px',
                     borderRadius: '2px',
                     border: 'none',
-                    background: activeTab === 'checkout' ? '#ffffff' : 'transparent',
-                    color: activeTab === 'checkout' ? '#0264d6' : '#64748b',
-                    fontWeight: activeTab === 'checkout' ? 700 : 500,
+                    background: activeTab === 'checkout' ? '#2a9d8f' : 'transparent',
+                    color: activeTab === 'checkout' ? '#ffffff' : '#5c4b4b',
+                    fontWeight: activeTab === 'checkout' ? 700 : 600,
                     fontSize: '0.8125rem',
                     cursor: 'pointer',
-                    boxShadow: activeTab === 'checkout' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s',
+                    boxShadow: activeTab === 'checkout' ? '0 2px 8px rgba(42, 157, 143, 0.28)' : 'none',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'checkout') {
+                      e.currentTarget.style.color = '#2a9d8f';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'checkout') {
+                      e.currentTarget.style.color = '#5c4b4b';
+                    }
                   }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -287,8 +301,8 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   {cartItemCount > 0 && (
                     <span
                       style={{
-                        background: activeTab === 'checkout' ? '#0264d6' : '#cbd5e1',
-                        color: activeTab === 'checkout' ? '#ffffff' : '#334155',
+                        background: activeTab === 'checkout' ? 'rgba(255, 255, 255, 0.25)' : '#f4ede4',
+                        color: activeTab === 'checkout' ? '#ffffff' : '#5c4b4b',
                         fontSize: '0.7rem',
                         fontWeight: 700,
                         padding: '1px 6px',
@@ -311,13 +325,23 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                     padding: '8px 16px',
                     borderRadius: '2px',
                     border: 'none',
-                    background: activeTab === 'history' ? '#ffffff' : 'transparent',
-                    color: activeTab === 'history' ? '#0264d6' : '#64748b',
-                    fontWeight: activeTab === 'history' ? 700 : 500,
+                    background: activeTab === 'history' ? '#2a9d8f' : 'transparent',
+                    color: activeTab === 'history' ? '#ffffff' : '#5c4b4b',
+                    fontWeight: activeTab === 'history' ? 700 : 600,
                     fontSize: '0.8125rem',
                     cursor: 'pointer',
-                    boxShadow: activeTab === 'history' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'all 0.15s',
+                    boxShadow: activeTab === 'history' ? '0 2px 8px rgba(42, 157, 143, 0.28)' : 'none',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'history') {
+                      e.currentTarget.style.color = '#2a9d8f';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'history') {
+                      e.currentTarget.style.color = '#5c4b4b';
+                    }
                   }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -342,13 +366,23 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   padding: '8px 16px',
                   borderRadius: '2px',
                   border: 'none',
-                  background: activeTab === 'lookup' ? '#ffffff' : 'transparent',
-                  color: activeTab === 'lookup' ? '#0264d6' : '#64748b',
-                  fontWeight: activeTab === 'lookup' ? 700 : 500,
+                  background: activeTab === 'lookup' ? '#2a9d8f' : 'transparent',
+                  color: activeTab === 'lookup' ? '#ffffff' : '#5c4b4b',
+                  fontWeight: activeTab === 'lookup' ? 700 : 600,
                   fontSize: '0.8125rem',
                   cursor: 'pointer',
-                  boxShadow: activeTab === 'lookup' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s',
+                  boxShadow: activeTab === 'lookup' ? '0 2px 8px rgba(42, 157, 143, 0.28)' : 'none',
+                  transition: 'all 0.18s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'lookup') {
+                    e.currentTarget.style.color = '#2a9d8f';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'lookup') {
+                    e.currentTarget.style.color = '#5c4b4b';
+                  }
                 }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
