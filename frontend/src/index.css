@@ -349,32 +349,22 @@ body {
 .pulse-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 50% !important;
   position: relative;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .dot-online {
   background-color: var(--success);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
-  animation: pulse-green 2s infinite ease-in-out;
+  box-shadow: none;
+  animation: none;
 }
 
 .dot-offline {
   background-color: var(--danger);
-}
-
-@keyframes pulse-green {
-
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.35;
-    transform: scale(1.35);
-  }
+  box-shadow: none;
+  animation: none;
 }
 
 .badge-text {
@@ -2984,32 +2974,134 @@ a.st-view-all-link:hover svg {
   overflow-x: auto;
 }
 
-.st-tab-btn {
-  padding: 8px 20px;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #64748b;
+.st-tab-btn,
+button.st-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-btn, 2px);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #3b2f2f;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #e7d7c1;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(59, 47, 47, 0.04);
 }
 
-.st-tab-btn:hover {
-  color: #0f172a;
-  border-color: #cbd5e1;
-  background: #f8fafc;
+.st-tab-btn:hover,
+button.st-tab-btn:hover {
+  color: #2a9d8f;
+  border-color: #2a9d8f;
+  background: #faf7f2;
+  transform: translateY(-1px);
 }
 
-.st-tab-btn.active {
+.st-tab-btn.active,
+button.st-tab-btn.active {
+  background: #2a9d8f !important;
+  color: #ffffff !important;
+  border: 1.5px solid #2a9d8f !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 10px rgba(42, 157, 143, 0.3) !important;
+  transform: none;
+}
+
+.st-tab-btn .st-tab-badge {
+  background: #f4ede4;
+  color: #5c4b4b;
+  border-radius: 2px;
+  padding: 1px 7px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin-left: 4px;
+  transition: all 0.18s ease;
+}
+
+.st-tab-btn:hover .st-tab-badge {
+  background: rgba(42, 157, 143, 0.12);
+  color: #2a9d8f;
+}
+
+.st-tab-btn.active .st-tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Registered Customer Orders & Tracking System
+   ========================================================================== */
+.st-order-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-btn, 2px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #3b2f2f;
   background: #ffffff;
-  color: #0f172a;
-  border-color: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15), 0 2px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e7d7c1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(59, 47, 47, 0.04);
 }
+
+.st-order-filter-btn:hover {
+  color: #2a9d8f;
+  border-color: #2a9d8f;
+  background: #faf7f2;
+  transform: translateY(-1px);
+}
+
+.st-order-filter-btn.active {
+  background: #2a9d8f !important;
+  color: #ffffff !important;
+  border: 1.5px solid #2a9d8f !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 10px rgba(42, 157, 143, 0.28) !important;
+  transform: none;
+}
+
+.st-order-filter-btn .st-filter-badge {
+  background: #f4ede4;
+  color: #5c4b4b;
+  border-radius: 2px;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+
+.st-order-filter-btn:hover .st-filter-badge {
+  background: rgba(42, 157, 143, 0.12);
+  color: #2a9d8f;
+}
+
+.st-order-filter-btn.active .st-filter-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.st-order-card {
+  background: #ffffff;
+  border-radius: 2px;
+  border: 1.5px solid #e7d7c1;
+  box-shadow: 0 2px 8px rgba(59, 47, 47, 0.04);
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.st-order-card:hover {
+  border-color: #d8c4a9;
+  box-shadow: 0 6px 18px rgba(59, 47, 47, 0.08);
+}
+
 
 /* ==========================================================================
    Brand Partners Showcase
@@ -5163,8 +5255,17 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .navbar-cart-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  box-sizing: border-box !important;
   background: #ffffff !important;
   border: 1.5px solid #e7d7c1 !important;
+  border-radius: var(--radius-btn, 2px) !important;
   color: #3b2f2f !important;
 }
 
@@ -5181,13 +5282,50 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .connection-badge {
-  border: 1px solid #e7d7c1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  box-sizing: border-box !important;
+  padding: 0 14px !important;
+  border: 1.5px solid #e7d7c1 !important;
   background: #ffffff !important;
   color: #3b2f2f !important;
+  border-radius: var(--radius-btn, 2px) !important;
+  box-shadow: none !important;
+  line-height: 1 !important;
 }
 
+.connection-badge .pulse-dot,
 .pulse-dot.dot-online {
-  background: #2a9d8f !important;
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px !important;
+  min-height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #16a34a !important; /* solid vibrant green */
+  animation: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.connection-badge .pulse-dot.dot-offline,
+.pulse-dot.dot-offline {
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px !important;
+  min-height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #dc2626 !important;
+  animation: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 /* 4. Primary CTAs & Buttons — EYE-CATCHING VIBRANT PERSIAN TEAL */

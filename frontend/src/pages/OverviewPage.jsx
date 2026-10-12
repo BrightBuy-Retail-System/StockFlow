@@ -144,6 +144,34 @@ const PRESET_PRODUCTS = [
     details: ['500 m³/h clean air delivery', '3-in-1 True HEPA filter', 'OLED air-quality display', 'App and voice control'],
     colors: ['White'],
   },
+  {
+    product_id: 109,
+    name: 'Belkin BoostCharge Pro 3-in-1 MagSafe Charger',
+    image: chargerImg,
+    category: 'Accessories',
+    base_price: 149,
+    mrp: 179,
+    rating: 4.8,
+    reviews_count: 58,
+    badge: 'Popular',
+    description: 'Fast wireless charging for iPhone, Apple Watch and AirPods simultaneously.',
+    details: ['15W MagSafe fast charging', 'Apple Watch fast charging', 'Premium stainless steel finish'],
+    colors: ['White', 'Black'],
+  },
+  {
+    product_id: 110,
+    name: 'Bose QuietComfort Ultra Wireless Earbuds',
+    image: headsetImg,
+    category: 'Audio',
+    base_price: 299,
+    mrp: 349,
+    rating: 4.9,
+    reviews_count: 89,
+    badge: 'Top rated',
+    description: 'Breakthrough spatialized audio and world-class quiet with CustomTune technology.',
+    details: ['Bose Immersive Audio', 'World-class noise cancellation', 'Up to 24 hours total playtime'],
+    colors: ['Black', 'White Smoke'],
+  },
 ];
 
 // The hero only features a few products. Price and image come from the product itself.
@@ -154,7 +182,7 @@ const HERO_SLIDES = [
   { productId: 106, title: 'DJI Osmo Pocket 3', text: 'Smooth 4K/120fps video from a camera that fits in your pocket.' },
 ];
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 
@@ -318,6 +346,7 @@ export default function OverviewPage() {
 
   /* ---- data ---- */
   useEffect(() => {
+    setVisible((v) => (v < PAGE_SIZE ? PAGE_SIZE : v));
     api
       .get('/catalog/products')
       .then((res) => {
@@ -632,7 +661,7 @@ export default function OverviewPage() {
           </div>
         ) : (
           <div className="ov-grid">
-            {shown.map((p) => {
+            {shown.map((p, idx) => {
               const pct = discountPct(p);
               const tag = pct > 0 ? `-${pct}%` : p.badge;
               return (
@@ -645,7 +674,15 @@ export default function OverviewPage() {
                 >
                   {tag && <span className={`ov-badge ${pct > 0 ? 'sale' : ''}`}>{tag}</span>}
                   <div className="ov-card-img">
-                    <img src={p.image} alt={p.name} loading="lazy" />
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = FALLBACK_IMAGES[idx % FALLBACK_IMAGES.length];
+                      }}
+                    />
                   </div>
                   <div className="ov-card-cat">{p.category}</div>
                   <h3 className="ov-card-title" title={p.name}>{p.name}</h3>

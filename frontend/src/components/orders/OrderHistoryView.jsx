@@ -42,15 +42,15 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
   const getStatusBadge = (status) => {
     switch (status) {
       case 'DELIVERED':
-        return { label: 'Delivered', bg: '#dcfce7', color: '#15803d', icon: '✓' };
+        return { label: 'Delivered', bg: '#e6f6f4', color: '#2a9d8f', border: '#a4dbd4', icon: '✓' };
       case 'SHIPPED':
-        return { label: 'In Transit', bg: '#e0f2fe', color: '#0369a1', icon: '●' };
+        return { label: 'In Transit', bg: '#e6f6f4', color: '#2a9d8f', border: '#a4dbd4', icon: '●' };
       case 'CONFIRMED':
-        return { label: 'Confirmed', bg: '#fef3c7', color: '#b45309', icon: '●' };
+        return { label: 'Confirmed', bg: '#f7eee6', color: '#c08457', border: '#e7d7c1', icon: '●' };
       case 'CANCELLED':
-        return { label: 'Cancelled', bg: '#fee2e2', color: '#b91c1c', icon: '✕' };
+        return { label: 'Cancelled', bg: '#fdf2f0', color: '#d94a38', border: '#fecaca', icon: '✕' };
       default:
-        return { label: 'Processing', bg: '#f1f5f9', color: '#475569', icon: '●' };
+        return { label: 'Processing', bg: '#faf7f2', color: '#5c4b4b', border: '#e7d7c1', icon: '●' };
     }
   };
 
@@ -59,18 +59,18 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
       {/* Header Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.6rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
             Your Orders
           </h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', margin: 0 }}>
-            View your past purchases, shipment status, and order receipts.
+          <p style={{ color: '#5c4b4b', fontSize: '0.875rem', margin: 0 }}>
+            View your past purchases, shipment status, and official order receipts.
           </p>
         </div>
       </div>
 
       {/* Error Notice */}
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '14px 18px', color: '#991b1b', fontSize: '0.875rem', marginBottom: '24px' }}>
+        <div style={{ background: '#fdf2f0', border: '1px solid #fecaca', borderRadius: '2px', padding: '14px 18px', color: '#d94a38', fontSize: '0.875rem', marginBottom: '24px' }}>
           {error}
         </div>
       )}
@@ -78,33 +78,42 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
       {/* Loading Indicator */}
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
-          <div className="spinner" style={{ width: '32px', height: '32px', marginBottom: '12px' }} />
-          <div style={{ color: '#64748b', fontSize: '0.875rem' }}>Loading your orders...</div>
+          <div className="spinner" style={{ width: '32px', height: '32px', marginBottom: '12px', borderTopColor: '#2a9d8f' }} />
+          <div style={{ color: '#5c4b4b', fontSize: '0.875rem' }}>Loading your orders...</div>
         </div>
       ) : orders.length === 0 ? (
         /* Empty State */
-        <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '60px 20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#64748b' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ background: '#ffffff', borderRadius: '2px', border: '1.5px dashed #e7d7c1', padding: '60px 20px', textAlign: 'center', boxShadow: '0 2px 8px rgba(59, 47, 47, 0.03)' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '2px', background: '#e6f6f4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#2a9d8f' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
           </div>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>No orders yet</h2>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', maxWidth: '420px', margin: '0 auto 20px' }}>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.3rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 6px' }}>No orders yet</h2>
+          <p style={{ color: '#5c4b4b', fontSize: '0.875rem', maxWidth: '420px', margin: '0 auto 20px' }}>
             When you place an order, it will appear here so you can track delivery and view receipts.
           </p>
           <button
             onClick={onNavigateToCheckout}
             style={{
-              background: '#0264d6',
+              background: '#2a9d8f',
               color: '#ffffff',
               border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
+              padding: '11px 24px',
+              borderRadius: '2px',
               fontWeight: 700,
               fontSize: '0.875rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(2, 100, 214, 0.2)',
+              boxShadow: '0 3px 10px rgba(42, 157, 143, 0.28)',
+              transition: 'all 0.18s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#22867a';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#2a9d8f';
+              e.currentTarget.style.transform = 'none';
             }}
           >
             Create New Order via Checkout
@@ -120,9 +129,9 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                 key={ord.order_id}
                 style={{
                   background: '#ffffff',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  borderRadius: '2px',
+                  border: '1.5px solid #e7d7c1',
+                  boxShadow: '0 2px 8px rgba(59, 47, 47, 0.04)',
                   overflow: 'hidden',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
@@ -130,8 +139,8 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                 {/* Order Top Banner */}
                 <div
                   style={{
-                    background: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0',
+                    background: '#faf7f2',
+                    borderBottom: '1px solid #e7d7c1',
                     padding: '16px 20px',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -142,22 +151,22 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                     <div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Order Placed</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>
+                      <div style={{ fontSize: '0.72rem', color: '#826e6e', fontWeight: 600, textTransform: 'uppercase' }}>Order Placed</div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#3b2f2f' }}>
                         {ord.placed_at ? new Date(ord.placed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent'}
                       </div>
                     </div>
-                    <div style={{ height: '24px', width: '1px', background: '#cbd5e1' }} />
+                    <div style={{ height: '24px', width: '1px', background: '#e7d7c1' }} />
                     <div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
-                        Rs {parseFloat(ord.total_amount).toFixed(2)}
+                      <div style={{ fontSize: '0.72rem', color: '#826e6e', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 800, color: '#3b2f2f' }}>
+                        ${parseFloat(ord.total_amount).toFixed(2)}
                       </div>
                     </div>
-                    <div style={{ height: '24px', width: '1px', background: '#cbd5e1' }} />
+                    <div style={{ height: '24px', width: '1px', background: '#e7d7c1' }} />
                     <div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Order Ref</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0264d6' }}>#{ord.order_id}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#826e6e', fontWeight: 600, textTransform: 'uppercase' }}>Order Ref</div>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '0.92rem', fontWeight: 800, color: '#2a9d8f' }}>#{ord.order_id}</div>
                     </div>
                   </div>
 
@@ -167,13 +176,16 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                       style={{
                         background: badge.bg,
                         color: badge.color,
+                        border: `1px solid ${badge.border || badge.color + '40'}`,
                         padding: '4px 12px',
-                        borderRadius: '9999px',
+                        borderRadius: '2px',
                         fontSize: '0.75rem',
                         fontWeight: 700,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
                       }}
                     >
                       <span>{badge.icon}</span>
@@ -185,8 +197,6 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                 {/* Order Body Details */}
                 <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-
                     {/* Line Items List */}
                     {Array.isArray(ord.items) && ord.items.length > 0 ? (
                       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -198,25 +208,25 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                               alignItems: 'center',
                               gap: '10px',
                               padding: '8px 12px',
-                              borderRadius: '8px',
-                              border: '1px solid #f1f5f9',
-                              background: '#f8fafc',
+                              borderRadius: '2px',
+                              border: '1px solid #e7d7c1',
+                              background: '#faf7f2',
                             }}
                           >
                             <img src={headsetImg} alt="Item" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
                             <div>
-                              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }}>
+                              <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#3b2f2f' }}>
                                 {it.product_title || `Item SKU: ${it.sku || 'N/A'}`}
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                                Qty: {it.quantity} × Rs {parseFloat(it.unit_price).toFixed(2)}
+                              <div style={{ fontSize: '0.72rem', color: '#826e6e' }}>
+                                Qty: {it.quantity} × ${parseFloat(it.unit_price).toFixed(2)}
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+                      <div style={{ fontSize: '0.8125rem', color: '#826e6e' }}>
                         Order details available in receipt.
                       </div>
                     )}
@@ -227,18 +237,29 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                     <button
                       onClick={() => onInspectOrder(ord.order_id)}
                       style={{
-                        padding: '10px 18px',
-                        background: '#0264d6',
+                        padding: '9px 18px',
+                        background: '#2a9d8f',
                         color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
+                        border: '1.5px solid #2a9d8f',
+                        borderRadius: '2px',
                         fontSize: '0.8125rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        boxShadow: '0 2px 6px rgba(2, 100, 214, 0.2)',
+                        boxShadow: '0 3px 8px rgba(42, 157, 143, 0.25)',
+                        transition: 'all 0.18s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#22867a';
+                        e.currentTarget.style.borderColor = '#22867a';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#2a9d8f';
+                        e.currentTarget.style.borderColor = '#2a9d8f';
+                        e.currentTarget.style.transform = 'none';
                       }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -253,6 +274,7 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
           })}
         </div>
       )}
+
     </div>
   );
 }
