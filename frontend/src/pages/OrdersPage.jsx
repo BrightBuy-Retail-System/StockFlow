@@ -403,13 +403,13 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                   gap: '8px',
                   padding: '8px 16px',
                   borderRadius: '2px',
-                  border: 'none',
+                  border: activeTab === 'fulfillment' ? '1px solid #e7d7c1' : 'none',
                   background: activeTab === 'fulfillment' ? '#ffffff' : 'transparent',
-                  color: activeTab === 'fulfillment' ? '#0264d6' : '#64748b',
+                  color: activeTab === 'fulfillment' ? '#2a9d8f' : '#826e6e',
                   fontWeight: activeTab === 'fulfillment' ? 700 : 500,
                   fontSize: '0.8125rem',
                   cursor: 'pointer',
-                  boxShadow: activeTab === 'fulfillment' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  boxShadow: activeTab === 'fulfillment' ? '0 1px 3px rgba(59,47,47,0.06)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -431,13 +431,13 @@ export default function OrdersPage({ defaultTab = 'history' }) {
               style={{
                 width: '34px',
                 height: '34px',
-                border: '3px solid #e2e8f0',
-                borderTopColor: '#0264d6',
+                border: '3px solid #e7d7c1',
+                borderTopColor: '#2a9d8f',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
               }}
             />
-            <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 500 }}>
+            <span style={{ fontSize: '0.875rem', color: '#826e6e', fontWeight: 500 }}>
               Loading orders...
             </span>
             <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
