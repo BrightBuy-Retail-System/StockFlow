@@ -252,39 +252,92 @@
 
 .ov-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
-  padding-bottom: 6px;
-  margin-bottom: 20px;
+  padding: 4px 2px 12px 2px;
+  margin-bottom: 24px;
   scrollbar-width: thin;
 }
 
 .ov-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   white-space: nowrap;
-  padding: 8px 16px;
+  padding: 8px 16px 8px 10px;
   border-radius: var(--radius-btn, 2px);
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
+  border: 1px solid #e7d7c1;
+  background: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #3b2f2f;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(59, 47, 47, 0.04);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ov-chip-icon-box {
+  width: 26px;
+  height: 26px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #f6f3ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.ov-chip-icon-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ov-chip-count {
+  background: #f4ede4;
+  color: #5c4b4b;
+  border-radius: 2px;
+  padding: 2px 7px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin-left: 2px;
+  transition: all 0.2s ease;
 }
 
 .ov-chip:hover {
-  border-color: #93c5fd;
+  border-color: #2a9d8f;
+  color: #2a9d8f;
+  background: #faf7f2;
+  transform: translateY(-1px);
+}
+
+.ov-chip:hover .ov-chip-count {
+  background: rgba(42, 157, 143, 0.12);
+  color: #2a9d8f;
 }
 
 .ov-chip.active {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+  background: #2a9d8f;
+  border: 1.5px solid #2a9d8f;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(42, 157, 143, 0.3);
+  transform: none;
 }
 
-.ov-chip span {
-  opacity: 0.65;
-  margin-left: 4px;
-  font-weight: 500;
+.ov-chip.active .ov-chip-icon-box {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.ov-chip.active .ov-chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .ov-grid {
