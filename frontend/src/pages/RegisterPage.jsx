@@ -81,9 +81,11 @@ export default function RegisterPage() {
       <div className="st-auth-card">
         {/* Header Branding */}
         <div className="st-auth-header">
-          <div className="st-auth-logo-badge">
-            <ShoppingBagIcon className="w-6 h-6" />
-          </div>
+          <img
+            src="/brightbuy-logo.png"
+            alt="BrightBuy"
+            style={{ height: '54px', objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+          />
           <h1 className="st-auth-title">Create Account</h1>
           <p className="st-auth-subtitle">
             Join thousands of gadget enthusiasts across Sri Lanka and unlock exclusive VIP tech deals.
