@@ -519,15 +519,15 @@ export default function SystemAdministrator() {
   if (loading && !executiveOverview) {
     return (
       <div className="st-admin-container" style={{ textAlign: 'center', minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="st-admin-card" style={{ padding: '48px 36px', maxWidth: '440px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
+        <div className="st-admin-card" style={{ padding: '48px 36px', maxWidth: '440px', width: '100%', margin: '0 auto', textAlign: 'center', borderRadius: '2px' }}>
           <div
             style={{
               width: '48px',
               height: '48px',
-              borderRadius: '12px',
-              background: '#eff6ff',
-              border: '1px solid #dbeafe',
-              color: '#2563eb',
+              borderRadius: '2px',
+              background: '#e6f6f4',
+              border: '1px solid #a8ded8',
+              color: '#2a9d8f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -536,10 +536,10 @@ export default function SystemAdministrator() {
           >
             <RefreshCwIcon style={{ width: '1.25rem', height: '1.25rem', animation: 'spin 1.2s linear infinite' }} />
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1f2937', marginBottom: '6px' }}>
             Loading System Dashboard...
           </h2>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
             Fetching executive analytics, live fulfillment dispatches, and warehouse catalog records.
           </p>
         </div>
@@ -559,8 +559,8 @@ export default function SystemAdministrator() {
             right: '24px',
             zIndex: 9999,
             padding: '10px 18px',
-            borderRadius: '8px',
-            background: notification.type === 'danger' ? '#991b1b' : '#065f46',
+            borderRadius: '2px',
+            background: notification.type === 'danger' ? '#991b1b' : '#2a9d8f',
             color: '#ffffff',
             boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
             fontWeight: 500,
@@ -626,14 +626,14 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Gross Revenue</span>
             <div className="st-admin-kpi-iconbox">
-              <AnalyticsIcon style={{ width: '1rem', height: '1rem', color: '#2563eb' }} />
+              <AnalyticsIcon style={{ width: '1rem', height: '1rem', color: '#2a9d8f' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             ${Number(executiveOverview?.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            Net settled: <strong style={{ color: '#0f172a' }}>${Number(executiveOverview?.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            Net settled: <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(executiveOverview?.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
         </div>
 
@@ -642,14 +642,14 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Total Orders</span>
             <div className="st-admin-kpi-iconbox">
-              <OrdersIcon style={{ width: '1rem', height: '1rem', color: '#059669' }} />
+              <OrdersIcon style={{ width: '1rem', height: '1rem', color: '#c08457' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             {executiveOverview?.total_orders || 0}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#0f172a' }}>{executiveOverview?.active_customers || 0}</strong> active registered customers
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{executiveOverview?.active_customers || 0}</strong> active registered customers
           </div>
         </div>
 
@@ -658,14 +658,14 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Warehouse Inventory</span>
             <div className="st-admin-kpi-iconbox">
-              <BoxIcon style={{ width: '1rem', height: '1rem', color: '#4f46e5' }} />
+              <BoxIcon style={{ width: '1rem', height: '1rem', color: '#c08457' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             ${Number(inventoryMetrics.valuation || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#0f172a' }}>{inventoryMetrics.totalUnits}</strong> units across <strong style={{ color: '#0f172a' }}>{inventoryMetrics.totalSkus}</strong> SKUs
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{inventoryMetrics.totalUnits}</strong> units across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{inventoryMetrics.totalSkus}</strong> SKUs
           </div>
         </div>
 
@@ -674,7 +674,7 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Active Orders</span>
             <div className="st-admin-kpi-iconbox">
-              <TruckIcon style={{ width: '1rem', height: '1rem', color: '#2563eb' }} />
+              <TruckIcon style={{ width: '1rem', height: '1rem', color: '#2a9d8f' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
@@ -900,7 +900,7 @@ export default function SystemAdministrator() {
           {/* REPORT 1: QUARTERLY SALES REPORT */}
           {activeReportTab === 'quarterly' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                 <div>
                   <h3 className="st-admin-card-title">Quarterly Sales Report</h3>
                   <p className="st-admin-card-subtitle">
@@ -953,15 +953,15 @@ export default function SystemAdministrator() {
                         filteredQuarterly.map((q, idx) => (
                           <tr key={idx}>
                             <td>
-                              <span style={{ fontWeight: 600, color: '#0f172a' }}>Q{q.sales_quarter}</span>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>Q{q.sales_quarter}</span>
                               <span style={{ color: '#64748b', marginLeft: '6px' }}>{q.sales_year}</span>
                             </td>
                             <td>{q.total_orders} orders</td>
                             <td>{q.total_units_sold} units</td>
-                            <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                            <td style={{ fontWeight: 500, color: '#1f2937' }}>
                               ${Number(q.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
-                            <td style={{ color: '#059669', fontWeight: 600 }}>
+                            <td style={{ color: '#2a9d8f', fontWeight: 500 }}>
                               ${Number(q.net_collected_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td style={{ color: '#475569', fontWeight: 500 }}>
@@ -980,7 +980,7 @@ export default function SystemAdministrator() {
           {/* REPORT 2: TOP SELLING PRODUCTS */}
           {activeReportTab === 'topProducts' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                 <div>
                   <h3 className="st-admin-card-title">Top-Selling Products Leaderboard</h3>
                   <p className="st-admin-card-subtitle">
@@ -1026,31 +1026,31 @@ export default function SystemAdministrator() {
                                   display: 'inline-block',
                                   width: '24px',
                                   height: '24px',
-                                  borderRadius: '50%',
-                                  background: rank === 1 ? '#fef3c7' : rank === 2 ? '#f1f5f9' : rank === 3 ? '#eff6ff' : '#ffffff',
-                                  color: rank === 1 ? '#92400e' : rank === 2 ? '#334155' : rank === 3 ? '#1d4ed8' : '#64748b',
-                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '2px',
+                                  background: rank === 1 ? '#fef3c7' : rank === 2 ? '#f1f5f9' : rank === 3 ? '#e6f6f4' : '#ffffff',
+                                  color: rank === 1 ? '#92400e' : rank === 2 ? '#334155' : rank === 3 ? '#2a9d8f' : '#64748b',
+                                  border: '1px solid #e7d7c1',
                                   textAlign: 'center',
                                   lineHeight: '22px',
-                                  fontWeight: 700,
+                                  fontWeight: 500,
                                   fontSize: '0.78rem'
                                 }}>
                                   {rank}
                                 </span>
                               </td>
                               <td>
-                                <div style={{ fontWeight: 600, color: '#0f172a' }}>{p.product_name}</div>
+                                <div style={{ fontWeight: 500, color: '#1f2937' }}>{p.product_name}</div>
                                 <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>SKU #{p.product_id}</div>
                               </td>
                               <td>
-                                <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#475569' }}>
+                                <span style={{ background: '#f8fafc', border: '1px solid #e7d7c1', padding: '2px 8px', borderRadius: '2px', fontSize: '0.76rem', color: '#475569' }}>
                                   {p.category_name}
                                 </span>
                               </td>
-                              <td style={{ fontWeight: 500 }}>
+                              <td style={{ fontWeight: 500, color: '#4b5563' }}>
                                 {Number(p.total_units_sold || 0).toLocaleString()} units
                               </td>
-                              <td style={{ fontWeight: 600, color: '#059669' }}>
+                              <td style={{ fontWeight: 500, color: '#1f2937' }}>
                                 ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                             </tr>
@@ -1067,7 +1067,7 @@ export default function SystemAdministrator() {
           {/* REPORT 3: CATEGORY ORDERS WITH ROLLUP */}
           {activeReportTab === 'categories' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                 <div>
                   <h3 className="st-admin-card-title">Category Orders &amp; Revenue Rollup</h3>
                   <p className="st-admin-card-subtitle">
@@ -1110,20 +1110,20 @@ export default function SystemAdministrator() {
                               key={idx}
                               style={{
                                 background: isRollup ? '#f8fafc' : '#ffffff',
-                                borderTop: isRollup ? '2px solid #cbd5e1' : undefined,
-                                fontWeight: isRollup ? 700 : 400
+                                borderTop: isRollup ? '1px solid #e7d7c1' : undefined,
+                                fontWeight: isRollup ? 600 : 400
                               }}
                             >
                               <td>
                                 {isRollup ? (
-                                  <span style={{ color: '#0f172a', fontWeight: 700 }}>Total Rollup</span>
+                                  <span style={{ color: '#2a9d8f', fontWeight: 600 }}>Total Rollup</span>
                                 ) : (
-                                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{cat.category_name}</span>
+                                  <span style={{ color: '#1f2937', fontWeight: 500 }}>{cat.category_name}</span>
                                 )}
                               </td>
-                              <td>{cat.total_orders} orders</td>
-                              <td>{cat.total_units_sold} units</td>
-                              <td style={{ fontWeight: 600, color: isRollup ? '#0f172a' : '#059669' }}>
+                              <td style={{ color: '#4b5563' }}>{cat.total_orders} orders</td>
+                              <td style={{ color: '#4b5563' }}>{cat.total_units_sold} units</td>
+                              <td style={{ fontWeight: 500, color: isRollup ? '#2a9d8f' : '#1f2937' }}>
                                 ${Number(cat.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                             </tr>
@@ -1140,7 +1140,7 @@ export default function SystemAdministrator() {
           {/* REPORT 4: TEXAS DELIVERY ESTIMATES */}
           {activeReportTab === 'delivery' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                 <div>
                   <h3 className="st-admin-card-title">Delivery Lead Time Estimates</h3>
                   <p className="st-admin-card-subtitle">
@@ -1225,11 +1225,11 @@ export default function SystemAdministrator() {
                               <span style={{
                                 background: d.stock_penalty_days > 0 ? '#fffbeb' : '#f8fafc',
                                 color: d.stock_penalty_days > 0 ? '#92400e' : '#334155',
-                                border: '1px solid #e2e8f0',
+                                border: '1px solid #e7d7c1',
                                 padding: '3px 8px',
-                                borderRadius: '4px',
+                                borderRadius: '2px',
                                 fontSize: '0.76rem',
-                                fontWeight: 600
+                                fontWeight: 500
                               }}>
                                 {d.total_lead_days} days
                               </span>
@@ -1237,14 +1237,14 @@ export default function SystemAdministrator() {
                                 {d.delivery_formula}
                               </div>
                             </td>
-                            <td style={{ fontWeight: 500 }}>
+                            <td style={{ fontWeight: 500, color: '#4b5563' }}>
                               {d.estimated_arrival ? new Date(d.estimated_arrival).toLocaleDateString() : 'Pending'}
                             </td>
                             <td>
                               <div style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: '#475569' }}>
                                 {d.tracking_number || 'Pending'}
                               </div>
-                              <span style={{ fontSize: '0.74rem', color: d.shipping_status === 'DISPATCHED' ? '#059669' : '#d97706', fontWeight: 500 }}>
+                              <span style={{ fontSize: '0.74rem', color: d.shipping_status === 'DISPATCHED' ? '#2a9d8f' : '#d97706', fontWeight: 500 }}>
                                 {d.shipping_status || 'PENDING'}
                               </span>
                             </td>
@@ -1261,7 +1261,7 @@ export default function SystemAdministrator() {
           {/* REPORT 5: CUSTOMER ORDER SUMMARY */}
           {activeReportTab === 'customers' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                 <div>
                   <h3 className="st-admin-card-title">Customer Order Summary &amp; Settlement</h3>
                   <p className="st-admin-card-subtitle">
@@ -1317,17 +1317,17 @@ export default function SystemAdministrator() {
                         filteredCustomers.map((cust) => (
                           <tr key={cust.customer_id}>
                             <td>
-                              <span style={{ fontWeight: 600, color: '#0f172a' }}>{cust.customer_name}</span>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>{cust.customer_name}</span>
                               <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>ID #{cust.customer_id}</div>
                             </td>
                             <td style={{ color: '#475569' }}>{cust.email}</td>
                             <td>
-                              <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#334155' }}>
+                              <span style={{ background: '#f8fafc', border: '1px solid #e7d7c1', padding: '2px 8px', borderRadius: '2px', fontSize: '0.76rem', color: '#334155' }}>
                                 {cust.primary_city || 'Regional'}
                               </span>
                             </td>
-                            <td>{cust.total_orders} orders</td>
-                            <td style={{ fontWeight: 600, color: '#059669' }}>
+                            <td style={{ color: '#4b5563' }}>{cust.total_orders} orders</td>
+                            <td style={{ fontWeight: 500, color: '#1f2937' }}>
                               ${Number(cust.lifetime_spending || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
                             <td>
@@ -1359,7 +1359,7 @@ export default function SystemAdministrator() {
       {activeTab === 'inventory' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
             <div>
               <h3 className="st-admin-card-title">Warehouse Inventory Control</h3>
               <p className="st-admin-card-subtitle">
@@ -1597,7 +1597,7 @@ export default function SystemAdministrator() {
       {activeTab === 'staff' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1px solid #e7d7c1' }}>
             <div>
               <h3 className="st-admin-card-title">Corporate Staff Accounts</h3>
               <p className="st-admin-card-subtitle">
@@ -1651,19 +1651,19 @@ export default function SystemAdministrator() {
                               <div style={{
                                 width: '30px',
                                 height: '30px',
-                                borderRadius: '50%',
-                                background: isAdmin ? '#eff6ff' : '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                color: isAdmin ? '#1e40af' : '#475569',
+                                borderRadius: '2px',
+                                background: isAdmin ? '#e6f6f4' : '#f8fafc',
+                                border: '1px solid #e7d7c1',
+                                color: isAdmin ? '#2a9d8f' : '#475569',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '0.75rem',
-                                fontWeight: 700
+                                fontWeight: 500
                               }}>
                                 {initials}
                               </div>
-                              <span style={{ fontWeight: 600, color: '#0f172a' }}>{st.full_name}</span>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>{st.full_name}</span>
                             </div>
                           </td>
                           <td style={{ color: '#475569' }}>{st.email}</td>
@@ -1696,7 +1696,7 @@ export default function SystemAdministrator() {
         <div className="st-admin-modal-backdrop">
           <div className="st-admin-modal-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 Onboard Staff Member
               </h3>
               <button
@@ -1709,7 +1709,7 @@ export default function SystemAdministrator() {
             </div>
 
             {staffError && (
-              <div style={{ padding: '8px 12px', borderRadius: '6px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
                 {staffError}
               </div>
             )}
@@ -1799,7 +1799,7 @@ export default function SystemAdministrator() {
         <div className="st-admin-modal-backdrop">
           <div className="st-admin-modal-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {modalType === 'createProduct' ? 'Create Catalog Product' : 'Edit Product Details'}
               </h3>
               <button
@@ -1915,7 +1915,7 @@ export default function SystemAdministrator() {
         <div className="st-admin-modal-backdrop">
           <div className="st-admin-modal-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {modalType === 'createVariant' ? 'Add SKU Variant' : 'Edit SKU Variant'}
               </h3>
               <button

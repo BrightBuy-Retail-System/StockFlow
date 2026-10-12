@@ -3131,67 +3131,67 @@ export default function CatalogPage() {
               {showLowStock && (
                 <div
                   style={{
-                    background: '#fffbeb',
-                    border: '1.5px solid rgba(245,158,11,0.35)',
-                    borderRadius: '18px',
+                    background: '#faf7f2',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
                     padding: '20px 24px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '16px',
-                    boxShadow: '0 4px 14px rgba(245,158,11,0.08)',
+                    boxShadow: 'none',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#b45309' }}>Low Stock Variants Alert</h4>
-                      <span style={{ fontSize: '0.9rem', color: '#78716c' }}>Variants with inventory count below threshold</span>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Low Stock Variants Alert</h4>
+                      <span style={{ fontSize: '0.86rem', color: '#6b7280' }}>Variants with inventory count below threshold</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#78716c' }}>Threshold:</span>
+                      <span style={{ fontSize: '0.86rem', fontWeight: 500, color: '#6b7280' }}>Threshold:</span>
                       <input
                         type="number"
                         min="1"
                         value={threshold}
                         onChange={(e) => setThreshold(Number(e.target.value))}
-                        style={{ width: '70px', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.5)', textAlign: 'center', fontSize: '0.95rem', fontWeight: 700, background: '#fff' }}
+                        style={{ width: '70px', padding: '6px 10px', borderRadius: '2px', border: '1px solid #e7d7c1', textAlign: 'center', fontSize: '0.9rem', fontWeight: 500, background: '#fff' }}
                       />
                       <button
                         onClick={() => fetchLowStock(threshold)}
-                        style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', boxShadow: '0 2px 8px rgba(245,158,11,0.3)' }}
+                        style={{ padding: '7px 18px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
                       >
                         Apply
                       </button>
                     </div>
                   </div>
-                  {lowStockLoading && <p style={{ fontSize: '0.92rem', color: '#78716c', margin: 0 }}>Loading inventory…</p>}
-                  {lowStockError && <p style={{ fontSize: '0.92rem', color: '#dc2626', margin: 0, fontWeight: 600 }}>Error: {lowStockError}</p>}
+                  {lowStockLoading && <p style={{ fontSize: '0.92rem', color: '#6b7280', margin: 0 }}>Loading inventory…</p>}
+                  {lowStockError && <p style={{ fontSize: '0.92rem', color: '#dc2626', margin: 0, fontWeight: 500 }}>Error: {lowStockError}</p>}
                   {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
-                    <p style={{ fontSize: '0.92rem', color: '#059669', margin: 0, fontWeight: 600 }}>✓ All product variants have healthy stock levels above threshold.</p>
+                    <p style={{ fontSize: '0.92rem', color: '#2a9d8f', margin: 0, fontWeight: 500 }}>✓ All product variants have healthy stock levels above threshold.</p>
                   )}
                   {!lowStockLoading && lowStock.length > 0 && (
-                    <div style={{ maxHeight: '240px', overflowY: 'auto', background: '#ffffff', borderRadius: '12px', border: '1px solid rgba(245,158,11,0.2)', padding: '6px 14px' }}>
-                      <table style={{ width: '100%', fontSize: '0.95rem', borderCollapse: 'collapse' }}>
+                    <div style={{ maxHeight: '240px', overflowY: 'auto', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', padding: '6px 14px' }}>
+                      <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ textAlign: 'left', borderBottom: '1.5px solid rgba(0,0,0,0.08)', color: '#475569' }}>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Product</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>SKU</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Attribute</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Stock</th>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid #e7d7c1', color: '#6b7280' }}>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Product</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>SKU</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Attribute</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Stock</th>
                           </tr>
                         </thead>
                         <tbody>
                           {lowStock.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                              <td style={{ padding: '10px 8px', fontWeight: 700, color: '#1a1917', fontSize: '0.95rem' }}>{row.product_name}</td>
+                            <tr key={i} style={{ borderBottom: '1px solid #f4ede4' }}>
+                              <td style={{ padding: '10px 8px', fontWeight: 500, color: '#1f2937', fontSize: '0.9rem' }}>{row.product_name}</td>
                               <td style={{ padding: '10px 8px' }}>
-                                <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>
+                                <code style={{ background: '#f8fafc', padding: '3px 8px', borderRadius: '2px', fontSize: '0.84rem', color: '#1f2937', fontWeight: 500, border: '1px solid #e7d7c1' }}>
                                   {row.sku}
                                 </code>
                               </td>
-                              <td style={{ padding: '10px 8px', color: '#334155', fontSize: '0.92rem' }}>
+                              <td style={{ padding: '10px 8px', color: '#4b5563', fontSize: '0.86rem' }}>
                                 {row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}
                               </td>
-                              <td style={{ padding: '10px 8px', fontWeight: 800, fontSize: '1rem', color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                              <td style={{ padding: '10px 8px', fontWeight: 600, fontSize: '0.9rem', color: row.stock === 0 ? '#ef4444' : '#c08457' }}>
                                 {row.stock === 0 ? '0 (Out of stock)' : `${row.stock} units`}
                               </td>
                             </tr>
@@ -3442,13 +3442,13 @@ export default function CatalogPage() {
                                 style={{
                                   flex: 1,
                                   padding: '5px',
-                                  borderRadius: '6px',
-                                  border: '1px solid rgba(0,0,0,0.12)',
+                                  borderRadius: '2px',
+                                  border: '1px solid #e7d7c1',
                                   background: '#ffffff',
-                                  color: '#1a1917',
+                                  color: '#1f2937',
                                   cursor: 'pointer',
                                   fontSize: '0.74rem',
-                                  fontWeight: 600,
+                                  fontWeight: 500,
                                 }}
                               >
                                 Edit
@@ -3458,13 +3458,13 @@ export default function CatalogPage() {
                                 style={{
                                   flex: 1,
                                   padding: '5px',
-                                  borderRadius: '6px',
+                                  borderRadius: '2px',
                                   border: '1px solid rgba(239,68,68,0.2)',
                                   background: '#ffffff',
                                   color: '#dc2626',
                                   cursor: 'pointer',
                                   fontSize: '0.74rem',
-                                  fontWeight: 600,
+                                  fontWeight: 500,
                                 }}
                               >
                                 Del
@@ -3506,23 +3506,24 @@ export default function CatalogPage() {
               maxWidth: '620px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '32px 36px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '18px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
               maxHeight: '90vh',
               overflowY: 'auto',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editProduct ? 'Edit Product' : 'Add New Product'}
               </h3>
               <button
                 onClick={() => setShowProductForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3534,7 +3535,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Anker Soundcore R50i NC Earbuds"
                 value={productForm.title}
                 onChange={(e) => setProductForm((f) => ({ ...f, title: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3544,7 +3545,7 @@ export default function CatalogPage() {
                 value={productForm.description}
                 rows={4}
                 onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3554,7 +3555,7 @@ export default function CatalogPage() {
                 placeholder="4999.00"
                 value={productForm.base_price}
                 onChange={(e) => setProductForm((f) => ({ ...f, base_price: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3562,7 +3563,7 @@ export default function CatalogPage() {
               <select
                 value={productForm.category_id}
                 onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
               >
                 <option value="">Select Category…</option>
                 {categories.map((c) => (
@@ -3580,14 +3581,14 @@ export default function CatalogPage() {
                       type="button"
                       onClick={() => setProductForm((f) => ({ ...f, is_active: val }))}
                       style={{
-                        padding: '8px 18px',
-                        borderRadius: '8px',
-                        border: productForm.is_active === val ? '2px solid #0f172a' : '1px solid rgba(0,0,0,0.16)',
-                        background: productForm.is_active === val ? '#0f172a' : '#fff',
-                        color: productForm.is_active === val ? '#fff' : '#0f172a',
+                        padding: '7px 16px',
+                        borderRadius: '2px',
+                        border: productForm.is_active === val ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                        background: productForm.is_active === val ? '#2a9d8f' : '#fff',
+                        color: productForm.is_active === val ? '#fff' : '#1f2937',
                         cursor: 'pointer',
-                        fontSize: '0.92rem',
-                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                        fontWeight: 500,
                       }}
                     >
                       {label}
@@ -3597,13 +3598,13 @@ export default function CatalogPage() {
               </Field>
             )}
 
-            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>{productFormError}</p>}
+            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{productFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
               <button
                 type="button"
                 onClick={() => setShowProductForm(false)}
-                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
               >
                 Cancel
               </button>
@@ -3611,7 +3612,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveProduct}
                 disabled={productFormSaving}
-                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
               >
                 {productFormSaving ? 'Saving…' : (editProduct ? 'Save Changes' : 'Create Product')}
               </button>
@@ -3644,21 +3645,22 @@ export default function CatalogPage() {
               maxWidth: '560px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '30px 34px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editVariant ? 'Edit Variant' : 'Add Variant'}
               </h3>
               <button
                 onClick={() => setShowVariantForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3670,7 +3672,7 @@ export default function CatalogPage() {
                 placeholder="e.g. ANKER-R50I-BLK"
                 value={variantForm.sku}
                 onChange={(e) => setVariantForm((f) => ({ ...f, sku: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3681,7 +3683,7 @@ export default function CatalogPage() {
                   placeholder="e.g. Color"
                   value={variantForm.attribute_name}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_name: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
               <Field label="Attribute Value">
@@ -3690,7 +3692,7 @@ export default function CatalogPage() {
                   placeholder="e.g. Black"
                   value={variantForm.attribute_value}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_value: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
             </div>
@@ -3701,17 +3703,17 @@ export default function CatalogPage() {
                 placeholder="Leave blank for base price"
                 value={variantForm.price_override}
                 onChange={(e) => setVariantForm((f) => ({ ...f, price_override: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
-            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{variantFormError}</p>}
+            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{variantFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
               <button
                 type="button"
                 onClick={() => setShowVariantForm(false)}
-                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
               >
                 Cancel
               </button>
@@ -3719,7 +3721,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveVariant}
                 disabled={variantFormSaving}
-                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
               >
                 {variantFormSaving ? 'Saving…' : (editVariant ? 'Save Changes' : 'Add Variant')}
               </button>
@@ -3752,21 +3754,22 @@ export default function CatalogPage() {
               maxWidth: '540px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '30px 34px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '18px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editCategory ? 'Edit Category' : 'New Category'}
               </h3>
               <button
                 onClick={() => setShowCatForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3785,7 +3788,7 @@ export default function CatalogPage() {
                       setCatFormError(null);
                     }
                   }}
-                  style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', background: '#fff' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', background: '#fff' }}
                 >
                   {categories.map((c) => (
                     <option key={c.category_id} value={c.category_id}>
@@ -3802,7 +3805,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Wireless Audio"
                 value={catForm.name}
                 onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3812,13 +3815,13 @@ export default function CatalogPage() {
                 placeholder="e.g. wireless-audio"
                 value={catForm.slug}
                 onChange={(e) => setCatForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
             {catFormError && (
-              <div style={{ background: '#fef2f2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '10px 14px' }}>
-                <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{catFormError}</p>
+              <div style={{ background: '#fef2f2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '2px', padding: '10px 14px' }}>
+                <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{catFormError}</p>
               </div>
             )}
 
@@ -3829,14 +3832,14 @@ export default function CatalogPage() {
                   onClick={deleteCategory}
                   disabled={catFormDeleting || catFormSaving}
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '9999px',
+                    padding: '8px 18px',
+                    borderRadius: '2px',
                     border: '1px solid rgba(239,68,68,0.3)',
                     background: '#fef2f2',
                     color: '#dc2626',
                     cursor: (catFormDeleting || catFormSaving) ? 'not-allowed' : 'pointer',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    fontSize: '0.88rem',
                   }}
                 >
                   {catFormDeleting ? 'Deleting…' : '🗑 Delete Category'}
@@ -3847,7 +3850,7 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={() => setShowCatForm(false)}
-                  style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                  style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
                 >
                   Cancel
                 </button>
@@ -3855,7 +3858,7 @@ export default function CatalogPage() {
                   type="button"
                   onClick={saveCategory}
                   disabled={catFormSaving || catFormDeleting}
-                  style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: (catFormSaving || catFormDeleting) ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                  style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: (catFormSaving || catFormDeleting) ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
                 >
                   {catFormSaving ? 'Saving…' : editCategory ? 'Save Changes' : 'Create'}
                 </button>
