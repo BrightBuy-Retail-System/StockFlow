@@ -919,46 +919,71 @@ export default function CatalogPage() {
   const renderFilterAccordions = () => (
     <>
       {/* Availability Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('availability')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Availability</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.availability && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.88rem',
+                color: availabilityFilter.inStock ? '#2a9d8f' : '#3b2f2f',
+                cursor: 'pointer',
+                fontWeight: availabilityFilter.inStock ? 700 : 500,
+                padding: '3px 0',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={availabilityFilter.inStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
-                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2a9d8f', width: '17px', height: '17px', cursor: 'pointer' }}
               />
               <span>In stock</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.88rem',
+                color: availabilityFilter.outOfStock ? '#2a9d8f' : '#3b2f2f',
+                cursor: 'pointer',
+                fontWeight: availabilityFilter.outOfStock ? 700 : 500,
+                padding: '3px 0',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={availabilityFilter.outOfStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
-                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2a9d8f', width: '17px', height: '17px', cursor: 'pointer' }}
               />
               <span>Out of stock</span>
             </label>
@@ -967,31 +992,34 @@ export default function CatalogPage() {
       </div>
 
       {/* Price Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('price')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Price</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.price && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="number"
@@ -1002,13 +1030,14 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  border: '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  fontSize: '0.84rem',
                   outline: 'none',
+                  color: '#3b2f2f',
                 }}
               />
-              <span style={{ color: '#94a3b8' }}>–</span>
+              <span style={{ color: '#826e6e' }}>–</span>
               <input
                 type="number"
                 placeholder="Rs Max"
@@ -1018,25 +1047,28 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  border: '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  fontSize: '0.84rem',
                   outline: 'none',
+                  color: '#3b2f2f',
                 }}
               />
             </div>
             {(minPrice || maxPrice) && (
               <button
+                type="button"
                 onClick={() => { setMinPrice(''); setMaxPrice(''); }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#2563eb',
-                  fontSize: '0.78rem',
+                  color: '#2a9d8f',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  padding: 0,
+                  padding: '2px 0',
                   fontWeight: 600,
+                  textDecoration: 'underline',
                 }}
               >
                 Reset price
@@ -1047,31 +1079,34 @@ export default function CatalogPage() {
       </div>
 
       {/* Color Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('color')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Color</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.color && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {[
               { label: 'Black', hex: '#1c1917' },
               { label: 'White', hex: '#f5f5f4' },
@@ -1083,6 +1118,8 @@ export default function CatalogPage() {
               return (
                 <button
                   key={label}
+                  type="button"
+                  className={`catalog-option-pill ${isSel ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedColors((prev) =>
                       isSel ? prev.filter((c) => c !== label) : [...prev, label]
@@ -1092,15 +1129,15 @@ export default function CatalogPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '5px 10px',
-                    borderRadius: '9999px',
-                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
-                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
-                    fontSize: '0.8rem',
+                    padding: '6px 12px',
+                    borderRadius: '2px',
+                    border: isSel ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                    backgroundColor: isSel ? '#2a9d8f' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#3b2f2f',
+                    boxShadow: isSel ? '0 2px 8px rgba(42, 157, 143, 0.25)' : 'none',
+                    fontSize: '0.82rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 500,
+                    fontWeight: isSel ? 700 : 500,
                   }}
                 >
                   <span
@@ -1109,10 +1146,11 @@ export default function CatalogPage() {
                       height: '10px',
                       borderRadius: '50%',
                       backgroundColor: hex,
-                      border: hex === '#f5f5f4' ? '1px solid #d6d3d1' : 'none',
+                      border: isSel ? '1.5px solid #ffffff' : (hex === '#f5f5f4' ? '1px solid #d6d3d1' : 'none'),
                     }}
                   />
                   <span>{label}</span>
+                  {isSel && <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>✓</span>}
                 </button>
               );
             })}
@@ -1121,54 +1159,60 @@ export default function CatalogPage() {
       </div>
 
       {/* Storage Accordion */}
-      <div style={{ padding: '16px 0' }}>
+      <div style={{ padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('storage')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Storage</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.storage && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {['64GB', '128GB', '256GB', '512GB', '1TB'].map((cap) => {
               const isSel = selectedStorage.includes(cap);
               return (
                 <button
                   key={cap}
+                  type="button"
+                  className={`catalog-option-pill ${isSel ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedStorage((prev) =>
                       isSel ? prev.filter((s) => s !== cap) : [...prev, cap]
                     );
                   }}
                   style={{
-                    padding: '5px 10px',
-                    borderRadius: '8px',
-                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
-                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
-                    fontSize: '0.78rem',
+                    padding: '6px 12px',
+                    borderRadius: '2px',
+                    border: isSel ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                    backgroundColor: isSel ? '#2a9d8f' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#3b2f2f',
+                    boxShadow: isSel ? '0 2px 8px rgba(42, 157, 143, 0.25)' : 'none',
+                    fontSize: '0.8rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 500,
+                    fontWeight: isSel ? 700 : 500,
                   }}
                 >
-                  {cap}
+                  <span>{cap}</span>
+                  {isSel && <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>✓</span>}
                 </button>
               );
             })}
@@ -1573,22 +1617,22 @@ export default function CatalogPage() {
                           alignItems: 'center',
                           gap: '8px',
                           padding: '6px 14px',
-                          borderRadius: '9999px',
-                          border: isSelected ? '2px solid #2563eb' : '1px solid rgba(0,0,0,0.14)',
-                          background: isSelected ? 'rgba(37,99,235,0.05)' : '#ffffff',
-                          color: '#1a1917',
+                          borderRadius: '2px',
+                          border: isSelected ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                          background: isSelected ? 'rgba(42, 157, 143, 0.12)' : '#ffffff',
+                          color: '#3b2f2f',
                           fontSize: '0.84rem',
                           fontWeight: isSelected ? 700 : 500,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
-                          boxShadow: isSelected ? '0 0 0 2px rgba(37,99,235,0.2)' : 'none',
+                          boxShadow: 'none',
                         }}
                       >
                         <span
                           style={{
                             width: '12px',
                             height: '12px',
-                            borderRadius: '50%',
+                            borderRadius: '2px',
                             backgroundColor:
                               (v.attribute_value || '').toLowerCase().includes('black') ? '#1c1917'
                                 : (v.attribute_value || '').toLowerCase().includes('blue') ? '#3b82f6'
@@ -1598,7 +1642,7 @@ export default function CatalogPage() {
                           }}
                         />
                         <span>{v.attribute_value || v.sku}</span>
-                        <span style={{ fontSize: '0.74rem', color: vStock > 0 ? '#059669' : '#dc2626', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.74rem', color: vStock > 0 ? '#2a9d8f' : '#dc2626', fontWeight: 600 }}>
                           {vStock > 0 ? `(${vStock} in stock)` : '(Out of stock)'}
                         </span>
                       </button>
@@ -1615,8 +1659,8 @@ export default function CatalogPage() {
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: '9999px',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
                     padding: '4px 8px',
                     background: '#ffffff',
                     height: '46px',
@@ -1629,12 +1673,12 @@ export default function CatalogPage() {
                     style={{
                       width: '32px',
                       height: '32px',
-                      borderRadius: '50%',
+                      borderRadius: '2px',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
                       cursor: (addingToCart || quantity <= 1) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || quantity <= 1) ? '#cbd5e1' : '#44403c',
+                      color: (addingToCart || quantity <= 1) ? '#e7d7c1' : '#3b2f2f',
                       fontWeight: 600,
                     }}
                   >
@@ -1646,7 +1690,7 @@ export default function CatalogPage() {
                       textAlign: 'center',
                       fontWeight: 700,
                       fontSize: '0.95rem',
-                      color: '#1a1917',
+                      color: '#3b2f2f',
                     }}
                   >
                     {quantity}
@@ -1658,12 +1702,12 @@ export default function CatalogPage() {
                     style={{
                       width: '32px',
                       height: '32px',
-                      borderRadius: '50%',
+                      borderRadius: '2px',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
                       cursor: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? '#cbd5e1' : '#44403c',
+                      color: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? '#e7d7c1' : '#3b2f2f',
                       fontWeight: 600,
                     }}
                   >
@@ -1673,24 +1717,23 @@ export default function CatalogPage() {
 
                 <button
                   type="button"
+                  className="btn-primary"
                   onClick={handleAddToCart}
                   disabled={addingToCart || !inStock}
                   style={{
                     flex: 1,
                     height: '46px',
-                    borderRadius: '9999px',
+                    borderRadius: '2px',
                     border: 'none',
                     background: inStock
-                      ? (addingToCart ? '#1d4ed8' : '#2563eb')
-                      : '#a8a29e',
+                      ? (addingToCart ? '#22867a' : '#2a9d8f')
+                      : '#826e6e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
                     cursor: (addingToCart || !inStock) ? 'not-allowed' : 'pointer',
                     opacity: addingToCart ? 0.85 : 1,
-                    boxShadow: inStock
-                      ? '0 4px 14px rgba(37,99,235,0.35)'
-                      : 'none',
+                    boxShadow: 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -2630,7 +2673,7 @@ export default function CatalogPage() {
                 fontWeight: 800,
                 letterSpacing: '-0.025em',
                 margin: '0 0 16px 0',
-                color: '#0f172a',
+                color: '#3b2f2f',
                 lineHeight: 1.1,
               }}
             >
@@ -2652,6 +2695,8 @@ export default function CatalogPage() {
             >
               {/* "All" category pill */}
               <button
+                type="button"
+                className={`catalog-category-pill ${(selectedCategory === '' && searchQuery === '') ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedCategory('');
                   setSearchQuery('');
@@ -2660,16 +2705,16 @@ export default function CatalogPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2563eb' : '#ffffff',
-                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#334155',
-                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                  borderRadius: '9999px',
-                  padding: '7px 16px 7px 12px',
+                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2a9d8f' : '#ffffff',
+                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#3b2f2f',
+                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  padding: '8px 16px 8px 12px',
                   fontSize: '0.86rem',
-                  fontWeight: 600,
+                  fontWeight: (selectedCategory === '' && searchQuery === '') ? 700 : 500,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
+                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 3px 10px rgba(42, 157, 143, 0.3)' : '0 1px 3px rgba(59, 47, 47, 0.04)',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
                 }}
@@ -2678,8 +2723,8 @@ export default function CatalogPage() {
                   style={{
                     width: '24px',
                     height: '24px',
-                    borderRadius: '8px',
-                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
+                    borderRadius: '2px',
+                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255, 255, 255, 0.22)' : '#f6f3ee',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2700,6 +2745,8 @@ export default function CatalogPage() {
                 return (
                   <button
                     key={cat.slug || cat.category_id}
+                    type="button"
+                    className={`catalog-category-pill ${isSelected ? 'active' : ''}`}
                     onClick={() => {
                       if (isSelected) {
                         setSelectedCategory('');
@@ -2716,16 +2763,16 @@ export default function CatalogPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '10px',
-                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#334155',
-                      border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                      borderRadius: '9999px',
-                      padding: '7px 16px 7px 10px',
+                      backgroundColor: isSelected ? '#2a9d8f' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#3b2f2f',
+                      border: isSelected ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                      borderRadius: '2px',
+                      padding: '8px 16px 8px 10px',
                       fontSize: '0.86rem',
-                      fontWeight: 600,
+                      fontWeight: isSelected ? 700 : 500,
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      boxShadow: isSelected ? '0 3px 10px rgba(42, 157, 143, 0.3)' : '0 1px 3px rgba(59, 47, 47, 0.04)',
                       transition: 'all 0.2s ease',
                       flexShrink: 0,
                     }}
@@ -2734,9 +2781,9 @@ export default function CatalogPage() {
                       style={{
                         width: '26px',
                         height: '26px',
-                        borderRadius: '8px',
+                        borderRadius: '2px',
                         overflow: 'hidden',
-                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
+                        background: isSelected ? 'rgba(255, 255, 255, 0.22)' : '#f6f3ee',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2796,18 +2843,19 @@ export default function CatalogPage() {
                       style={{
                         width: '100%',
                         padding: '8px 34px 8px 14px',
-                        borderRadius: '9999px',
+                        borderRadius: '2px',
                         background: '#ffffff',
-                        border: '1px solid rgba(0,0,0,0.12)',
+                        border: '1px solid #e7d7c1',
                         fontSize: '0.86rem',
-                        color: '#1c1917',
+                        color: '#3b2f2f',
                         outline: 'none',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        boxShadow: 'none',
                         boxSizing: 'border-box',
                       }}
                     />
                     {searchQuery && (
                       <button
+                        type="button"
                         onClick={() => setSearchQuery('')}
                         style={{
                           position: 'absolute',
@@ -2817,7 +2865,7 @@ export default function CatalogPage() {
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          color: '#a8a29e',
+                          color: '#826e6e',
                           fontSize: '1rem',
                         }}
                       >
@@ -2833,17 +2881,17 @@ export default function CatalogPage() {
                     onClick={() => setMobileFiltersOpen((v) => !v)}
                     style={{
                       padding: '8px 16px',
-                      borderRadius: '9999px',
-                      border: mobileFiltersOpen ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                      background: mobileFiltersOpen ? '#2563eb' : '#ffffff',
-                      color: mobileFiltersOpen ? '#ffffff' : '#2563eb',
+                      borderRadius: '2px',
+                      border: mobileFiltersOpen ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                      background: mobileFiltersOpen ? 'rgba(42, 157, 143, 0.12)' : '#ffffff',
+                      color: mobileFiltersOpen ? '#2a9d8f' : '#3b2f2f',
                       fontSize: '0.84rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       alignItems: 'center',
                       gap: '6px',
                       whiteSpace: 'nowrap',
-                      boxShadow: mobileFiltersOpen ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
+                      boxShadow: 'none',
                     }}
                   >
                     <span>⚙️ Filters</span>
@@ -2854,70 +2902,74 @@ export default function CatalogPage() {
                   {isManager && (
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <button
+                        type="button"
                         onClick={openCreateCategory}
                         title="Add New Category"
                         style={{
                           padding: '8px 18px',
-                          borderRadius: '9999px',
-                          border: '1px solid rgba(0,0,0,0.14)',
+                          borderRadius: '2px',
+                          border: '1px solid #e7d7c1',
                           background: '#ffffff',
-                          color: '#1c1917',
+                          color: '#3b2f2f',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
                           whiteSpace: 'nowrap',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                          boxShadow: 'none',
                         }}
                       >
                         + Category
                       </button>
                       {categories.length > 0 && (
                         <button
+                          type="button"
                           onClick={() => openEditCategory()}
                           title="Edit or Delete Categories"
                           style={{
                             padding: '8px 16px',
-                            borderRadius: '9999px',
-                            border: '1px solid rgba(0,0,0,0.14)',
+                            borderRadius: '2px',
+                            border: '1px solid #e7d7c1',
                             background: '#ffffff',
-                            color: '#1c1917',
+                            color: '#3b2f2f',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.84rem',
                             whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                            boxShadow: 'none',
                           }}
                         >
                           ✎ Edit Category
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={openCreateProduct}
                         title="Add Product"
                         style={{
                           padding: '8px 18px',
-                          borderRadius: '9999px',
+                          borderRadius: '2px',
                           border: 'none',
-                          background: '#1a1917',
+                          background: '#2a9d8f',
                           color: '#ffffff',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
                           whiteSpace: 'nowrap',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          boxShadow: 'none',
                         }}
                       >
                         + Product
                       </button>
                       <button
+                        type="button"
                         onClick={() => { setShowLowStock((v) => !v); if (!showLowStock) fetchLowStock(threshold); }}
                         title="Low Stock Alerts"
                         style={{
                           padding: '8px 16px',
-                          borderRadius: '9999px',
-                          border: '1px solid #f59e0b',
-                          background: showLowStock ? '#f59e0b' : 'rgba(245,158,11,0.08)',
-                          color: showLowStock ? '#ffffff' : '#b45309',
+                          borderRadius: '2px',
+                          border: '1px solid #c08457',
+                          background: showLowStock ? '#c08457' : 'rgba(192, 132, 87, 0.1)',
+                          color: showLowStock ? '#ffffff' : '#c08457',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
@@ -2941,18 +2993,18 @@ export default function CatalogPage() {
                         WebkitAppearance: 'none',
                         MozAppearance: 'none',
                         background: '#ffffff',
-                        border: '1px solid rgba(0,0,0,0.12)',
-                        borderRadius: '9999px',
+                        border: '1px solid #e7d7c1',
+                        borderRadius: '2px',
                         fontSize: '0.86rem',
                         fontWeight: 600,
-                        color: '#1c1917',
+                        color: '#3b2f2f',
                         cursor: 'pointer',
                         padding: '0 32px 0 16px',
                         height: '38px',
                         lineHeight: '38px',
                         boxSizing: 'border-box',
                         outline: 'none',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        boxShadow: 'none',
                         display: 'inline-block',
                         verticalAlign: 'middle',
                       }}
@@ -2971,7 +3023,7 @@ export default function CatalogPage() {
                         transform: 'translateY(-50%)',
                         pointerEvents: 'none',
                         fontSize: '0.65rem',
-                        color: '#78716c',
+                        color: '#826e6e',
                         lineHeight: 1,
                       }}
                     >
@@ -2984,6 +3036,89 @@ export default function CatalogPage() {
                   </span>
                 </div>
               </div>
+
+              {/* ── Active Filters Summary Bar ── */}
+              {(availabilityFilter.inStock || availabilityFilter.outOfStock || minPrice || maxPrice || selectedColors.length > 0 || selectedStorage.length > 0 || (selectedCategory && selectedCategory !== '')) && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    background: '#ffffff',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#3b2f2f' }}>Active Filters:</span>
+                  {selectedCategory && (
+                    <span
+                      onClick={() => setSelectedCategory('')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      {currentCategoryName} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {availabilityFilter.inStock && (
+                    <span
+                      onClick={() => setAvailabilityFilter((p) => ({ ...p, inStock: false }))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      In stock <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {availabilityFilter.outOfStock && (
+                    <span
+                      onClick={() => setAvailabilityFilter((p) => ({ ...p, outOfStock: false }))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Out of stock <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {(minPrice || maxPrice) && (
+                    <span
+                      onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Price: {minPrice ? `Rs ${minPrice}` : '0'} – {maxPrice ? `Rs ${maxPrice}` : '∞'} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {selectedColors.map((color) => (
+                    <span
+                      key={color}
+                      onClick={() => setSelectedColors((prev) => prev.filter((c) => c !== color))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Color: {color} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  ))}
+                  {selectedStorage.map((cap) => (
+                    <span
+                      key={cap}
+                      onClick={() => setSelectedStorage((prev) => prev.filter((s) => s !== cap))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Storage: {cap} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('');
+                      setSearchQuery('');
+                      setMinPrice('');
+                      setMaxPrice('');
+                      setSelectedColors([]);
+                      setSelectedStorage([]);
+                      setAvailabilityFilter({ inStock: false, outOfStock: false });
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#c08457', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: '2px 6px', textDecoration: 'underline', marginLeft: 'auto' }}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
 
               {/* ── Mobile Filters Expandable Drawer ── */}
               {mobileFiltersOpen && (
@@ -3121,31 +3256,31 @@ export default function CatalogPage() {
                           onClick={() => setSelectedProductId(p.product_id)}
                           style={{
                             backgroundColor: '#ffffff',
-                            borderRadius: '18px',
+                            borderRadius: '2px',
                             padding: '16px',
                             display: 'flex',
                             flexDirection: 'column',
                             position: 'relative',
-                            border: '1px solid rgba(0,0,0,0.08)',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
+                            border: '1px solid #e7d7c1',
+                            boxShadow: '0 2px 8px rgba(59, 47, 47, 0.04)',
                             cursor: 'pointer',
                             transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.16)';
-                            e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)';
+                            e.currentTarget.style.transform = 'translateY(-3px)';
+                            e.currentTarget.style.borderColor = '#2a9d8f';
+                            e.currentTarget.style.boxShadow = '0 6px 18px rgba(59, 47, 47, 0.08)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)';
-                            e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
+                            e.currentTarget.style.borderColor = '#e7d7c1';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 47, 47, 0.04)';
                           }}
                         >
                           {/* Top Status Badge (Real DB Status Only) */}
                           {p.is_active === 0 && (
                             <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2 }}>
-                              <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
+                              <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '2px' }}>
                                 INACTIVE
                               </span>
                             </div>
@@ -3161,7 +3296,7 @@ export default function CatalogPage() {
                               justifyContent: 'center',
                               marginBottom: '14px',
                               overflow: 'hidden',
-                              borderRadius: '12px',
+                              borderRadius: '2px',
                             }}
                           >
                             <img
@@ -3178,7 +3313,7 @@ export default function CatalogPage() {
 
                           {/* Category Subtitle */}
                           {p.category_name && (
-                            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: '#c08457', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                               {p.category_name}
                             </div>
                           )}
@@ -3188,7 +3323,7 @@ export default function CatalogPage() {
                             style={{
                               fontSize: '0.94rem',
                               fontWeight: 700,
-                              color: '#1a1917',
+                              color: '#3b2f2f',
                               lineHeight: 1.35,
                               margin: '0 0 8px 0',
                               display: '-webkit-box',
@@ -3203,7 +3338,7 @@ export default function CatalogPage() {
 
                           {/* Price */}
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#3b2f2f' }}>
                               {formatRs(basePrice)}
                             </span>
                           </div>
@@ -3215,11 +3350,11 @@ export default function CatalogPage() {
                                 width: '7px',
                                 height: '7px',
                                 borderRadius: '50%',
-                                backgroundColor: isInStock ? '#10b981' : '#ef4444',
+                                backgroundColor: isInStock ? '#2a9d8f' : '#ef4444',
                                 display: 'inline-block',
                               }}
                             />
-                            <span style={{ color: isInStock ? '#059669' : '#dc2626' }}>
+                            <span style={{ color: isInStock ? '#2a9d8f' : '#dc2626' }}>
                               {isInStock ? 'In stock' : 'Out of stock'}
                             </span>
                           </div>
@@ -3227,18 +3362,19 @@ export default function CatalogPage() {
                           {/* Direct Add to Cart Button */}
                           <button
                             type="button"
+                            className="st-card-add-btn"
                             disabled={!isInStock || cardAdding[p.product_id]}
                             onClick={(e) => handleAddProductToCart(p, e)}
                             style={{
                               marginTop: '12px',
                               width: '100%',
                               height: '38px',
-                              borderRadius: '10px',
+                              borderRadius: '2px',
                               border: 'none',
                               background: isInStock
-                                ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
-                                : '#f1f5f9',
-                              color: isInStock ? '#ffffff' : '#94a3b8',
+                                ? (cardAdding[p.product_id] ? '#22867a' : '#2a9d8f')
+                                : '#f6f3ee',
+                              color: isInStock ? '#ffffff' : '#826e6e',
                               fontSize: '0.84rem',
                               fontWeight: 600,
                               cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
@@ -3247,19 +3383,19 @@ export default function CatalogPage() {
                               justifyContent: 'center',
                               gap: '7px',
                               transition: 'all 0.18s ease',
-                              boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                              boxShadow: 'none',
                             }}
                             onMouseEnter={(e) => {
                               if (isInStock && !cardAdding[p.product_id]) {
-                                e.currentTarget.style.background = '#1d4ed8';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.3)';
+                                e.currentTarget.style.background = '#22867a';
+                                e.currentTarget.style.boxShadow = 'none';
                                 e.currentTarget.style.transform = 'translateY(-1px)';
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (isInStock && !cardAdding[p.product_id]) {
-                                e.currentTarget.style.background = '#2563eb';
-                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                                e.currentTarget.style.background = '#2a9d8f';
+                                e.currentTarget.style.boxShadow = 'none';
                                 e.currentTarget.style.transform = 'translateY(0)';
                               }
                             }}
