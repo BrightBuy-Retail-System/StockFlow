@@ -2,6 +2,7 @@ import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 
 from db import get_db_connection
 
@@ -210,7 +211,7 @@ def calculate_delivery():
 
             inv_row = found_map[vid]
             curr_stock = int(inv_row['stock_quantity'])
-            is_delayed = (curr_stock <= 0) or (curr_stock < qty)
+            is_delayed = (curr_stock <= 0)
 
             if is_delayed:
                 out_of_stock_variant_ids.append(vid)
@@ -257,10 +258,14 @@ def calculate_delivery():
 
 
 @logistics_bp.route('/shipments/<tracking_number>', methods=['GET'])
+@jwt_required()
 def track_shipment(tracking_number):
     """Look up full shipment and routing context by tracking number."""
     if not tracking_number or not tracking_number.strip():
         return jsonify({"error": "Tracking number is required"}), 400
+
+    current_user_id = get_jwt_identity()
+    caller_role = _get_jwt_role()
 
     conn = None
     try:
@@ -301,6 +306,11 @@ def track_shipment(tracking_number):
         if not shipment:
             return jsonify({"error": f"No shipment found for tracking number '{tracking_number}'"}), 404
 
+        if caller_role == 1:
+            shipment_user_id = shipment.get('user_id')
+            if _customer_lookup_is_forbidden(current_user_id, shipment_user_id):
+                return jsonify({"error": f"No shipment found for tracking number '{tracking_number}'"}), 404
+
         return jsonify(clean_row(shipment)), 200
     except Exception as err:
         return jsonify({"error": f"Failed to query tracking information: {str(err)}"}), 500
@@ -310,11 +320,14 @@ def track_shipment(tracking_number):
 
 
 @logistics_bp.route('/shipments', methods=['GET'])
+@jwt_required()
 def list_shipments():
     """
     List shipments with optional filtering by status or search keyword.
     Supports ?status=PENDING|DISPATCHED|IN_TRANSIT|DELIVERED|ALL&q=<search>&limit=<num>
     """
+    current_user_id = get_jwt_identity()
+    caller_role = _get_jwt_role()
     status_filter = request.args.get('status', 'ALL').strip().upper()
     query_search = request.args.get('q', '').strip()
     limit = min(int(request.args.get('limit', 50)), 100)
@@ -326,6 +339,10 @@ def list_shipments():
 
         where_clauses = []
         params = []
+
+        if caller_role == 1:
+            where_clauses.append("o.user_id = %s")
+            params.append(current_user_id)
 
         if status_filter and status_filter != 'ALL':
             where_clauses.append("s.shipping_status = %s")
@@ -351,6 +368,7 @@ def list_shipments():
                 c.city_name, 
                 c.hub_name,
                 o.order_id,
+                o.user_id,
                 o.status AS order_status,
                 o.total_amount
             FROM shipments s
@@ -382,11 +400,15 @@ def list_shipments():
 
 
 @logistics_bp.route('/upcoming-shipments', methods=['GET'])
+@jwt_required()
 def upcoming_shipments():
     """
     Logistics dispatcher view: all shipments that haven't been delivered
     yet, soonest estimated arrival first.
     """
+    if not _require_manager_or_admin():
+        return jsonify({"error": "Access denied. Manager or administrator role required."}), 403
+
     conn = None
     try:
         conn = get_db_connection()
@@ -423,12 +445,16 @@ def upcoming_shipments():
 
 
 @logistics_bp.route('/shipments/<int:shipment_id>/status', methods=['PATCH'])
+@jwt_required()
 def update_shipment_status(shipment_id):
     """
     Dispatcher / Manager Action: Advance shipment status through lifecycle:
     PENDING -> DISPATCHED -> IN_TRANSIT -> DELIVERED.
     Automatically records dispatched_at and delivered_at timestamps.
     """
+    if not _require_manager_or_admin():
+        return jsonify({"error": "Access denied. Manager or administrator role required."}), 403
+
     data = request.get_json(silent=True) or {}
     new_status = data.get('status', '').strip().upper()
     valid_statuses = ['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'DELIVERED']
@@ -450,6 +476,10 @@ def update_shipment_status(shipment_id):
             return jsonify({"error": f"Shipment #{shipment_id} not found"}), 404
 
         old_status = existing['shipping_status']
+        if not _is_valid_transition(old_status, new_status):
+            return jsonify({
+                "error": f"Invalid shipment lifecycle transition from '{old_status}' to '{new_status}'. Only the allowed next state is permitted."
+            }), 400
 
         # Determine timestamp updates
         timestamp_clauses = []
