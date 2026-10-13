@@ -139,6 +139,10 @@ export default function LogisticsPage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab === 'pipeline' && !isManagerOrAdmin) {
+      setActiveTab('tracker');
+      return;
+    }
     if (activeTab === 'pipeline') {
       fetchShipmentsList(pipelineStatusFilter, pipelineSearch);
     }
@@ -263,6 +267,16 @@ export default function LogisticsPage() {
     }
   };
 
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const currentUserRole = Number(storedUser?.role_id ?? 1);
+  const isManagerOrAdmin = [2, 3].includes(currentUserRole);
+
   return (
     <div>
       {/* Page Header */}
@@ -360,12 +374,20 @@ export default function LogisticsPage() {
 
       {/* Navigation Tab Bar */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '24px', gap: '8px', overflowX: 'auto' }}>
-        {[
-          { id: 'hubs', label: 'Texas Regional Hubs', badge: `${cities.length || 8} Hubs` },
-          { id: 'estimator', label: 'Delivery Lead-Time Estimator', badge: 'SRS Feature 5' },
-          { id: 'tracker', label: 'Live Parcel Tracker', badge: 'Visual Stepper' },
-          { id: 'pipeline', label: 'Dispatches & Pipeline Management', badge: 'Manager Action' },
-        ].map((tab) => (
+        {(
+          isManagerOrAdmin
+            ? [
+              { id: 'hubs', label: 'Texas Regional Hubs', badge: `${cities.length || 8} Hubs` },
+              { id: 'estimator', label: 'Delivery Lead-Time Estimator', badge: 'SRS Feature 5' },
+              { id: 'tracker', label: 'Live Parcel Tracker', badge: 'Visual Stepper' },
+              { id: 'pipeline', label: 'Dispatches & Pipeline Management', badge: 'Manager Action' },
+            ]
+            : [
+              { id: 'hubs', label: 'Texas Regional Hubs', badge: `${cities.length || 8} Hubs` },
+              { id: 'estimator', label: 'Delivery Lead-Time Estimator', badge: 'SRS Feature 5' },
+              { id: 'tracker', label: 'Live Parcel Tracker', badge: 'Visual Stepper' },
+            ]
+        ).map((tab) => (
           <button
             key={tab.id}
             type="button"
