@@ -772,25 +772,25 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         >
           {/* Checkout Header */}
           <div style={{ marginBottom: '20px' }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.5rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
               Checkout
             </h1>
-            <p style={{ fontSize: '0.8125rem', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '0.8125rem', color: '#5c4b4b', margin: 0 }}>
               Review your items and complete your order
             </p>
           </div>
 
           {/* Breadcrumbs Navigation */}
           {currentStep < 4 && (
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#64748b', marginBottom: '32px' }}>
-              <span style={{ color: '#0264d6', cursor: 'pointer' }} onClick={() => navigate('/auth-cart')}>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#826e6e', marginBottom: '32px' }}>
+              <span style={{ color: '#2a9d8f', cursor: 'pointer', fontWeight: 600 }} onClick={() => navigate('/auth-cart')}>
                 Cart
               </span>
               <span>&gt;</span>
               <span
                 style={{
-                  color: currentStep === 1 ? '#0f172a' : '#0264d6',
-                  fontWeight: currentStep === 1 ? 700 : 500,
+                  color: currentStep === 1 ? '#3b2f2f' : '#2a9d8f',
+                  fontWeight: currentStep === 1 ? 800 : 600,
                   cursor: currentStep > 1 ? 'pointer' : 'default',
                 }}
                 onClick={() => currentStep > 1 && setCurrentStep(1)}
@@ -800,8 +800,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               <span>&gt;</span>
               <span
                 style={{
-                  color: currentStep === 2 ? '#0f172a' : currentStep > 2 ? '#0264d6' : '#94a3b8',
-                  fontWeight: currentStep === 2 ? 700 : 500,
+                  color: currentStep === 2 ? '#3b2f2f' : currentStep > 2 ? '#2a9d8f' : '#826e6e',
+                  fontWeight: currentStep === 2 ? 800 : 500,
                   cursor: currentStep > 2 ? 'pointer' : 'default',
                 }}
                 onClick={() => currentStep > 2 && setCurrentStep(2)}
@@ -811,8 +811,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               <span>&gt;</span>
               <span
                 style={{
-                  color: currentStep === 3 ? '#0f172a' : '#94a3b8',
-                  fontWeight: currentStep === 3 ? 700 : 500,
+                  color: currentStep === 3 ? '#3b2f2f' : '#826e6e',
+                  fontWeight: currentStep === 3 ? 800 : 500,
                 }}
               >
                 Payment
@@ -824,11 +824,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           {stockConflictMessage && (
             <div
               style={{
-                background: '#fef2f2',
+                background: '#fdf2f0',
                 border: '1px solid #fecaca',
-                borderRadius: '8px',
+                borderRadius: '2px',
                 padding: '14px 18px',
-                color: '#991b1b',
+                color: '#d94a38',
                 fontSize: '0.875rem',
                 marginBottom: '24px',
                 display: 'flex',
@@ -846,11 +846,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           {errorMessage && (
             <div
               style={{
-                background: '#fff1f2',
-                border: '1px solid #ffe4e6',
-                borderRadius: '8px',
+                background: '#fdf2f0',
+                border: '1px solid #fecaca',
+                borderRadius: '2px',
                 padding: '14px 18px',
-                color: '#be123c',
+                color: '#d94a38',
                 fontSize: '0.875rem',
                 marginBottom: '24px',
               }}
@@ -868,32 +868,33 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               <div
                 style={{
                   background: '#ffffff',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
+                  borderRadius: '2px',
+                  border: '1.5px solid #e7d7c1',
                   padding: '20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+                  boxShadow: '0 1px 4px rgba(59, 47, 47, 0.03)',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                      <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.1rem', fontWeight: 800, color: '#3b2f2f', margin: 0 }}>
                         Select Items to Order
                       </h2>
                       <span
                         style={{
-                          background: noneSelected ? '#fee2e2' : '#eff6ff',
-                          color: noneSelected ? '#b91c1c' : '#1e40af',
+                          background: noneSelected ? '#fdf2f0' : '#e6f6f4',
+                          color: noneSelected ? '#d94a38' : '#2a9d8f',
+                          border: noneSelected ? '1px solid #fecaca' : '1px solid #a4dbd4',
                           fontSize: '0.72rem',
                           fontWeight: 700,
                           padding: '2px 8px',
-                          borderRadius: '9999px',
+                          borderRadius: '2px',
                         }}
                       >
                         {activeCheckoutItems.length} of {cartItems.length} selected
                       </span>
                     </div>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.8125rem', color: '#5c4b4b' }}>
                       Choose which items from your cart to checkout now. Unselected items will stay in your cart.
                     </p>
                   </div>
@@ -901,15 +902,23 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     type="button"
                     onClick={allSelected ? deselectAllItems : selectAllItems}
                     style={{
-                      background: '#f8fafc',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #e7d7c1',
+                      borderRadius: '2px',
+                      padding: '5px 12px',
                       fontSize: '0.75rem',
-                      fontWeight: 600,
-                      color: '#0264d6',
+                      fontWeight: 700,
+                      color: '#2a9d8f',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.18s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#2a9d8f';
+                      e.currentTarget.style.background = '#e6f6f4';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e7d7c1';
+                      e.currentTarget.style.background = '#ffffff';
                     }}
                   >
                     {allSelected ? 'Deselect All' : 'Select All'}
@@ -928,11 +937,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           alignItems: 'center',
                           gap: '14px',
                           padding: '12px 14px',
-                          borderRadius: '10px',
-                          border: isSelected ? '1.5px solid #0264d6' : '1px solid #e2e8f0',
-                          background: isSelected ? '#f8faff' : '#f8fafc',
+                          borderRadius: '2px',
+                          border: isSelected ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                          background: isSelected ? '#f4faf9' : '#faf7f2',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease',
+                          transition: 'all 0.18s ease',
                         }}
                       >
                         <input
@@ -943,7 +952,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           style={{
                             width: '18px',
                             height: '18px',
-                            accentColor: '#0264d6',
+                            accentColor: '#2a9d8f',
                             cursor: 'pointer',
                           }}
                         />
@@ -951,9 +960,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           style={{
                             width: '46px',
                             height: '46px',
-                            borderRadius: '8px',
+                            borderRadius: '2px',
                             background: '#ffffff',
-                            border: '1px solid #e2e8f0',
+                            border: '1px solid #e7d7c1',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -970,9 +979,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
                             style={{
-                              fontWeight: 600,
+                              fontWeight: 700,
                               fontSize: '0.875rem',
-                              color: isSelected ? '#0f172a' : '#64748b',
+                              color: isSelected ? '#3b2f2f' : '#826e6e',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -980,15 +989,15 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           >
                             {item.product_name}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#826e6e', marginTop: '2px' }}>
                             Qty: {item.quantity || 1} {item.attribute_value ? `• ${item.attribute_value}` : ''}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? '#0f172a' : '#64748b' }}>
+                          <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '0.925rem', color: isSelected ? '#3b2f2f' : '#826e6e' }}>
                             Rs {((parseFloat(item.unit_price) || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: isSelected ? '#16a34a' : '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.72rem', color: isSelected ? '#2a9d8f' : '#826e6e', fontWeight: 700, marginTop: '2px' }}>
                             {isSelected ? '✓ In order' : 'Remains in cart'}
                           </div>
                         </div>
@@ -1002,10 +1011,10 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     style={{
                       marginTop: '12px',
                       padding: '10px 14px',
-                      background: '#fef2f2',
+                      background: '#fdf2f0',
                       border: '1px solid #fecaca',
-                      borderRadius: '8px',
-                      color: '#991b1b',
+                      borderRadius: '2px',
+                      color: '#d94a38',
                       fontSize: '0.8125rem',
                       display: 'flex',
                       alignItems: 'center',
@@ -1021,10 +1030,10 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               {/* Contact Information */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Contact</h2>
+                  <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.15rem', fontWeight: 800, color: '#3b2f2f', margin: 0 }}>Contact</h2>
                   <button
                     type="button"
-                    style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
                     onClick={() => {
                       localStorage.removeItem('token');
                       localStorage.removeItem('user');
@@ -1035,20 +1044,20 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   </button>
                 </div>
                 {contactEmail ? (
-                  <div style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500, marginBottom: '6px' }}>
+                  <div style={{ fontSize: '0.875rem', color: '#3b2f2f', fontWeight: 600, marginBottom: '6px' }}>
                     ({contactEmail})
                   </div>
                 ) : null}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#475569', cursor: 'pointer', marginTop: '8px' }}>
-                  <input type="checkbox" defaultChecked />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#5c4b4b', cursor: 'pointer', marginTop: '8px' }}>
+                  <input type="checkbox" defaultChecked style={{ accentColor: '#2a9d8f' }} />
                   Email me with news and offers
                 </label>
               </div>
 
               {/* Delivery Method Toggle */}
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>Delivery method</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '6px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.15rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 12px' }}>Delivery method</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#faf7f2', padding: '6px', borderRadius: '2px', border: '1px solid #e7d7c1' }}>
                   <button
                     type="button"
                     style={{
@@ -1056,16 +1065,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: deliveryType === 'SHIP' ? '2px solid #0264d6' : '1px solid transparent',
+                      padding: '11px 16px',
+                      borderRadius: '2px',
+                      border: deliveryType === 'SHIP' ? '1.5px solid #2a9d8f' : '1px solid transparent',
                       background: deliveryType === 'SHIP' ? '#ffffff' : 'transparent',
-                      color: deliveryType === 'SHIP' ? '#0264d6' : '#475569',
-                      fontWeight: deliveryType === 'SHIP' ? 700 : 500,
+                      color: deliveryType === 'SHIP' ? '#2a9d8f' : '#5c4b4b',
+                      fontWeight: deliveryType === 'SHIP' ? 700 : 600,
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      boxShadow: deliveryType === 'SHIP' ? '0 2px 6px rgba(2, 100, 214, 0.1)' : 'none',
-                      transition: 'all 0.2s',
+                      boxShadow: deliveryType === 'SHIP' ? '0 2px 6px rgba(42, 157, 143, 0.15)' : 'none',
+                      transition: 'all 0.18s ease',
                     }}
                     onClick={() => setDeliveryType('SHIP')}
                   >
@@ -1079,16 +1088,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: deliveryType === 'PICKUP' ? '2px solid #0264d6' : '1px solid transparent',
+                      padding: '11px 16px',
+                      borderRadius: '2px',
+                      border: deliveryType === 'PICKUP' ? '1.5px solid #2a9d8f' : '1px solid transparent',
                       background: deliveryType === 'PICKUP' ? '#ffffff' : 'transparent',
-                      color: deliveryType === 'PICKUP' ? '#0264d6' : '#475569',
-                      fontWeight: deliveryType === 'PICKUP' ? 700 : 500,
+                      color: deliveryType === 'PICKUP' ? '#2a9d8f' : '#5c4b4b',
+                      fontWeight: deliveryType === 'PICKUP' ? 700 : 600,
                       fontSize: '0.875rem',
                       cursor: 'pointer',
-                      boxShadow: deliveryType === 'PICKUP' ? '0 2px 6px rgba(2, 100, 214, 0.1)' : 'none',
-                      transition: 'all 0.2s',
+                      boxShadow: deliveryType === 'PICKUP' ? '0 2px 6px rgba(42, 157, 143, 0.15)' : 'none',
+                      transition: 'all 0.18s ease',
                     }}
                     onClick={() => setDeliveryType('PICKUP')}
                   >
@@ -1101,13 +1110,13 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               {/* Shipping Address Fields (Rendered if Ship is active) */}
               {deliveryType === 'SHIP' ? (
                 <div>
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: '0 0 14px' }}>Shipping address</h2>
+                  <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.15rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 14px' }}>Shipping address</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {/* Saved Addresses dropdown */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>Saved addresses</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#5c4b4b', fontWeight: 700, marginBottom: '4px' }}>Saved addresses</label>
                       <select
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem', background: '#ffffff', color: '#0f172a' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         onChange={(e) => {
                           if (e.target.value === 'default') {
                             setAddress('1201 Elm Street');
@@ -1129,11 +1138,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
                     {/* Country/Region */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '4px' }}>Country/Region</label>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: '#5c4b4b', fontWeight: 700, marginBottom: '4px' }}>Country/Region</label>
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem', background: '#ffffff', color: '#0f172a' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                       >
                         <option value="United States">United States</option>
                       </select>
@@ -1148,7 +1157,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                           required
-                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         />
                       </div>
                       <div>
@@ -1158,7 +1167,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
                           required
-                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         />
                       </div>
                     </div>
@@ -1170,7 +1179,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         placeholder="Company (optional)"
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                       />
                     </div>
 
@@ -1182,7 +1191,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         required
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                       />
                     </div>
 
@@ -1193,7 +1202,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         placeholder="Apartment, suite, unit, etc. (optional)"
                         value={apartment}
                         onChange={(e) => setApartment(e.target.value)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                       />
                     </div>
 
@@ -1203,7 +1212,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         <select
                           value={selectedCityId}
                           onChange={handleCityChange}
-                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem', background: '#ffffff' }}
+                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         >
                           {cities.map((c) => (
                             <option key={c.city_id} value={c.city_id}>
@@ -1218,7 +1227,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           placeholder="ZIP code (e.g. 75270)"
                           value={postalCode}
                           onChange={(e) => setPostalCode(e.target.value)}
-                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         />
                       </div>
                     </div>
@@ -1231,42 +1240,42 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         required
-                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                       />
                       <span
                         title="In case we need to contact you regarding order delivery"
-                        style={{ position: 'absolute', right: '12px', top: '13px', color: '#94a3b8', fontSize: '0.9rem', cursor: 'help' }}
+                        style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', fontSize: '0.9rem', cursor: 'help' }}
                       >
                         ❓
                       </span>
                     </div>
 
                     {/* Save Info Checkbox */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#475569', cursor: 'pointer', marginTop: '4px' }}>
-                      <input type="checkbox" checked={saveInfo} onChange={(e) => setSaveInfo(e.target.checked)} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8125rem', color: '#5c4b4b', cursor: 'pointer', marginTop: '4px' }}>
+                      <input type="checkbox" checked={saveInfo} onChange={(e) => setSaveInfo(e.target.checked)} style={{ accentColor: '#2a9d8f' }} />
                       Save this information for next time
                     </label>
                   </div>
                 </div>
               ) : (
                 /* Pickup Location Notice */
-                <div style={{ padding: '20px', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Pickup Location</div>
-                  <div style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.5 }}>
+                <div style={{ padding: '20px', borderRadius: '2px', background: '#faf7f2', border: '1px solid #e7d7c1' }}>
+                  <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, color: '#3b2f2f', marginBottom: '6px' }}>Pickup Location</div>
+                  <div style={{ fontSize: '0.875rem', color: '#5c4b4b', lineHeight: 1.5 }}>
                     BrightBuy Texas Flagship Hub
                     <br />
                     100 Congress Ave, Suite 200, Austin, TX 78701, United States
                     <br />
-                    <span style={{ color: '#16a34a', fontWeight: 600 }}>Usually ready in 2 hours • Free Pickup</span>
+                    <span style={{ color: '#2a9d8f', fontWeight: 700 }}>Usually ready in 2 hours • Free Pickup</span>
                   </div>
                 </div>
               )}
 
               {/* CTAs */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap', gap: '12px' }}>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                   onClick={() => navigate('/auth-cart')}
                 >
                   &lt; Return to cart
@@ -1275,16 +1284,28 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   type="submit"
                   disabled={noneSelected}
                   style={{
-                    background: noneSelected ? '#94a3b8' : '#0264d6',
+                    background: noneSelected ? '#e7d7c1' : '#2a9d8f',
                     color: '#ffffff',
                     border: 'none',
-                    padding: '14px 28px',
-                    borderRadius: '8px',
+                    padding: '12px 28px',
+                    borderRadius: '2px',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     cursor: noneSelected ? 'not-allowed' : 'pointer',
-                    boxShadow: noneSelected ? 'none' : '0 2px 8px rgba(2, 100, 214, 0.25)',
-                    transition: 'all 0.2s',
+                    boxShadow: noneSelected ? 'none' : '0 3px 10px rgba(42, 157, 143, 0.28)',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!noneSelected) {
+                      e.currentTarget.style.background = '#22867a';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!noneSelected) {
+                      e.currentTarget.style.background = '#2a9d8f';
+                      e.currentTarget.style.transform = 'none';
+                    }
                   }}
                 >
                   {noneSelected ? 'Select items to continue' : 'Continue to shipping'}
@@ -1292,7 +1313,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               </div>
 
               {/* Legal Footer Links */}
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#0264d6' }}>
+              <div style={{ borderTop: '1px solid #e7d7c1', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#826e6e' }}>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Refund policy</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Shipping</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Privacy policy</span>
@@ -1303,38 +1324,39 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             </form>
           )}
 
+
           {/* --------------------------------------------------------------- */}
           {/* STEP 2: SHIPPING VIEW                                           */}
           {/* --------------------------------------------------------------- */}
           {currentStep === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
               {/* Review Summary Box */}
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', fontSize: '0.875rem' }}>
+              <div style={{ border: '1.5px solid #e7d7c1', borderRadius: '2px', background: '#ffffff', overflow: 'hidden', fontSize: '0.875rem' }}>
                 {/* Items Row */}
-                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ede6dc' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Items</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Items</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 700 }}>
                       {activeCheckoutItems.length} of {cartItems.length} item(s) selected
                     </span>
                   </div>
                   <button
                     type="button"
-                    style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
                     onClick={() => setCurrentStep(1)}
                   >
                     Change
                   </button>
                 </div>
                 {/* Contact Row */}
-                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ede6dc' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Contact</span>
-                    <span style={{ color: '#0f172a', fontWeight: 500 }}>{contactEmail}</span>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Contact</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 600 }}>{contactEmail}</span>
                   </div>
                   <button
                     type="button"
-                    style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
                     onClick={() => setCurrentStep(1)}
                   >
                     Change
@@ -1343,12 +1365,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Ship to Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Ship to</span>
-                    <span style={{ color: '#0f172a', fontWeight: 500, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Ship to</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
                   </div>
                   <button
                     type="button"
-                    style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
                     onClick={() => setCurrentStep(1)}
                   >
                     Change
@@ -1358,40 +1380,40 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
               {/* Shipping Method Selector */}
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: '0 0 14px' }}>Shipping method</h2>
+                <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.15rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 14px' }}>Shipping method</h2>
                 <div
                   style={{
-                    border: '2px solid #0264d6',
-                    borderRadius: '8px',
+                    border: '1.5px solid #2a9d8f',
+                    borderRadius: '2px',
                     padding: '16px 20px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    background: '#f8fafc',
+                    background: '#f4faf9',
                   }}
                 >
                   <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', width: '100%' }}>
-                    <input type="radio" checked readOnly style={{ accentColor: '#0264d6' }} />
+                    <input type="radio" checked readOnly style={{ accentColor: '#2a9d8f' }} />
                     <div>
-                      <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.875rem' }}>
+                      <div style={{ fontWeight: 700, color: '#3b2f2f', fontSize: '0.875rem' }}>
                         {deliveryType === 'PICKUP' ? 'Store Pickup (Ready in 2 hours)' : 'Standard Delivery'}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                        {deliveryType === 'PICKUP' ? 'BrightBuy Colombo Flagship Store' : '3 - 5 business days'}
+                      <div style={{ fontSize: '0.75rem', color: '#5c4b4b', marginTop: '2px' }}>
+                        {deliveryType === 'PICKUP' ? 'BrightBuy Texas Flagship Hub' : '3 - 5 business days'}
                       </div>
                     </div>
                   </label>
-                  <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, color: '#3b2f2f', fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
                     {deliveryType === 'PICKUP' ? 'Free' : `Rs ${pricing.shipping_fee.toFixed(2)}`}
                   </div>
                 </div>
               </div>
 
               {/* CTAs */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap', gap: '12px' }}>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                   onClick={() => setCurrentStep(1)}
                 >
                   &lt; Return to information
@@ -1400,16 +1422,24 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   type="button"
                   onClick={handleProceedToPayment}
                   style={{
-                    background: '#0264d6',
+                    background: '#2a9d8f',
                     color: '#ffffff',
                     border: 'none',
-                    padding: '14px 28px',
-                    borderRadius: '8px',
+                    padding: '12px 28px',
+                    borderRadius: '2px',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(2, 100, 214, 0.25)',
-                    transition: 'background 0.2s',
+                    boxShadow: '0 3px 10px rgba(42, 157, 143, 0.28)',
+                    transition: 'all 0.18s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#22867a';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#2a9d8f';
+                    e.currentTarget.style.transform = 'none';
                   }}
                 >
                   Continue to payment
@@ -1417,7 +1447,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               </div>
 
               {/* Legal Footer Links */}
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#0264d6' }}>
+              <div style={{ borderTop: '1px solid #e7d7c1', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#826e6e' }}>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Refund policy</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Shipping</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Privacy policy</span>
@@ -1427,6 +1457,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               </div>
             </div>
           )}
+
 
           {/* --------------------------------------------------------------- */}
           {/* STEP 3: PAYMENT VIEW                                            */}
@@ -1468,12 +1499,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Shipping Method Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Shipping</span>
-                    <span style={{ color: '#0f172a', fontWeight: 500 }}>
+                    <span style={{ color: '#826e6e', minWidth: '70px' }}>Shipping</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
                       {deliveryType === 'PICKUP' ? 'Store Pickup • Free' : `Standard Delivery • Rs ${pricing.shipping_fee.toFixed(2)}`}
                     </span>
                   </div>
-                  <button type="button" style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setCurrentStep(2)}>
+                  <button type="button" style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }} onClick={() => setCurrentStep(2)}>
                     Change
                   </button>
                 </div>
@@ -1481,17 +1512,17 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
               {/* Payment Section */}
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>Payment</h2>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '14px' }}>All transactions are secure and encrypted.</div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#3b2f2f', margin: '0 0 4px', fontFamily: 'Outfit, sans-serif' }}>Payment</h2>
+                <div style={{ fontSize: '0.8125rem', color: '#826e6e', marginBottom: '14px' }}>All transactions are secure and encrypted.</div>
 
-                <div style={{ border: '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <div style={{ border: '1.5px solid #e7d7c1', borderRadius: '2px', overflow: 'hidden', boxShadow: 'none' }}>
                   {/* ========================================================= */}
                   {/* 1. CREDIT / DEBIT CARD                                   */}
                   {/* ========================================================= */}
                   <div
                     style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      background: paymentMethod === 'CREDIT_CARD' ? '#f8faff' : '#ffffff',
+                      borderBottom: '1px solid #e7d7c1',
+                      background: paymentMethod === 'CREDIT_CARD' ? '#f4faf9' : '#ffffff',
                       transition: 'background 0.2s',
                     }}
                   >
@@ -1510,23 +1541,23 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           type="radio"
                           checked={paymentMethod === 'CREDIT_CARD'}
                           onChange={() => setPaymentMethod('CREDIT_CARD')}
-                          style={{ accentColor: '#0264d6', cursor: 'pointer' }}
+                          style={{ accentColor: '#2a9d8f', cursor: 'pointer' }}
                         />
-                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
                           Credit / Debit Card
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        <span style={{ background: '#1e3a8a', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '3px' }}>VISA</span>
-                        <span style={{ background: '#ea580c', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '3px' }}>MC</span>
-                        <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '3px' }}>AMEX</span>
-                        <span style={{ background: '#f97316', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '3px' }}>DISCOVER</span>
+                        <span style={{ background: '#264653', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '2px' }}>VISA</span>
+                        <span style={{ background: '#c08457', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '2px' }}>MC</span>
+                        <span style={{ background: '#2a9d8f', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '2px' }}>AMEX</span>
+                        <span style={{ background: '#e76f51', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '2px 6px', borderRadius: '2px' }}>DISCOVER</span>
                       </div>
                     </label>
 
                     {/* Credit Card Input Drawer */}
                     {paymentMethod === 'CREDIT_CARD' && (
-                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
                         <div>
                           <div style={{ position: 'relative' }}>
                             <input
@@ -1538,14 +1569,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                               style={{
                                 width: '100%',
                                 padding: '12px',
-                                borderRadius: '8px',
-                                border: cardErrors.number ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                                borderRadius: '2px',
+                                border: cardErrors.number ? '1.5px solid #ef4444' : '1.5px solid #e7d7c1',
                                 fontSize: '0.875rem',
                                 letterSpacing: '0.04em',
                                 fontFamily: 'monospace',
+                                color: '#3b2f2f',
+                                background: '#ffffff',
                               }}
                             />
-                            <span style={{ position: 'absolute', right: '12px', top: '12px', color: '#64748b', fontSize: '0.9rem' }}>🔒</span>
+                            <span style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', fontSize: '0.9rem' }}>🔒</span>
                           </div>
                           {cardErrors.number && <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '4px' }}>{cardErrors.number}</div>}
                         </div>
@@ -1561,10 +1594,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                               style={{
                                 width: '100%',
                                 padding: '12px',
-                                borderRadius: '8px',
-                                border: cardErrors.expiry ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                                borderRadius: '2px',
+                                border: cardErrors.expiry ? '1.5px solid #ef4444' : '1.5px solid #e7d7c1',
                                 fontSize: '0.875rem',
                                 letterSpacing: '0.04em',
+                                color: '#3b2f2f',
+                                background: '#ffffff',
                               }}
                             />
                             {cardErrors.expiry && <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '4px' }}>{cardErrors.expiry}</div>}
@@ -1581,14 +1616,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                                 style={{
                                   width: '100%',
                                   padding: '12px',
-                                  borderRadius: '8px',
-                                  border: cardErrors.cvc ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                                  borderRadius: '2px',
+                                  border: cardErrors.cvc ? '1.5px solid #ef4444' : '1.5px solid #e7d7c1',
                                   fontSize: '0.875rem',
+                                  color: '#3b2f2f',
+                                  background: '#ffffff',
                                 }}
                               />
                               <span
                                 title="3-digit security code on the back of Visa/Mastercard/Discover, or 4-digit code on front of Amex"
-                                style={{ position: 'absolute', right: '12px', top: '12px', color: '#94a3b8', cursor: 'help' }}
+                                style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', cursor: 'help' }}
                               >
                                 ❓
                               </span>
@@ -1610,14 +1647,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                               style={{
                                 width: '100%',
                                 padding: '12px',
-                                borderRadius: '8px',
-                                border: cardErrors.name ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                                borderRadius: '2px',
+                                border: cardErrors.name ? '1.5px solid #ef4444' : '1.5px solid #e7d7c1',
                                 fontSize: '0.875rem',
+                                color: '#3b2f2f',
+                                background: '#ffffff',
                               }}
                             />
                             <span
                               onClick={() => setCardName('')}
-                              style={{ position: 'absolute', right: '12px', top: '12px', color: '#94a3b8', cursor: 'pointer' }}
+                              style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', cursor: 'pointer' }}
                             >
                               ✕
                             </span>
@@ -1625,7 +1664,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           {cardErrors.name && <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '4px' }}>{cardErrors.name}</div>}
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: '#826e6e', marginTop: '2px' }}>
                           <span>🔒</span>
                           <span>256-bit SSL Encrypted • PCI-DSS Certified Simulated Gateway</span>
                         </div>
@@ -1638,8 +1677,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   {/* ========================================================= */}
                   <div
                     style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      background: paymentMethod === 'KLARNA' ? '#fdf2f8' : '#ffffff',
+                      borderBottom: '1px solid #e7d7c1',
+                      background: paymentMethod === 'KLARNA' ? '#faf7f2' : '#ffffff',
                       transition: 'background 0.2s',
                     }}
                   >
@@ -1658,54 +1697,54 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           type="radio"
                           checked={paymentMethod === 'KLARNA'}
                           onChange={() => setPaymentMethod('KLARNA')}
-                          style={{ accentColor: '#db2777', cursor: 'pointer' }}
+                          style={{ accentColor: '#c08457', cursor: 'pointer' }}
                         />
-                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
                           Klarna | Shop now. Pay later.
                         </span>
                       </div>
-                      <span style={{ background: '#ffb3c7', color: '#000000', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                      <span style={{ background: '#f7eee6', color: '#c08457', border: '1px solid #e7d7c1', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.04em' }}>
                         KLARNA PAY IN 4
                       </span>
                     </label>
 
                     {/* Klarna Drawer */}
                     {paymentMethod === 'KLARNA' && (
-                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #fbcfe8', paddingTop: '16px' }}>
-                        <div style={{ background: '#fdf2f8', border: '1px solid #f472b6', borderRadius: '8px', padding: '12px 14px', color: '#9d174d', fontSize: '0.84rem', lineHeight: 1.5 }}>
-                          <strong>Pay in 4 interest-free bi-weekly payments of Rs {(pricing.total / 4).toFixed(2)} with Klarna.</strong> No hidden fees or impact on your credit score.
+                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
+                        <div style={{ background: '#faf7f2', border: '1px solid #e7d7c1', borderRadius: '2px', padding: '12px 14px', color: '#3b2f2f', fontSize: '0.84rem', lineHeight: 1.5 }}>
+                          <strong style={{ color: '#c08457' }}>Pay in 4 interest-free bi-weekly payments of Rs {(pricing.total / 4).toFixed(2)} with Klarna.</strong> No hidden fees or impact on your credit score.
                         </div>
 
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#be185d', background: '#fce7f3', padding: '4px 10px', borderRadius: '9999px', fontWeight: 600, border: '1px solid #fbcfe8', width: 'fit-content' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#c08457', background: '#f7eee6', padding: '4px 10px', borderRadius: '2px', fontWeight: 600, border: '1px solid #e7d7c1', width: 'fit-content' }}>
                           <span>✓</span>
                           <span>Pre-approved for registered US phone: {phone || '(214) 555-0199'}</span>
                         </div>
 
                         {/* 4 Payments Timeline Breakdown */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
-                          <div style={{ background: '#ffffff', border: '1px solid #fbcfe8', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#db2777', fontWeight: 700, textTransform: 'uppercase' }}>1. Today</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Due upon order</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>1. Today</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Due upon order</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #fbcfe8', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#db2777', fontWeight: 700, textTransform: 'uppercase' }}>2. 2 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Automated debit</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>2. 2 Weeks</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Automated debit</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #fbcfe8', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#db2777', fontWeight: 700, textTransform: 'uppercase' }}>3. 4 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Automated debit</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>3. 4 Weeks</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Automated debit</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #fbcfe8', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#db2777', fontWeight: 700, textTransform: 'uppercase' }}>4. 6 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Final payment</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>4. 6 Weeks</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Final payment</div>
                           </div>
                         </div>
 
-                        <div style={{ fontSize: '0.72rem', color: '#475569', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#5c4b4b', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                           <span>• 0% APR</span>
                           <span>• US Debit & Credit Cards</span>
                           <span>• Instant soft credit verification</span>
@@ -1719,8 +1758,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   {/* ========================================================= */}
                   <div
                     style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      background: paymentMethod === 'AFTERPAY' ? '#f0fdf4' : '#ffffff',
+                      borderBottom: '1px solid #e7d7c1',
+                      background: paymentMethod === 'AFTERPAY' ? '#f4faf9' : '#ffffff',
                       transition: 'background 0.2s',
                     }}
                   >
@@ -1739,17 +1778,17 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           type="radio"
                           checked={paymentMethod === 'AFTERPAY'}
                           onChange={() => setPaymentMethod('AFTERPAY')}
-                          style={{ accentColor: '#059669', cursor: 'pointer' }}
+                          style={{ accentColor: '#2a9d8f', cursor: 'pointer' }}
                         />
-                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
                           Afterpay / Affirm: Buy Now, Pay Later
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                        <span style={{ background: '#b2fce4', color: '#000000', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                        <span style={{ background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #cce8e4', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.04em' }}>
                           AFTERPAY
                         </span>
-                        <span style={{ background: '#000000', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.04em' }}>
+                        <span style={{ background: '#264653', color: '#ffffff', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '2px', letterSpacing: '0.04em' }}>
                           AFFIRM
                         </span>
                       </div>
@@ -1757,36 +1796,36 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
                     {/* Afterpay Drawer */}
                     {paymentMethod === 'AFTERPAY' && (
-                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #86efac', paddingTop: '16px' }}>
-                        <div style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: '8px', padding: '12px 14px', color: '#065f46', fontSize: '0.84rem', lineHeight: 1.5 }}>
+                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
+                        <div style={{ background: '#f4faf9', border: '1px solid #cce8e4', borderRadius: '2px', padding: '12px 14px', color: '#2a9d8f', fontSize: '0.84rem', lineHeight: 1.5 }}>
                           <strong>Split into 4 interest-free installments of Rs {(pricing.total / 4).toFixed(2)} every 2 weeks via Afterpay.</strong>
                         </div>
 
                         {/* 4 Installments Timeline Breakdown */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
-                          <div style={{ background: '#ffffff', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>1st Pay (Now)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Due today</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>1st Pay (Now)</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Due today</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>2nd (Week 2)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>In 14 days</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>2nd (Week 2)</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 14 days</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>3rd (Week 4)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>In 28 days</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>3rd (Week 4)</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 28 days</div>
                           </div>
-                          <div style={{ background: '#ffffff', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>4th (Week 6)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>In 42 days</div>
+                          <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>4th (Week 6)</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 42 days</div>
                           </div>
                         </div>
 
-                        <div style={{ fontSize: '0.72rem', color: '#047857', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#2a9d8f', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                           <span>• US Debit or Credit Card accepted</span>
                           <span>• 0% Interest</span>
                           <span>• Zero late fee simulation</span>
@@ -1800,7 +1839,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   {/* ========================================================= */}
                   <div
                     style={{
-                      background: paymentMethod === 'COD' ? '#fffbeb' : '#ffffff',
+                      background: paymentMethod === 'COD' ? '#faf7f2' : '#ffffff',
                       transition: 'background 0.2s',
                     }}
                   >
@@ -1819,27 +1858,27 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           type="radio"
                           checked={paymentMethod === 'COD'}
                           onChange={() => setPaymentMethod('COD')}
-                          style={{ accentColor: '#b45309', cursor: 'pointer' }}
+                          style={{ accentColor: '#c08457', cursor: 'pointer' }}
                         />
-                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
                           Cash on Delivery (COD)
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#c08457', fontWeight: 600 }}>
                         Pay courier upon receipt
                       </span>
                     </label>
 
                     {/* COD Drawer */}
                     {paymentMethod === 'COD' && (
-                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #fde68a', paddingTop: '16px' }}>
-                        <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '12px 14px', color: '#92400e', fontSize: '0.84rem', lineHeight: 1.5 }}>
-                          <strong>Please have the exact amount of Rs {pricing.total.toFixed(2)} ready upon doorstep delivery.</strong> Payment will be collected in cash by our authorized delivery partner.
+                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
+                        <div style={{ background: '#faf7f2', border: '1px solid #e7d7c1', borderRadius: '2px', padding: '12px 14px', color: '#5c4b4b', fontSize: '0.84rem', lineHeight: 1.5 }}>
+                          <strong style={{ color: '#3b2f2f' }}>Please have the exact amount of Rs {pricing.total.toFixed(2)} ready upon doorstep delivery.</strong> Payment will be collected in cash by our authorized delivery partner.
                         </div>
 
-                        <div style={{ fontSize: '0.75rem', color: '#78350f', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#826e6e', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>📞</span>
-                          <span>Courier will place a dispatch verification call to <strong>{phone || '(214) 555-0199'}</strong> before delivery.</span>
+                          <span>Courier will place a dispatch verification call to <strong style={{ color: '#3b2f2f' }}>{phone || '(214) 555-0199'}</strong> before delivery.</span>
                         </div>
                       </div>
                     )}
@@ -1849,33 +1888,33 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
               {/* Billing Address Options */}
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>Billing address</h2>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '14px' }}>Select the address that matches your card or payment method.</div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#3b2f2f', margin: '0 0 4px', fontFamily: 'Outfit, sans-serif' }}>Billing address</h2>
+                <div style={{ fontSize: '0.8125rem', color: '#826e6e', marginBottom: '14px' }}>Select the address that matches your card or payment method.</div>
 
-                <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ border: '1.5px solid #e7d7c1', borderRadius: '2px', overflow: 'hidden' }}>
                   <label
                     style={{
                       padding: '16px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      borderBottom: '1px solid #e2e8f0',
+                      borderBottom: '1px solid #e7d7c1',
                       cursor: 'pointer',
-                      background: billingOption === 'SAME' ? '#f0f7ff' : '#ffffff',
+                      background: billingOption === 'SAME' ? '#f4faf9' : '#ffffff',
                     }}
                     onClick={() => setBillingOption('SAME')}
                   >
-                    <input type="radio" checked={billingOption === 'SAME'} onChange={() => setBillingOption('SAME')} style={{ accentColor: '#0264d6' }} />
-                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0f172a' }}>Same as shipping address</span>
+                    <input type="radio" checked={billingOption === 'SAME'} onChange={() => setBillingOption('SAME')} style={{ accentColor: '#2a9d8f' }} />
+                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#3b2f2f' }}>Same as shipping address</span>
                   </label>
 
-                  <div style={{ background: billingOption === 'DIFFERENT' ? '#f0f7ff' : '#ffffff' }}>
+                  <div style={{ background: billingOption === 'DIFFERENT' ? '#f4faf9' : '#ffffff' }}>
                     <label
                       style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
                       onClick={() => setBillingOption('DIFFERENT')}
                     >
-                      <input type="radio" checked={billingOption === 'DIFFERENT'} onChange={() => setBillingOption('DIFFERENT')} style={{ accentColor: '#0264d6' }} />
-                      <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0f172a' }}>Use a different billing address</span>
+                      <input type="radio" checked={billingOption === 'DIFFERENT'} onChange={() => setBillingOption('DIFFERENT')} style={{ accentColor: '#2a9d8f' }} />
+                      <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#3b2f2f' }}>Use a different billing address</span>
                     </label>
 
                     {billingOption === 'DIFFERENT' && (
@@ -1885,7 +1924,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           rows={2}
                           value={billingAddress}
                           onChange={(e) => setBillingAddress(e.target.value)}
-                          style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                          style={{ width: '100%', padding: '12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', color: '#3b2f2f', background: '#ffffff' }}
                         />
                       </div>
                     )}
@@ -1897,7 +1936,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
                 <button
                   type="button"
-                  style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
                   onClick={() => setCurrentStep(2)}
                 >
                   &lt; Return to shipping
@@ -1907,19 +1946,19 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   disabled={submittingOrder || noneSelected}
                   onClick={handlePayNow}
                   style={{
-                    background: noneSelected ? '#94a3b8' : '#0264d6',
+                    background: noneSelected ? '#c4b5a5' : '#2a9d8f',
                     color: '#ffffff',
                     border: 'none',
                     padding: '14px 36px',
-                    borderRadius: '8px',
+                    borderRadius: '2px',
                     fontWeight: 700,
                     fontSize: '0.9375rem',
                     cursor: submittingOrder || noneSelected ? 'not-allowed' : 'pointer',
-                    boxShadow: noneSelected ? 'none' : '0 2px 8px rgba(2, 100, 214, 0.25)',
+                    boxShadow: noneSelected ? 'none' : '0 3px 10px rgba(42, 157, 143, 0.28)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    transition: 'background 0.2s',
+                    transition: 'all 0.2s',
                   }}
                 >
                   {submittingOrder ? (
@@ -1936,7 +1975,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               </div>
 
               {/* Legal Footer Links */}
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#0264d6' }}>
+              <div style={{ borderTop: '1.5px solid #e7d7c1', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.75rem', color: '#2a9d8f' }}>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Refund policy</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Shipping</span>
                 <span style={{ cursor: 'pointer', textDecoration: 'underline' }}>Privacy policy</span>
@@ -1952,56 +1991,57 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           {/* --------------------------------------------------------------- */}
           {currentStep === 4 && placedOrder && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.3s ease' }}>
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '24px', borderRadius: '12px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', background: '#22c55e', color: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', margin: '0 auto 16px' }}>
+              <div style={{ background: '#f4faf9', border: '1.5px solid #2a9d8f', padding: '24px', borderRadius: '2px', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', background: '#2a9d8f', color: '#ffffff', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', margin: '0 auto 16px' }}>
                   ✓
                 </div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#14532d', margin: '0 0 6px' }}>Order Placed Successfully!</h1>
-                <p style={{ color: '#166534', margin: 0, fontSize: '0.9rem' }}>
-                  Confirmation and tracking updates have been sent to {contactEmail ? <strong>{contactEmail}</strong> : 'your registered email'}.
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b2f2f', margin: '0 0 6px', fontFamily: 'Outfit, sans-serif' }}>Order Placed Successfully!</h1>
+                <p style={{ color: '#5c4b4b', margin: 0, fontSize: '0.9rem' }}>
+                  Confirmation and tracking updates have been sent to {contactEmail ? <strong style={{ color: '#2a9d8f' }}>{contactEmail}</strong> : 'your registered email'}.
                 </p>
               </div>
 
               {/* Order Meta Snapshot Card */}
-              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '20px', boxShadow: 'none' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Order Number</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>#{placedOrder.order_id}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Order Number</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>#{placedOrder.order_id}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Carrier Tracking Ref</div>
-                    <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0264d6', fontFamily: 'monospace' }}>{placedOrder.tracking_number}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Carrier Tracking Ref</div>
+                    <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#2a9d8f', fontFamily: 'monospace' }}>{placedOrder.tracking_number}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Payment Method</div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Payment Method</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#3b2f2f' }}>
                       {placedOrder.payment_method === 'KLARNA' ? 'Klarna (Pay in 4 BNPL)' :
                        placedOrder.payment_method === 'AFTERPAY' ? 'Afterpay / Affirm (4 Payments)' :
                        placedOrder.payment_method === 'COD' ? 'Cash on Delivery (COD)' :
                        'Credit / Debit Card'}
                     </div>
                     {placedOrder.transaction_ref && (
-                      <div style={{ fontSize: '0.68rem', color: '#64748b', fontFamily: 'monospace', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.68rem', color: '#826e6e', fontFamily: 'monospace', marginTop: '2px' }}>
                         Ref: {placedOrder.transaction_ref}
                       </div>
                     )}
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Settlement Status</div>
+                    <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Settlement Status</div>
                     <span
                       style={{
                         display: 'inline-block',
-                        background: placedOrder.payment_method === 'COD' ? '#fef9c3' :
-                                    placedOrder.payment_method === 'KLARNA' ? '#fdf2f8' :
-                                    placedOrder.payment_method === 'AFTERPAY' ? '#ecfdf5' : '#dcfce7',
-                        color: placedOrder.payment_method === 'COD' ? '#854d0e' :
-                               placedOrder.payment_method === 'KLARNA' ? '#be185d' :
-                               placedOrder.payment_method === 'AFTERPAY' ? '#047857' : '#15803d',
+                        background: placedOrder.payment_method === 'COD' ? '#faf7f2' :
+                                    placedOrder.payment_method === 'KLARNA' ? '#f7eee6' :
+                                    placedOrder.payment_method === 'AFTERPAY' ? '#e6f6f4' : '#e6f6f4',
+                        color: placedOrder.payment_method === 'COD' ? '#c08457' :
+                               placedOrder.payment_method === 'KLARNA' ? '#c08457' :
+                               placedOrder.payment_method === 'AFTERPAY' ? '#2a9d8f' : '#2a9d8f',
+                        border: '1px solid #e7d7c1',
                         fontSize: '0.72rem',
                         fontWeight: 700,
                         padding: '3px 10px',
-                        borderRadius: '9999px',
+                        borderRadius: '2px',
                         marginTop: '4px',
                       }}
                     >
@@ -2012,15 +2052,15 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     </span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Total Paid</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Rs {parseFloat(placedOrder.total_amount).toFixed(2)}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Total Paid</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>Rs {parseFloat(placedOrder.total_amount).toFixed(2)}</div>
                   </div>
                 </div>
 
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Delivery Destination</div>
-                  <div style={{ fontSize: '0.875rem', color: '#1e293b' }}>
-                    <strong>{placedOrder.recipient_name}</strong> • {placedOrder.phone}
+                <div style={{ borderTop: '1.5px solid #e7d7c1', paddingTop: '16px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#5c4b4b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Delivery Destination</div>
+                  <div style={{ fontSize: '0.875rem', color: '#3b2f2f' }}>
+                    <strong style={{ color: '#2a9d8f' }}>{placedOrder.recipient_name}</strong> • {placedOrder.phone}
                     <br />
                     {placedOrder.shipping_address}
                   </div>
@@ -2034,14 +2074,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   style={{
                     flex: 1,
                     padding: '14px 20px',
-                    borderRadius: '8px',
-                    background: '#0264d6',
+                    borderRadius: '2px',
+                    background: '#2a9d8f',
                     color: '#ffffff',
                     border: 'none',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(2, 100, 214, 0.2)',
+                    boxShadow: '0 3px 10px rgba(42, 157, 143, 0.28)',
                   }}
                   onClick={() => onNavigateToTrack && onNavigateToTrack(placedOrder.order_id)}
                 >
@@ -2052,10 +2092,10 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   style={{
                     flex: 1,
                     padding: '14px 20px',
-                    borderRadius: '8px',
-                    background: '#f1f5f9',
-                    color: '#334155',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: '2px',
+                    background: '#faf7f2',
+                    color: '#3b2f2f',
+                    border: '1.5px solid #e7d7c1',
                     fontWeight: 600,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
@@ -2070,40 +2110,23 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         </div>
 
         {/* ================================================================= */}
-        {/* RIGHT SIDE: DARK THEME ORDER SUMMARY (Cosmic / Slate Palette)     */}
+        {/* RIGHT SIDE: ORDER SUMMARY (Warm Cream / Persian Teal Aesthetic)   */}
         {/* ================================================================= */}
         <div
           style={{
-            background: 'radial-gradient(circle at 85% 25%, rgba(30, 64, 175, 0.35) 0%, transparent 55%), radial-gradient(circle at 75% 75%, rgba(14, 165, 233, 0.2) 0%, transparent 45%), #070e1c',
-            color: '#f8fafc',
+            background: '#faf7f2',
+            color: '#3b2f2f',
             padding: '40px 48px',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+            borderLeft: '1.5px solid #e7d7c1',
             position: 'relative',
-            overflow: 'hidden',
           }}
           className="st-checkout-right-col"
         >
-          {/* Subtle Constellation / Star Mesh Vector Backdrop */}
-          <svg
-            style={{ position: 'absolute', top: 0, right: 0, width: '100%', height: '100%', opacity: 0.18, pointerEvents: 'none' }}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="85%" cy="20%" r="2" fill="#ffffff" />
-            <circle cx="70%" cy="35%" r="3" fill="#60a5fa" />
-            <circle cx="90%" cy="50%" r="2" fill="#ffffff" />
-            <circle cx="60%" cy="70%" r="2" fill="#38bdf8" />
-            <circle cx="80%" cy="85%" r="2" fill="#ffffff" />
-            <line x1="85%" y1="20%" x2="70%" y2="35%" stroke="#3b82f6" strokeWidth="0.8" />
-            <line x1="70%" y1="35%" x2="90%" y2="50%" stroke="#3b82f6" strokeWidth="0.8" />
-            <line x1="70%" y1="35%" x2="60%" y2="70%" stroke="#3b82f6" strokeWidth="0.8" />
-            <line x1="60%" y1="70%" x2="80%" y2="85%" stroke="#3b82f6" strokeWidth="0.8" />
-          </svg>
-
           <div style={{ position: 'relative', zIndex: 2, maxWidth: '440px', width: '100%' }}>
             {/* Items Matrix */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '28px' }}>
               {/* 1. Service Fees Row (Collapsible platform verification fee) */}
-              <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+              <div style={{ borderBottom: '1.5px solid #e7d7c1', paddingBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div
@@ -2111,13 +2134,13 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         position: 'relative',
                         width: '56px',
                         height: '56px',
-                        borderRadius: '10px',
-                        background: '#1e293b',
-                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '2px',
+                        background: '#ffffff',
+                        border: '1.5px solid #e7d7c1',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#94a3b8',
+                        color: '#5c4b4b',
                         fontSize: '1.25rem',
                       }}
                     >
@@ -2127,13 +2150,13 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           position: 'absolute',
                           top: '-8px',
                           right: '-8px',
-                          background: '#475569',
+                          background: '#c08457',
                           color: '#ffffff',
                           fontSize: '0.7rem',
                           fontWeight: 700,
                           width: '20px',
                           height: '20px',
-                          borderRadius: '50%',
+                          borderRadius: '2px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2143,22 +2166,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       </span>
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f8fafc' }}>Service fees</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#3b2f2f' }}>Service fees</div>
                       <div
-                        style={{ fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ fontSize: '0.75rem', color: '#2a9d8f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
                         onClick={() => setServiceFeeExpanded(!serviceFeeExpanded)}
                       >
                         {serviceFeeExpanded ? 'Hide 1 item ⌃' : 'Show 1 item ⌄'}
                       </div>
                     </div>
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f8fafc' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
                     Rs {pricing.service_fee.toFixed(2)}
                   </div>
                 </div>
 
                 {serviceFeeExpanded && (
-                  <div style={{ marginTop: '10px', paddingLeft: '70px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                  <div style={{ marginTop: '10px', paddingLeft: '70px', fontSize: '0.75rem', color: '#826e6e' }}>
                     1 × Online Platform & Payment Verification Fee: Rs 217.47 LKR
                   </div>
                 )}
@@ -2166,20 +2189,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
 
               {/* 2. Merchandise Cart Line Items */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#5c4b4b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Order Items ({activeCheckoutItems.length}/{cartItems.length} selected)
                 </div>
                 <button
                   type="button"
                   onClick={allSelected ? deselectAllItems : selectAllItems}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#93c5fd',
-                    borderRadius: '4px',
-                    padding: '3px 8px',
-                    fontSize: '0.7rem',
+                    background: '#ffffff',
+                    border: '1.5px solid #2a9d8f',
+                    color: '#2a9d8f',
+                    borderRadius: '2px',
+                    padding: '3px 10px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
                     cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   {allSelected ? 'Deselect All' : 'Select All'}
@@ -2197,10 +2222,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       cursor: 'pointer',
-                      padding: '6px 8px',
-                      borderRadius: '8px',
-                      background: isSelected ? 'transparent' : 'rgba(255, 255, 255, 0.02)',
-                      opacity: isSelected ? 1 : 0.45,
+                      padding: '8px 10px',
+                      borderRadius: '2px',
+                      background: isSelected ? '#ffffff' : '#f7f4ef',
+                      border: isSelected ? '1.5px solid #e7d7c1' : '1px dashed #d5c3af',
+                      opacity: isSelected ? 1 : 0.65,
                       transition: 'all 0.15s ease',
                     }}
                   >
@@ -2213,7 +2239,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         style={{
                           width: '16px',
                           height: '16px',
-                          accentColor: '#3b82f6',
+                          accentColor: '#2a9d8f',
                           cursor: 'pointer',
                         }}
                         title={isSelected ? 'Included in this order' : 'Excluded from this order'}
@@ -2223,9 +2249,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           position: 'relative',
                           width: '52px',
                           height: '52px',
-                          borderRadius: '10px',
+                          borderRadius: '2px',
                           background: '#ffffff',
-                          border: '1px solid rgba(255,255,255,0.15)',
+                          border: '1px solid #e7d7c1',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -2243,13 +2269,13 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                             position: 'absolute',
                             top: '-6px',
                             right: '-6px',
-                            background: '#475569',
+                            background: '#c08457',
                             color: '#ffffff',
                             fontSize: '0.7rem',
                             fontWeight: 700,
                             width: '20px',
                             height: '20px',
-                            borderRadius: '50%',
+                            borderRadius: '2px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -2259,15 +2285,15 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         </span>
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#f8fafc', lineHeight: 1.3, maxWidth: '200px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#3b2f2f', lineHeight: 1.3, maxWidth: '200px' }}>
                           {item.product_name}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: isSelected ? '#94a3b8' : '#f87171', marginTop: '2px' }}>
+                        <div style={{ fontSize: '0.75rem', color: isSelected ? '#826e6e' : '#dc2626', marginTop: '2px' }}>
                           {isSelected ? (item.attribute_value || 'Included in order') : 'Excluded from this order'}
                         </div>
                       </div>
                     </div>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem', color: isSelected ? '#f8fafc' : '#64748b', textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? '#3b2f2f' : '#826e6e', textAlign: 'right' }}>
                       Rs {((parseFloat(item.unit_price) || 7249.00) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
@@ -2286,10 +2312,10 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   style={{
                     flex: 1,
                     padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '2px',
+                    border: '1.5px solid #e7d7c1',
                     background: '#ffffff',
-                    color: '#0f172a',
+                    color: '#3b2f2f',
                     fontSize: '0.875rem',
                   }}
                 />
@@ -2297,24 +2323,25 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   type="submit"
                   style={{
                     padding: '12px 20px',
-                    borderRadius: '8px',
-                    background: 'rgba(51, 65, 85, 0.9)',
+                    borderRadius: '2px',
+                    background: '#2a9d8f',
                     color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    fontWeight: 600,
+                    border: 'none',
+                    fontWeight: 700,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(42, 157, 143, 0.25)',
                     transition: 'all 0.2s',
                   }}
                 >
                   Apply
                 </button>
               </div>
-              {discountError && <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '6px' }}>{discountError}</div>}
+              {discountError && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '6px' }}>{discountError}</div>}
               {appliedDiscount && (
-                <div style={{ fontSize: '0.75rem', color: '#4ade80', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: '#2a9d8f', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
                   <span>✓ {appliedDiscount.label} applied</span>
-                  <button type="button" onClick={() => setAppliedDiscount(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem' }}>
+                  <button type="button" onClick={() => setAppliedDiscount(null)} style={{ background: 'none', border: 'none', color: '#826e6e', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}>
                     Remove
                   </button>
                 </div>
@@ -2322,25 +2349,25 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             </form>
 
             {/* Price Calculations */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#94a3b8' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1.5px solid #e7d7c1', paddingTop: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#826e6e' }}>
                 <span>Subtotal · {activeCheckoutItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} items</span>
-                <span style={{ color: '#f8fafc', fontWeight: 500 }}>
+                <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
                   Rs {pricing.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#826e6e' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   Shipping <span title="Carrier logistics rate based on selected destination">ℹ️</span>
                 </span>
-                <span style={{ color: '#f8fafc', fontWeight: 500 }}>
+                <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
                   {pricing.shipping_fee === 0 ? 'Free' : `Rs ${pricing.shipping_fee.toFixed(2)}`}
                 </span>
               </div>
 
               {appliedDiscount && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#4ade80' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#2a9d8f', fontWeight: 600 }}>
                   <span>Discount ({appliedDiscount.code})</span>
                   <span>- Rs {((pricing.subtotal * (appliedDiscount.pct || 0)) / 100).toFixed(2)}</span>
                 </div>
@@ -2348,18 +2375,18 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             </div>
 
             {/* Grand Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '20px' }}>
-              <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>Total</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1.5px solid #e7d7c1', paddingTop: '20px' }}>
+              <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>Total</span>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginRight: '6px' }}>LKR</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff' }}>
+                <span style={{ fontSize: '0.75rem', color: '#826e6e', marginRight: '6px' }}>LKR</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>
                   Rs {pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
 
             {syncingPricing && (
-              <div style={{ fontSize: '0.72rem', color: '#60a5fa', marginTop: '10px', textAlign: 'right' }}>
+              <div style={{ fontSize: '0.72rem', color: '#2a9d8f', marginTop: '10px', textAlign: 'right', fontWeight: 600 }}>
                 Syncing live fees with backend...
               </div>
             )}
@@ -2376,8 +2403,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(59, 47, 47, 0.6)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2387,11 +2414,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '20px',
+              borderRadius: '2px',
+              border: '1.5px solid #e7d7c1',
               padding: '36px 32px',
               maxWidth: '460px',
               width: '100%',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
@@ -2404,27 +2432,27 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               style={{
                 width: '64px',
                 height: '64px',
-                borderRadius: '50%',
+                borderRadius: '2px',
                 background:
                   paymentMethod === 'KLARNA'
-                    ? '#fdf2f8'
+                    ? '#faf7f2'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#ecfdf5'
+                    ? '#f4faf9'
                     : paymentMethod === 'COD'
-                    ? '#fffbeb'
-                    : '#f0f9ff',
+                    ? '#faf7f2'
+                    : '#f4faf9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.75rem',
-                border: `2px solid ${
+                border: `1.5px solid ${
                   paymentMethod === 'KLARNA'
-                    ? '#f472b6'
+                    ? '#e7d7c1'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#6ee7b7'
+                    ? '#2a9d8f'
                     : paymentMethod === 'COD'
-                    ? '#fde68a'
-                    : '#bae6fd'
+                    ? '#c08457'
+                    : '#2a9d8f'
                 }`,
               }}
             >
@@ -2443,22 +2471,23 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 textTransform: 'uppercase',
                 color:
                   paymentMethod === 'KLARNA'
-                    ? '#db2777'
+                    ? '#c08457'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#059669'
+                    ? '#2a9d8f'
                     : paymentMethod === 'COD'
-                    ? '#b45309'
-                    : '#0284c7',
+                    ? '#c08457'
+                    : '#2a9d8f',
                 background:
                   paymentMethod === 'KLARNA'
-                    ? '#fdf2f8'
+                    ? '#f7eee6'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#ecfdf5'
+                    ? '#e6f6f4'
                     : paymentMethod === 'COD'
-                    ? '#fffbeb'
-                    : '#f0f9ff',
+                    ? '#f7eee6'
+                    : '#e6f6f4',
                 padding: '4px 12px',
-                borderRadius: '9999px',
+                borderRadius: '2px',
+                border: '1px solid #e7d7c1',
               }}
             >
               {paymentMethod === 'KLARNA' && 'Klarna Pay in 4 US Gateway'}
@@ -2468,7 +2497,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             </div>
 
             {/* Main Title */}
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#3b2f2f', margin: '4px 0 0', fontFamily: 'Outfit, sans-serif' }}>
               {paymentMethod === 'COD' ? 'Confirming Your Order' : 'Authorizing Payment Simulation'}
             </h3>
 
@@ -2476,7 +2505,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             <p
               style={{
                 fontSize: '0.9rem',
-                color: '#475569',
+                color: '#5c4b4b',
                 margin: 0,
                 lineHeight: 1.5,
                 fontWeight: 500,
@@ -2489,9 +2518,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             {/* Amount authorized display */}
             <div
               style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
+                background: '#faf7f2',
+                border: '1.5px solid #e7d7c1',
+                borderRadius: '2px',
                 padding: '10px 18px',
                 width: '100%',
                 display: 'flex',
@@ -2500,8 +2529,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 margin: '4px 0',
               }}
             >
-              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Simulated Amount:</span>
-              <span style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>
+              <span style={{ fontSize: '0.8rem', color: '#826e6e', fontWeight: 600 }}>Simulated Amount:</span>
+              <span style={{ fontSize: '1rem', color: '#3b2f2f', fontWeight: 800, fontFamily: 'Outfit, sans-serif' }}>
                 Rs {pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -2514,23 +2543,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   width: '20px',
                   height: '20px',
                   borderWidth: '2.5px',
-                  borderColor:
-                    paymentMethod === 'KLARNA'
-                      ? '#db2777 #fce7f3 #fce7f3 #fce7f3'
-                      : paymentMethod === 'AFTERPAY'
-                      ? '#059669 #d1fae5 #d1fae5 #d1fae5'
-                      : paymentMethod === 'COD'
-                      ? '#b45309 #fef3c7 #fef3c7 #fef3c7'
-                      : '#0284c7 #e0f2fe #e0f2fe #e0f2fe',
+                  borderColor: '#2a9d8f #cce8e4 #cce8e4 #cce8e4',
                 }}
               />
-              <span style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.8125rem', color: '#826e6e', fontWeight: 600 }}>
                 Verifying credentials securely...
               </span>
             </div>
 
             {/* Security Notice */}
-            <div style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+            <div style={{ fontSize: '0.72rem', color: '#826e6e', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
               <span>🔒</span>
               <span>Encrypted 256-bit SSL • Please do not close or reload this window</span>
             </div>

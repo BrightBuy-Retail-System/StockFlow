@@ -1,11 +1,11 @@
-import os
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from datetime import datetime, date
-from uuid import uuid4
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from db import get_db_connection
 
 analytics_bp = Blueprint('analytics', __name__)
+
+#use this function to convert backend and database return values like timespan, decimat to json consumable
 def serialize_item(item):
     """Serialize Decimals, Dates, and Timestamps for clean JSON output."""
     if not item:
@@ -378,7 +378,7 @@ def serialize_row(row):
             cleaned[k] = v
     return cleaned
 
-# 
+# ============================================================================
 # ROLE-BASED EXTENSION: Transactions Ledger (Manager & Admin View)
 # References:
 #   Lecture Note 1 (Tables: PAYMENT_TRANSACTION)

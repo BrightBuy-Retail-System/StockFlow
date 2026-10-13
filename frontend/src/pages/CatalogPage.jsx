@@ -200,6 +200,7 @@ export default function CatalogPage() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [cardAdding, setCardAdding] = useState({});
   const [cartVersion, setCartVersion] = useState(0);
   const [shortDescOpen, setShortDescOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
@@ -599,15 +600,6 @@ export default function CatalogPage() {
   const handleAddToCart = async () => {
     if (addingToCart) return;
 
-    if (!isLoggedIn) {
-      setToastMessage('🔒 Please log in to add items to your cart.');
-      setTimeout(() => {
-        setToastMessage(null);
-        navigate('/login');
-      }, 1200);
-      return;
-    }
-
     if (!productDetail) return;
     const variants = Array.isArray(productDetail.variants) ? productDetail.variants : [];
     const selectedVariant = variants.find((v) => v.variant_id === selectedVariantId) || variants[0];
@@ -644,26 +636,30 @@ export default function CatalogPage() {
         ? Number(selectedVariant.price)
         : Number(productDetail.base_price) || 0;
 
+      const photo = getProductPhoto(productDetail);
       const cartItem = {
         product_id: productDetail.product_id,
         name: productDetail.name || productDetail.title,
+        product_name: productDetail.name || productDetail.title,
         variant_id: selectedVariant?.variant_id || null,
         sku: selectedVariant?.sku || 'STD',
         attribute_name: selectedVariant?.attribute_name || null,
         attribute_value: selectedVariant?.attribute_value || 'Default',
         price: itemPrice,
+        unit_price: itemPrice,
         quantity: qtyToAdd,
         available_stock: availableStock - qtyToAdd,
-        image: getProductPhoto(productDetail),
+        image: photo,
+        image_url: photo,
       };
 
       const currentUid = currentUser?.id || currentUser?.user_id;
       const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
-      const raw = localStorage.getItem(userCartKey) || (!isLoggedIn ? localStorage.getItem('cart') : null);
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
       const existing = raw ? JSON.parse(raw) : [];
       const list = Array.isArray(existing) ? existing : [];
       const matchIndex = list.findIndex(
-        (i) => i.product_id === cartItem.product_id && i.variant_id === cartItem.variant_id
+        (i) => i.product_id === cartItem.product_id && (cartItem.variant_id ? i.variant_id === cartItem.variant_id : true)
       );
 
       if (matchIndex > -1) {
@@ -677,32 +673,127 @@ export default function CatalogPage() {
       } else {
         localStorage.removeItem('cart');
       }
+      window.dispatchEvent(new Event('cartUpdated'));
       setCartVersion((v) => v + 1);
       setQuantity(1);
 
-      // 2. Persist reservation to database catalog
-      try {
-        if (selectedVariant?.variant_id) {
-          await api.post('/catalog/cart/reserve', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
-          // 3. Save item to database cart (carts + cart_items tables)
-          await api.post('/catalog/cart/add', {
-            variant_id: selectedVariant.variant_id,
-            quantity: qtyToAdd,
-          });
+      // 2. Persist reservation to database catalog (only if authenticated user)
+      if (isLoggedIn) {
+        try {
+          if (selectedVariant?.variant_id) {
+            await api.post('/catalog/cart/reserve', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+            // 3. Save item to database cart (carts + cart_items tables)
+            await api.post('/catalog/cart/add', {
+              variant_id: selectedVariant.variant_id,
+              quantity: qtyToAdd,
+            });
+          }
+          refreshDetail(true);
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart note:', err);
         }
-        refreshDetail(true);
-        refreshProducts();
-      } catch (err) {
-        console.warn('Backend cart note:', err);
       }
 
-      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name} to cart!`);
+      setToastMessage(`✓ Added ${qtyToAdd}x ${productDetail.name || productDetail.title} to cart!`);
       setTimeout(() => setToastMessage(null), 3500);
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleAddProductToCart = async (p, e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!p || p.is_active === 0) return;
+    if (cardAdding[p.product_id]) return;
+
+    setCardAdding((prev) => ({ ...prev, [p.product_id]: true }));
+
+    try {
+      const photo = getProductPhoto(p);
+      const itemPrice = Number(p.base_price) || 0;
+      const currentUid = currentUser?.id || currentUser?.user_id;
+      const userCartKey = currentUid ? `cart_${currentUid}` : 'cart';
+      const raw = localStorage.getItem(userCartKey) || localStorage.getItem('cart');
+      const existing = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(existing) ? existing : [];
+      const matchIndex = list.findIndex((i) => i.product_id === p.product_id);
+
+      let resolvedVariantId = null;
+
+      if (matchIndex > -1) {
+        list[matchIndex].quantity = (Number(list[matchIndex].quantity) || 0) + 1;
+        resolvedVariantId = list[matchIndex].variant_id || null;
+      } else {
+        const cartItem = {
+          product_id: p.product_id,
+          name: p.name || p.title,
+          product_name: p.name || p.title,
+          variant_id: null,
+          sku: `SKU-${p.product_id}`,
+          attribute_name: null,
+          attribute_value: 'Default',
+          price: itemPrice,
+          unit_price: itemPrice,
+          quantity: 1,
+          available_stock: 99,
+          image: photo,
+          image_url: photo,
+        };
+        list.push(cartItem);
+      }
+
+      localStorage.setItem(userCartKey, JSON.stringify(list));
+      if (!isLoggedIn) {
+        localStorage.setItem('cart', JSON.stringify(list));
+      } else {
+        localStorage.removeItem('cart');
+      }
+
+      window.dispatchEvent(new Event('cartUpdated'));
+      setCartVersion((v) => v + 1);
+
+      // If user is authenticated, sync with backend database cart
+      if (isLoggedIn) {
+        try {
+          const res = await api.post('/auth_cart/cart/add', {
+            product_id: p.product_id,
+            quantity: 1,
+          });
+          if (res.data?.variant_id) {
+            resolvedVariantId = res.data.variant_id;
+            const updatedList = list.map((item) =>
+              item.product_id === p.product_id && !item.variant_id
+                ? { ...item, variant_id: resolvedVariantId }
+                : item
+            );
+            localStorage.setItem(userCartKey, JSON.stringify(updatedList));
+            // Reserve stock
+            await api.post('/catalog/cart/reserve', {
+              variant_id: resolvedVariantId,
+              quantity: 1,
+            }).catch(() => null);
+          }
+          refreshProducts();
+        } catch (err) {
+          console.warn('Backend cart add note:', err);
+        }
+      }
+
+      setToastMessage(`✓ Added 1x ${p.name || p.title} to cart!`);
+      setTimeout(() => setToastMessage(null), 3200);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setToastMessage('❌ Could not add item to cart. Please try again.');
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setCardAdding((prev) => ({ ...prev, [p.product_id]: false }));
     }
   };
 
@@ -828,46 +919,71 @@ export default function CatalogPage() {
   const renderFilterAccordions = () => (
     <>
       {/* Availability Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('availability')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Availability</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.availability ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.availability && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.88rem',
+                color: availabilityFilter.inStock ? '#2a9d8f' : '#3b2f2f',
+                cursor: 'pointer',
+                fontWeight: availabilityFilter.inStock ? 700 : 500,
+                padding: '3px 0',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={availabilityFilter.inStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, inStock: e.target.checked }))}
-                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2a9d8f', width: '17px', height: '17px', cursor: 'pointer' }}
               />
               <span>In stock</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '9px', fontSize: '0.86rem', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '0.88rem',
+                color: availabilityFilter.outOfStock ? '#2a9d8f' : '#3b2f2f',
+                cursor: 'pointer',
+                fontWeight: availabilityFilter.outOfStock ? 700 : 500,
+                padding: '3px 0',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={availabilityFilter.outOfStock}
                 onChange={(e) => setAvailabilityFilter((p) => ({ ...p, outOfStock: e.target.checked }))}
-                style={{ accentColor: '#2563eb', width: '16px', height: '16px', cursor: 'pointer' }}
+                style={{ accentColor: '#2a9d8f', width: '17px', height: '17px', cursor: 'pointer' }}
               />
               <span>Out of stock</span>
             </label>
@@ -876,31 +992,34 @@ export default function CatalogPage() {
       </div>
 
       {/* Price Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('price')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Price</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.price ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.price && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="number"
@@ -911,13 +1030,14 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  border: '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  fontSize: '0.84rem',
                   outline: 'none',
+                  color: '#3b2f2f',
                 }}
               />
-              <span style={{ color: '#94a3b8' }}>–</span>
+              <span style={{ color: '#826e6e' }}>–</span>
               <input
                 type="number"
                 placeholder="Rs Max"
@@ -927,25 +1047,28 @@ export default function CatalogPage() {
                   width: '100%',
                   padding: '7px 10px',
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
+                  border: '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  fontSize: '0.84rem',
                   outline: 'none',
+                  color: '#3b2f2f',
                 }}
               />
             </div>
             {(minPrice || maxPrice) && (
               <button
+                type="button"
                 onClick={() => { setMinPrice(''); setMaxPrice(''); }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#2563eb',
-                  fontSize: '0.78rem',
+                  color: '#2a9d8f',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  padding: 0,
+                  padding: '2px 0',
                   fontWeight: 600,
+                  textDecoration: 'underline',
                 }}
               >
                 Reset price
@@ -956,31 +1079,34 @@ export default function CatalogPage() {
       </div>
 
       {/* Color Accordion */}
-      <div style={{ borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
+      <div style={{ borderBottom: '1px solid #ede6dc', padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('color')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Color</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.color ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.color && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             {[
               { label: 'Black', hex: '#1c1917' },
               { label: 'White', hex: '#f5f5f4' },
@@ -992,6 +1118,8 @@ export default function CatalogPage() {
               return (
                 <button
                   key={label}
+                  type="button"
+                  className={`catalog-option-pill ${isSel ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedColors((prev) =>
                       isSel ? prev.filter((c) => c !== label) : [...prev, label]
@@ -1001,15 +1129,15 @@ export default function CatalogPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '5px 10px',
-                    borderRadius: '9999px',
-                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
-                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
-                    fontSize: '0.8rem',
+                    padding: '6px 12px',
+                    borderRadius: '2px',
+                    border: isSel ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                    backgroundColor: isSel ? '#2a9d8f' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#3b2f2f',
+                    boxShadow: isSel ? '0 2px 8px rgba(42, 157, 143, 0.25)' : 'none',
+                    fontSize: '0.82rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 500,
+                    fontWeight: isSel ? 700 : 500,
                   }}
                 >
                   <span
@@ -1018,10 +1146,11 @@ export default function CatalogPage() {
                       height: '10px',
                       borderRadius: '50%',
                       backgroundColor: hex,
-                      border: hex === '#f5f5f4' ? '1px solid #d6d3d1' : 'none',
+                      border: isSel ? '1.5px solid #ffffff' : (hex === '#f5f5f4' ? '1px solid #d6d3d1' : 'none'),
                     }}
                   />
                   <span>{label}</span>
+                  {isSel && <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>✓</span>}
                 </button>
               );
             })}
@@ -1030,54 +1159,60 @@ export default function CatalogPage() {
       </div>
 
       {/* Storage Accordion */}
-      <div style={{ padding: '16px 0' }}>
+      <div style={{ padding: '12px 0' }}>
         <button
+          type="button"
+          className="catalog-accordion-btn"
           onClick={() => toggleAccordion('storage')}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            background: 'none',
+            background: 'transparent',
             border: 'none',
-            padding: 0,
-            fontSize: '0.98rem',
+            padding: '4px 0',
+            fontSize: '0.94rem',
             fontWeight: 700,
-            color: '#0f172a',
+            color: '#3b2f2f',
             cursor: 'pointer',
             textAlign: 'left',
+            boxShadow: 'none',
           }}
         >
           <span>Storage</span>
-          <span style={{ fontSize: '0.75rem', color: '#2563eb', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+          <span style={{ fontSize: '0.72rem', color: '#2a9d8f', transform: openAccordions.storage ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
             ▲
           </span>
         </button>
         {openAccordions.storage && (
-          <div style={{ paddingTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ paddingTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {['64GB', '128GB', '256GB', '512GB', '1TB'].map((cap) => {
               const isSel = selectedStorage.includes(cap);
               return (
                 <button
                   key={cap}
+                  type="button"
+                  className={`catalog-option-pill ${isSel ? 'active' : ''}`}
                   onClick={() => {
                     setSelectedStorage((prev) =>
                       isSel ? prev.filter((s) => s !== cap) : [...prev, cap]
                     );
                   }}
                   style={{
-                    padding: '5px 10px',
-                    borderRadius: '8px',
-                    border: isSel ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                    backgroundColor: isSel ? '#2563eb' : '#ffffff',
-                    color: isSel ? '#ffffff' : '#334155',
-                    boxShadow: isSel ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
-                    fontSize: '0.78rem',
+                    padding: '6px 12px',
+                    borderRadius: '2px',
+                    border: isSel ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                    backgroundColor: isSel ? '#2a9d8f' : '#ffffff',
+                    color: isSel ? '#ffffff' : '#3b2f2f',
+                    boxShadow: isSel ? '0 2px 8px rgba(42, 157, 143, 0.25)' : 'none',
+                    fontSize: '0.8rem',
                     cursor: 'pointer',
-                    fontWeight: isSel ? 600 : 500,
+                    fontWeight: isSel ? 700 : 500,
                   }}
                 >
-                  {cap}
+                  <span>{cap}</span>
+                  {isSel && <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>✓</span>}
                 </button>
               );
             })}
@@ -1281,43 +1416,6 @@ export default function CatalogPage() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%', maxWidth: '1680px', margin: '0 auto', boxSizing: 'border-box' }}>
-        {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
-        {toastMessage && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: '28px',
-              right: '28px',
-              zIndex: 9999,
-              background: toastMessage.startsWith('⚠️')
-                ? '#d97706'
-                : toastMessage.startsWith('❌')
-                  ? '#dc2626'
-                  : toastMessage.startsWith('🔒')
-                    ? '#1e293b'
-                    : '#10b981',
-              color: '#ffffff',
-              padding: '14px 22px',
-              borderRadius: '12px',
-              fontWeight: 600,
-              fontSize: '0.92rem',
-              boxShadow: toastMessage.startsWith('⚠️')
-                ? '0 10px 30px rgba(217, 119, 6, 0.4)'
-                : toastMessage.startsWith('❌')
-                  ? '0 10px 30px rgba(220, 38, 38, 0.4)'
-                  : toastMessage.startsWith('🔒')
-                    ? '0 10px 30px rgba(30, 41, 59, 0.4)'
-                    : '0 10px 30px rgba(16, 185, 129, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              animation: 'fadeInUp 0.3s ease-out',
-            }}
-          >
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* ── Breadcrumb & Navigation Bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <button
@@ -1347,19 +1445,9 @@ export default function CatalogPage() {
         <div className="product-top-grid">
           {/* LEFT: GALLERY & PROMO BADGES */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-              {/* Vertical Thumbnail Strip */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  maxHeight: '520px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
-                  scrollbarWidth: 'none',
-                }}
-              >
+            <div className="product-gallery-layout">
+              {/* Thumbnail Strip */}
+              <div className="product-thumbnails-strip">
                 {gallery.map((imgUrl, idx) => (
                   <button
                     key={idx}
@@ -1384,21 +1472,7 @@ export default function CatalogPage() {
               </div>
 
               {/* Large Main Photo */}
-              <div
-                style={{
-                  flex: 1,
-                  background: '#ffffff',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  padding: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  minHeight: '420px',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.02)',
-                }}
-              >
+              <div className="product-main-photo-card">
                 <img
                   src={gallery[activePhotoIndex] || getProductPhoto(productDetail)}
                   alt={productDetail.name}
@@ -1433,16 +1507,7 @@ export default function CatalogPage() {
           {/* RIGHT: DETAILS, PRICING, VARIANTS, ACTIONS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Title */}
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 800,
-                color: '#1a1917',
-                lineHeight: 1.2,
-                margin: 0,
-                letterSpacing: '-0.02em',
-              }}
-            >
+            <h1 className="product-detail-title">
               {productDetail.name}
             </h1>
 
@@ -1552,22 +1617,22 @@ export default function CatalogPage() {
                           alignItems: 'center',
                           gap: '8px',
                           padding: '6px 14px',
-                          borderRadius: '9999px',
-                          border: isSelected ? '2px solid #2563eb' : '1px solid rgba(0,0,0,0.14)',
-                          background: isSelected ? 'rgba(37,99,235,0.05)' : '#ffffff',
-                          color: '#1a1917',
+                          borderRadius: '2px',
+                          border: isSelected ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                          background: isSelected ? 'rgba(42, 157, 143, 0.12)' : '#ffffff',
+                          color: '#3b2f2f',
                           fontSize: '0.84rem',
                           fontWeight: isSelected ? 700 : 500,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
-                          boxShadow: isSelected ? '0 0 0 2px rgba(37,99,235,0.2)' : 'none',
+                          boxShadow: 'none',
                         }}
                       >
                         <span
                           style={{
                             width: '12px',
                             height: '12px',
-                            borderRadius: '50%',
+                            borderRadius: '2px',
                             backgroundColor:
                               (v.attribute_value || '').toLowerCase().includes('black') ? '#1c1917'
                                 : (v.attribute_value || '').toLowerCase().includes('blue') ? '#3b82f6'
@@ -1577,7 +1642,7 @@ export default function CatalogPage() {
                           }}
                         />
                         <span>{v.attribute_value || v.sku}</span>
-                        <span style={{ fontSize: '0.74rem', color: vStock > 0 ? '#059669' : '#dc2626', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.74rem', color: vStock > 0 ? '#2a9d8f' : '#dc2626', fontWeight: 600 }}>
                           {vStock > 0 ? `(${vStock} in stock)` : '(Out of stock)'}
                         </span>
                       </button>
@@ -1589,13 +1654,14 @@ export default function CatalogPage() {
 
             {/* Quantity Selector & Add to Cart Button */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: '10px',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
+                    padding: '4px 8px',
                     background: '#ffffff',
                     height: '46px',
                   }}
@@ -1603,37 +1669,45 @@ export default function CatalogPage() {
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={addingToCart || quantity <= 1 || availableStock <= 0}
+                    disabled={addingToCart || quantity <= 1}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '2px',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
-                      cursor: (addingToCart || quantity <= 1 || availableStock <= 0) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || quantity <= 1 || availableStock <= 0) ? '#cbd5e1' : '#44403c',
+                      cursor: (addingToCart || quantity <= 1) ? 'not-allowed' : 'pointer',
+                      color: (addingToCart || quantity <= 1) ? '#e7d7c1' : '#3b2f2f',
                       fontWeight: 600,
                     }}
                   >
                     −
                   </button>
-                  <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: '#1c1917' }}>
-                    {availableStock <= 0 ? 0 : Math.min(quantity, availableStock)}
+                  <span
+                    style={{
+                      minWidth: '32px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                      color: '#3b2f2f',
+                    }}
+                  >
+                    {quantity}
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setQuantity((q) => Math.min(availableStock, q + 1));
-                    }}
+                    onClick={() => setQuantity((q) => q + 1)}
                     disabled={addingToCart || availableStock <= 0 || quantity >= availableStock}
                     style={{
-                      width: '38px',
-                      height: '100%',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '2px',
                       background: 'none',
                       border: 'none',
                       fontSize: '1.1rem',
                       cursor: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? 'not-allowed' : 'pointer',
-                      color: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? '#cbd5e1' : '#44403c',
+                      color: (addingToCart || availableStock <= 0 || quantity >= availableStock) ? '#e7d7c1' : '#3b2f2f',
                       fontWeight: 600,
                     }}
                   >
@@ -1643,28 +1717,23 @@ export default function CatalogPage() {
 
                 <button
                   type="button"
+                  className="btn-primary"
                   onClick={handleAddToCart}
-                  disabled={addingToCart || (isLoggedIn && !inStock)}
+                  disabled={addingToCart || !inStock}
                   style={{
                     flex: 1,
                     height: '46px',
-                    borderRadius: '9999px',
+                    borderRadius: '2px',
                     border: 'none',
-                    background: !isLoggedIn
-                      ? '#0f172a'
-                      : inStock
-                        ? (addingToCart ? '#6366f1' : '#3b5bcf')
-                        : '#a8a29e',
+                    background: inStock
+                      ? (addingToCart ? '#22867a' : '#2a9d8f')
+                      : '#826e6e',
                     color: '#ffffff',
                     fontSize: '0.95rem',
                     fontWeight: 700,
-                    cursor: (addingToCart || (isLoggedIn && !inStock)) ? 'not-allowed' : 'pointer',
+                    cursor: (addingToCart || !inStock) ? 'not-allowed' : 'pointer',
                     opacity: addingToCart ? 0.85 : 1,
-                    boxShadow: !isLoggedIn
-                      ? '0 4px 14px rgba(15,23,42,0.25)'
-                      : inStock
-                        ? '0 4px 14px rgba(59,91,207,0.35)'
-                        : 'none',
+                    boxShadow: 'none',
                     transition: 'all 0.2s ease',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1672,12 +1741,7 @@ export default function CatalogPage() {
                     gap: '8px',
                   }}
                 >
-                  {!isLoggedIn ? (
-                    <>
-                      <span>🔒</span>
-                      <span>Sign in to add to cart</span>
-                    </>
-                  ) : addingToCart ? (
+                  {addingToCart ? (
                     <>
                       <span>⏳</span>
                       <span>Adding to cart...</span>
@@ -2279,6 +2343,7 @@ export default function CatalogPage() {
               {relatedProducts.map((p) => {
                 const photo = getProductPhoto(p);
                 const price = Number(p.base_price) || 0;
+                const isInStock = p.is_active !== 0;
                 return (
                   <div
                     key={p.product_id}
@@ -2304,9 +2369,71 @@ export default function CatalogPage() {
                     <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1a1917', margin: '0 0 6px 0', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {p.name}
                     </h3>
-                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto' }}>
+                    <div style={{ fontSize: '0.98rem', fontWeight: 700, color: '#1a1917', marginTop: 'auto', marginBottom: '10px' }}>
                       {formatRs(price)}
                     </div>
+                    <button
+                      type="button"
+                      disabled={!isInStock || cardAdding[p.product_id]}
+                      onClick={(e) => handleAddProductToCart(p, e)}
+                      style={{
+                        width: '100%',
+                        height: '36px',
+                        borderRadius: '9px',
+                        border: 'none',
+                        background: isInStock
+                          ? (cardAdding[p.product_id] ? '#1d4ed8' : '#2563eb')
+                          : '#f1f5f9',
+                        color: isInStock ? '#ffffff' : '#94a3b8',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.18s ease',
+                        boxShadow: isInStock ? '0 2px 6px rgba(37,99,235,0.2)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#1d4ed8';
+                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(37,99,235,0.3)';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isInStock && !cardAdding[p.product_id]) {
+                          e.currentTarget.style.background = '#2563eb';
+                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(37,99,235,0.2)';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {cardAdding[p.product_id] ? (
+                        <span>Adding...</span>
+                      ) : isInStock ? (
+                        <>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <path d="M16 10a4 4 0 0 1-8 0" />
+                          </svg>
+                          <span>Add to cart</span>
+                        </>
+                      ) : (
+                        <span>Out of stock</span>
+                      )}
+                    </button>
                   </div>
                 );
               })}
@@ -2353,6 +2480,42 @@ export default function CatalogPage() {
           gap: 36px;
           align-items: flex-start;
         }
+        .product-gallery-layout {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+          width: 100%;
+        }
+        .product-thumbnails-strip {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 520px;
+          overflow-y: auto;
+          padding-right: 4px;
+          scrollbar-width: none;
+        }
+        .product-main-photo-card {
+          flex: 1;
+          background: #ffffff;
+          border-radius: 20px;
+          border: 1px solid rgba(0,0,0,0.08);
+          padding: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          min-height: 420px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .product-detail-title {
+          font-size: 2rem;
+          font-weight: 800;
+          color: #1a1917;
+          line-height: 1.2;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
         .catalog-product-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2392,6 +2555,27 @@ export default function CatalogPage() {
           display: none;
         }
         @media (max-width: 640px) {
+          .product-gallery-layout {
+            flex-direction: column-reverse;
+            gap: 12px;
+          }
+          .product-thumbnails-strip {
+            flex-direction: row;
+            overflow-x: auto;
+            overflow-y: visible;
+            max-height: none;
+            width: 100%;
+            padding-bottom: 6px;
+            -webkit-overflow-scrolling: touch;
+          }
+          .product-main-photo-card {
+            padding: 16px;
+            min-height: 260px;
+            border-radius: 16px;
+          }
+          .product-detail-title {
+            font-size: 1.45rem;
+          }
           .catalog-product-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
@@ -2438,6 +2622,43 @@ export default function CatalogPage() {
         }
       `}</style>
 
+      {/* Floating Add to Cart Toast with Dynamic State-Based Colors */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            right: '28px',
+            zIndex: 9999,
+            background: toastMessage.startsWith('⚠️')
+              ? '#d97706'
+              : toastMessage.startsWith('❌')
+                ? '#dc2626'
+                : toastMessage.startsWith('🔒')
+                  ? '#1e293b'
+                  : '#10b981',
+            color: '#ffffff',
+            padding: '14px 22px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            fontSize: '0.92rem',
+            boxShadow: toastMessage.startsWith('⚠️')
+              ? '0 10px 30px rgba(217, 119, 6, 0.4)'
+              : toastMessage.startsWith('❌')
+                ? '0 10px 30px rgba(220, 38, 38, 0.4)'
+                : toastMessage.startsWith('🔒')
+                  ? '0 10px 30px rgba(30, 41, 59, 0.4)'
+                  : '0 10px 30px rgba(16, 185, 129, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            animation: 'fadeInUp 0.3s ease-out',
+          }}
+        >
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ── CONDITIONAL RENDER: PRODUCT DETAILS PAGE vs CATALOG BROWSE GRID ── */}
       {selectedProductId ? (
         renderProductDetailPage()
@@ -2452,7 +2673,7 @@ export default function CatalogPage() {
                 fontWeight: 800,
                 letterSpacing: '-0.025em',
                 margin: '0 0 16px 0',
-                color: '#0f172a',
+                color: '#3b2f2f',
                 lineHeight: 1.1,
               }}
             >
@@ -2474,6 +2695,8 @@ export default function CatalogPage() {
             >
               {/* "All" category pill */}
               <button
+                type="button"
+                className={`catalog-category-pill ${(selectedCategory === '' && searchQuery === '') ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedCategory('');
                   setSearchQuery('');
@@ -2482,16 +2705,16 @@ export default function CatalogPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '10px',
-                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2563eb' : '#ffffff',
-                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#334155',
-                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                  borderRadius: '9999px',
-                  padding: '7px 16px 7px 12px',
+                  backgroundColor: (selectedCategory === '' && searchQuery === '') ? '#2a9d8f' : '#ffffff',
+                  color: (selectedCategory === '' && searchQuery === '') ? '#ffffff' : '#3b2f2f',
+                  border: (selectedCategory === '' && searchQuery === '') ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                  borderRadius: '2px',
+                  padding: '8px 16px 8px 12px',
                   fontSize: '0.86rem',
-                  fontWeight: 600,
+                  fontWeight: (selectedCategory === '' && searchQuery === '') ? 700 : 500,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
+                  boxShadow: (selectedCategory === '' && searchQuery === '') ? '0 3px 10px rgba(42, 157, 143, 0.3)' : '0 1px 3px rgba(59, 47, 47, 0.04)',
                   transition: 'all 0.2s ease',
                   flexShrink: 0,
                 }}
@@ -2500,8 +2723,8 @@ export default function CatalogPage() {
                   style={{
                     width: '24px',
                     height: '24px',
-                    borderRadius: '8px',
-                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
+                    borderRadius: '2px',
+                    background: (selectedCategory === '' && searchQuery === '') ? 'rgba(255, 255, 255, 0.22)' : '#f6f3ee',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2522,6 +2745,8 @@ export default function CatalogPage() {
                 return (
                   <button
                     key={cat.slug || cat.category_id}
+                    type="button"
+                    className={`catalog-category-pill ${isSelected ? 'active' : ''}`}
                     onClick={() => {
                       if (isSelected) {
                         setSelectedCategory('');
@@ -2538,16 +2763,16 @@ export default function CatalogPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '10px',
-                      backgroundColor: isSelected ? '#2563eb' : '#ffffff',
-                      color: isSelected ? '#ffffff' : '#334155',
-                      border: isSelected ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                      borderRadius: '9999px',
-                      padding: '7px 16px 7px 10px',
+                      backgroundColor: isSelected ? '#2a9d8f' : '#ffffff',
+                      color: isSelected ? '#ffffff' : '#3b2f2f',
+                      border: isSelected ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                      borderRadius: '2px',
+                      padding: '8px 16px 8px 10px',
                       fontSize: '0.86rem',
-                      fontWeight: 600,
+                      fontWeight: isSelected ? 700 : 500,
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      boxShadow: isSelected ? '0 4px 14px rgba(37, 99, 235, 0.35)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      boxShadow: isSelected ? '0 3px 10px rgba(42, 157, 143, 0.3)' : '0 1px 3px rgba(59, 47, 47, 0.04)',
                       transition: 'all 0.2s ease',
                       flexShrink: 0,
                     }}
@@ -2556,9 +2781,9 @@ export default function CatalogPage() {
                       style={{
                         width: '26px',
                         height: '26px',
-                        borderRadius: '8px',
+                        borderRadius: '2px',
                         overflow: 'hidden',
-                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(37,99,235,0.08)',
+                        background: isSelected ? 'rgba(255, 255, 255, 0.22)' : '#f6f3ee',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2618,18 +2843,19 @@ export default function CatalogPage() {
                       style={{
                         width: '100%',
                         padding: '8px 34px 8px 14px',
-                        borderRadius: '9999px',
+                        borderRadius: '2px',
                         background: '#ffffff',
-                        border: '1px solid rgba(0,0,0,0.12)',
+                        border: '1px solid #e7d7c1',
                         fontSize: '0.86rem',
-                        color: '#1c1917',
+                        color: '#3b2f2f',
                         outline: 'none',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        boxShadow: 'none',
                         boxSizing: 'border-box',
                       }}
                     />
                     {searchQuery && (
                       <button
+                        type="button"
                         onClick={() => setSearchQuery('')}
                         style={{
                           position: 'absolute',
@@ -2639,7 +2865,7 @@ export default function CatalogPage() {
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          color: '#a8a29e',
+                          color: '#826e6e',
                           fontSize: '1rem',
                         }}
                       >
@@ -2655,17 +2881,17 @@ export default function CatalogPage() {
                     onClick={() => setMobileFiltersOpen((v) => !v)}
                     style={{
                       padding: '8px 16px',
-                      borderRadius: '9999px',
-                      border: mobileFiltersOpen ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                      background: mobileFiltersOpen ? '#2563eb' : '#ffffff',
-                      color: mobileFiltersOpen ? '#ffffff' : '#2563eb',
+                      borderRadius: '2px',
+                      border: mobileFiltersOpen ? '1.5px solid #2a9d8f' : '1px solid #e7d7c1',
+                      background: mobileFiltersOpen ? 'rgba(42, 157, 143, 0.12)' : '#ffffff',
+                      color: mobileFiltersOpen ? '#2a9d8f' : '#3b2f2f',
                       fontSize: '0.84rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       alignItems: 'center',
                       gap: '6px',
                       whiteSpace: 'nowrap',
-                      boxShadow: mobileFiltersOpen ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
+                      boxShadow: 'none',
                     }}
                   >
                     <span>⚙️ Filters</span>
@@ -2676,70 +2902,74 @@ export default function CatalogPage() {
                   {isManager && (
                     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <button
+                        type="button"
                         onClick={openCreateCategory}
                         title="Add New Category"
                         style={{
                           padding: '8px 18px',
-                          borderRadius: '9999px',
-                          border: '1px solid rgba(0,0,0,0.14)',
+                          borderRadius: '2px',
+                          border: '1px solid #e7d7c1',
                           background: '#ffffff',
-                          color: '#1c1917',
+                          color: '#3b2f2f',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
                           whiteSpace: 'nowrap',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                          boxShadow: 'none',
                         }}
                       >
                         + Category
                       </button>
                       {categories.length > 0 && (
                         <button
+                          type="button"
                           onClick={() => openEditCategory()}
                           title="Edit or Delete Categories"
                           style={{
                             padding: '8px 16px',
-                            borderRadius: '9999px',
-                            border: '1px solid rgba(0,0,0,0.14)',
+                            borderRadius: '2px',
+                            border: '1px solid #e7d7c1',
                             background: '#ffffff',
-                            color: '#1c1917',
+                            color: '#3b2f2f',
                             cursor: 'pointer',
                             fontWeight: 600,
                             fontSize: '0.84rem',
                             whiteSpace: 'nowrap',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                            boxShadow: 'none',
                           }}
                         >
                           ✎ Edit Category
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={openCreateProduct}
                         title="Add Product"
                         style={{
                           padding: '8px 18px',
-                          borderRadius: '9999px',
+                          borderRadius: '2px',
                           border: 'none',
-                          background: '#1a1917',
+                          background: '#2a9d8f',
                           color: '#ffffff',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
                           whiteSpace: 'nowrap',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          boxShadow: 'none',
                         }}
                       >
                         + Product
                       </button>
                       <button
+                        type="button"
                         onClick={() => { setShowLowStock((v) => !v); if (!showLowStock) fetchLowStock(threshold); }}
                         title="Low Stock Alerts"
                         style={{
                           padding: '8px 16px',
-                          borderRadius: '9999px',
-                          border: '1px solid #f59e0b',
-                          background: showLowStock ? '#f59e0b' : 'rgba(245,158,11,0.08)',
-                          color: showLowStock ? '#ffffff' : '#b45309',
+                          borderRadius: '2px',
+                          border: '1px solid #c08457',
+                          background: showLowStock ? '#c08457' : 'rgba(192, 132, 87, 0.1)',
+                          color: showLowStock ? '#ffffff' : '#c08457',
                           cursor: 'pointer',
                           fontWeight: 600,
                           fontSize: '0.84rem',
@@ -2763,18 +2993,18 @@ export default function CatalogPage() {
                         WebkitAppearance: 'none',
                         MozAppearance: 'none',
                         background: '#ffffff',
-                        border: '1px solid rgba(0,0,0,0.12)',
-                        borderRadius: '9999px',
+                        border: '1px solid #e7d7c1',
+                        borderRadius: '2px',
                         fontSize: '0.86rem',
                         fontWeight: 600,
-                        color: '#1c1917',
+                        color: '#3b2f2f',
                         cursor: 'pointer',
                         padding: '0 32px 0 16px',
                         height: '38px',
                         lineHeight: '38px',
                         boxSizing: 'border-box',
                         outline: 'none',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                        boxShadow: 'none',
                         display: 'inline-block',
                         verticalAlign: 'middle',
                       }}
@@ -2793,7 +3023,7 @@ export default function CatalogPage() {
                         transform: 'translateY(-50%)',
                         pointerEvents: 'none',
                         fontSize: '0.65rem',
-                        color: '#78716c',
+                        color: '#826e6e',
                         lineHeight: 1,
                       }}
                     >
@@ -2807,6 +3037,89 @@ export default function CatalogPage() {
                 </div>
               </div>
 
+              {/* ── Active Filters Summary Bar ── */}
+              {(availabilityFilter.inStock || availabilityFilter.outOfStock || minPrice || maxPrice || selectedColors.length > 0 || selectedStorage.length > 0 || (selectedCategory && selectedCategory !== '')) && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    background: '#ffffff',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
+                  }}
+                >
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#3b2f2f' }}>Active Filters:</span>
+                  {selectedCategory && (
+                    <span
+                      onClick={() => setSelectedCategory('')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      {currentCategoryName} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {availabilityFilter.inStock && (
+                    <span
+                      onClick={() => setAvailabilityFilter((p) => ({ ...p, inStock: false }))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      In stock <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {availabilityFilter.outOfStock && (
+                    <span
+                      onClick={() => setAvailabilityFilter((p) => ({ ...p, outOfStock: false }))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Out of stock <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {(minPrice || maxPrice) && (
+                    <span
+                      onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Price: {minPrice ? `Rs ${minPrice}` : '0'} – {maxPrice ? `Rs ${maxPrice}` : '∞'} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  )}
+                  {selectedColors.map((color) => (
+                    <span
+                      key={color}
+                      onClick={() => setSelectedColors((prev) => prev.filter((c) => c !== color))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Color: {color} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  ))}
+                  {selectedStorage.map((cap) => (
+                    <span
+                      key={cap}
+                      onClick={() => setSelectedStorage((prev) => prev.filter((s) => s !== cap))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Storage: {cap} <span style={{ fontWeight: 800 }}>×</span>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('');
+                      setSearchQuery('');
+                      setMinPrice('');
+                      setMaxPrice('');
+                      setSelectedColors([]);
+                      setSelectedStorage([]);
+                      setAvailabilityFilter({ inStock: false, outOfStock: false });
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#c08457', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: '2px 6px', textDecoration: 'underline', marginLeft: 'auto' }}
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+
               {/* ── Mobile Filters Expandable Drawer ── */}
               {mobileFiltersOpen && (
                 <div className="mobile-filters-drawer">
@@ -2818,67 +3131,67 @@ export default function CatalogPage() {
               {showLowStock && (
                 <div
                   style={{
-                    background: '#fffbeb',
-                    border: '1.5px solid rgba(245,158,11,0.35)',
-                    borderRadius: '18px',
+                    background: '#faf7f2',
+                    border: '1px solid #e7d7c1',
+                    borderRadius: '2px',
                     padding: '20px 24px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '16px',
-                    boxShadow: '0 4px 14px rgba(245,158,11,0.08)',
+                    boxShadow: 'none',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#b45309' }}>Low Stock Variants Alert</h4>
-                      <span style={{ fontSize: '0.9rem', color: '#78716c' }}>Variants with inventory count below threshold</span>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#1f2937' }}>Low Stock Variants Alert</h4>
+                      <span style={{ fontSize: '0.86rem', color: '#6b7280' }}>Variants with inventory count below threshold</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#78716c' }}>Threshold:</span>
+                      <span style={{ fontSize: '0.86rem', fontWeight: 500, color: '#6b7280' }}>Threshold:</span>
                       <input
                         type="number"
                         min="1"
                         value={threshold}
                         onChange={(e) => setThreshold(Number(e.target.value))}
-                        style={{ width: '70px', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.5)', textAlign: 'center', fontSize: '0.95rem', fontWeight: 700, background: '#fff' }}
+                        style={{ width: '70px', padding: '6px 10px', borderRadius: '2px', border: '1px solid #e7d7c1', textAlign: 'center', fontSize: '0.9rem', fontWeight: 500, background: '#fff' }}
                       />
                       <button
                         onClick={() => fetchLowStock(threshold)}
-                        style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', boxShadow: '0 2px 8px rgba(245,158,11,0.3)' }}
+                        style={{ padding: '7px 18px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
                       >
                         Apply
                       </button>
                     </div>
                   </div>
-                  {lowStockLoading && <p style={{ fontSize: '0.92rem', color: '#78716c', margin: 0 }}>Loading inventory…</p>}
-                  {lowStockError && <p style={{ fontSize: '0.92rem', color: '#dc2626', margin: 0, fontWeight: 600 }}>Error: {lowStockError}</p>}
+                  {lowStockLoading && <p style={{ fontSize: '0.92rem', color: '#6b7280', margin: 0 }}>Loading inventory…</p>}
+                  {lowStockError && <p style={{ fontSize: '0.92rem', color: '#dc2626', margin: 0, fontWeight: 500 }}>Error: {lowStockError}</p>}
                   {!lowStockLoading && !lowStockError && lowStock.length === 0 && (
-                    <p style={{ fontSize: '0.92rem', color: '#059669', margin: 0, fontWeight: 600 }}>✓ All product variants have healthy stock levels above threshold.</p>
+                    <p style={{ fontSize: '0.92rem', color: '#2a9d8f', margin: 0, fontWeight: 500 }}>✓ All product variants have healthy stock levels above threshold.</p>
                   )}
                   {!lowStockLoading && lowStock.length > 0 && (
-                    <div style={{ maxHeight: '240px', overflowY: 'auto', background: '#ffffff', borderRadius: '12px', border: '1px solid rgba(245,158,11,0.2)', padding: '6px 14px' }}>
-                      <table style={{ width: '100%', fontSize: '0.95rem', borderCollapse: 'collapse' }}>
+                    <div style={{ maxHeight: '240px', overflowY: 'auto', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', padding: '6px 14px' }}>
+                      <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ textAlign: 'left', borderBottom: '1.5px solid rgba(0,0,0,0.08)', color: '#475569' }}>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Product</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>SKU</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Attribute</th>
-                            <th style={{ padding: '10px 8px', fontWeight: 700, fontSize: '0.92rem' }}>Stock</th>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid #e7d7c1', color: '#6b7280' }}>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Product</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>SKU</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Attribute</th>
+                            <th style={{ padding: '10px 8px', fontWeight: 500, fontSize: '0.86rem' }}>Stock</th>
                           </tr>
                         </thead>
                         <tbody>
                           {lowStock.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                              <td style={{ padding: '10px 8px', fontWeight: 700, color: '#1a1917', fontSize: '0.95rem' }}>{row.product_name}</td>
+                            <tr key={i} style={{ borderBottom: '1px solid #f4ede4' }}>
+                              <td style={{ padding: '10px 8px', fontWeight: 500, color: '#1f2937', fontSize: '0.9rem' }}>{row.product_name}</td>
                               <td style={{ padding: '10px 8px' }}>
-                                <code style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>
+                                <code style={{ background: '#f8fafc', padding: '3px 8px', borderRadius: '2px', fontSize: '0.84rem', color: '#1f2937', fontWeight: 500, border: '1px solid #e7d7c1' }}>
                                   {row.sku}
                                 </code>
                               </td>
-                              <td style={{ padding: '10px 8px', color: '#334155', fontSize: '0.92rem' }}>
+                              <td style={{ padding: '10px 8px', color: '#4b5563', fontSize: '0.86rem' }}>
                                 {row.attribute_name ? `${row.attribute_name}: ${row.attribute_value}` : 'Standard'}
                               </td>
-                              <td style={{ padding: '10px 8px', fontWeight: 800, fontSize: '1rem', color: row.stock === 0 ? '#ef4444' : '#f59e0b' }}>
+                              <td style={{ padding: '10px 8px', fontWeight: 600, fontSize: '0.9rem', color: row.stock === 0 ? '#ef4444' : '#c08457' }}>
                                 {row.stock === 0 ? '0 (Out of stock)' : `${row.stock} units`}
                               </td>
                             </tr>
@@ -2943,31 +3256,31 @@ export default function CatalogPage() {
                           onClick={() => setSelectedProductId(p.product_id)}
                           style={{
                             backgroundColor: '#ffffff',
-                            borderRadius: '18px',
+                            borderRadius: '2px',
                             padding: '16px',
                             display: 'flex',
                             flexDirection: 'column',
                             position: 'relative',
-                            border: '1px solid rgba(0,0,0,0.08)',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
+                            border: '1px solid #e7d7c1',
+                            boxShadow: '0 2px 8px rgba(59, 47, 47, 0.04)',
                             cursor: 'pointer',
                             transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.16)';
-                            e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.08)';
+                            e.currentTarget.style.transform = 'translateY(-3px)';
+                            e.currentTarget.style.borderColor = '#2a9d8f';
+                            e.currentTarget.style.boxShadow = '0 6px 18px rgba(59, 47, 47, 0.08)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)';
-                            e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.02)';
+                            e.currentTarget.style.borderColor = '#e7d7c1';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 47, 47, 0.04)';
                           }}
                         >
                           {/* Top Status Badge (Real DB Status Only) */}
                           {p.is_active === 0 && (
                             <div style={{ position: 'absolute', top: '14px', left: '14px', zIndex: 2 }}>
-                              <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '9999px' }}>
+                              <span style={{ background: 'rgba(239,68,68,0.14)', color: '#b91c1c', fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '2px' }}>
                                 INACTIVE
                               </span>
                             </div>
@@ -2983,7 +3296,7 @@ export default function CatalogPage() {
                               justifyContent: 'center',
                               marginBottom: '14px',
                               overflow: 'hidden',
-                              borderRadius: '12px',
+                              borderRadius: '2px',
                             }}
                           >
                             <img
@@ -3000,7 +3313,7 @@ export default function CatalogPage() {
 
                           {/* Category Subtitle */}
                           {p.category_name && (
-                            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '0.76rem', fontWeight: 600, color: '#c08457', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                               {p.category_name}
                             </div>
                           )}
@@ -3010,7 +3323,7 @@ export default function CatalogPage() {
                             style={{
                               fontSize: '0.94rem',
                               fontWeight: 700,
-                              color: '#1a1917',
+                              color: '#3b2f2f',
                               lineHeight: 1.35,
                               margin: '0 0 8px 0',
                               display: '-webkit-box',
@@ -3025,7 +3338,7 @@ export default function CatalogPage() {
 
                           {/* Price */}
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1c1917' }}>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#3b2f2f' }}>
                               {formatRs(basePrice)}
                             </span>
                           </div>
@@ -3037,14 +3350,80 @@ export default function CatalogPage() {
                                 width: '7px',
                                 height: '7px',
                                 borderRadius: '50%',
-                                backgroundColor: isInStock ? '#10b981' : '#ef4444',
+                                backgroundColor: isInStock ? '#2a9d8f' : '#ef4444',
                                 display: 'inline-block',
                               }}
                             />
-                            <span style={{ color: isInStock ? '#059669' : '#dc2626' }}>
+                            <span style={{ color: isInStock ? '#2a9d8f' : '#dc2626' }}>
                               {isInStock ? 'In stock' : 'Out of stock'}
                             </span>
                           </div>
+
+                          {/* Direct Add to Cart Button */}
+                          <button
+                            type="button"
+                            className="st-card-add-btn"
+                            disabled={!isInStock || cardAdding[p.product_id]}
+                            onClick={(e) => handleAddProductToCart(p, e)}
+                            style={{
+                              marginTop: '12px',
+                              width: '100%',
+                              height: '38px',
+                              borderRadius: '2px',
+                              border: 'none',
+                              background: isInStock
+                                ? (cardAdding[p.product_id] ? '#22867a' : '#2a9d8f')
+                                : '#f6f3ee',
+                              color: isInStock ? '#ffffff' : '#826e6e',
+                              fontSize: '0.84rem',
+                              fontWeight: 600,
+                              cursor: isInStock && !cardAdding[p.product_id] ? 'pointer' : 'not-allowed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '7px',
+                              transition: 'all 0.18s ease',
+                              boxShadow: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#22867a';
+                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isInStock && !cardAdding[p.product_id]) {
+                                e.currentTarget.style.background = '#2a9d8f';
+                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }
+                            }}
+                          >
+                            {cardAdding[p.product_id] ? (
+                              <span>Adding...</span>
+                            ) : isInStock ? (
+                              <>
+                                <svg
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                                  <line x1="3" y1="6" x2="21" y2="6" />
+                                  <path d="M16 10a4 4 0 0 1-8 0" />
+                                </svg>
+                                <span>Add to cart</span>
+                              </>
+                            ) : (
+                              <span>Out of stock</span>
+                            )}
+                          </button>
 
                           {/* Manager Hover Controls */}
                           {isManager && (
@@ -3063,13 +3442,13 @@ export default function CatalogPage() {
                                 style={{
                                   flex: 1,
                                   padding: '5px',
-                                  borderRadius: '6px',
-                                  border: '1px solid rgba(0,0,0,0.12)',
+                                  borderRadius: '2px',
+                                  border: '1px solid #e7d7c1',
                                   background: '#ffffff',
-                                  color: '#1a1917',
+                                  color: '#1f2937',
                                   cursor: 'pointer',
                                   fontSize: '0.74rem',
-                                  fontWeight: 600,
+                                  fontWeight: 500,
                                 }}
                               >
                                 Edit
@@ -3079,13 +3458,13 @@ export default function CatalogPage() {
                                 style={{
                                   flex: 1,
                                   padding: '5px',
-                                  borderRadius: '6px',
+                                  borderRadius: '2px',
                                   border: '1px solid rgba(239,68,68,0.2)',
                                   background: '#ffffff',
                                   color: '#dc2626',
                                   cursor: 'pointer',
                                   fontSize: '0.74rem',
-                                  fontWeight: 600,
+                                  fontWeight: 500,
                                 }}
                               >
                                 Del
@@ -3127,23 +3506,24 @@ export default function CatalogPage() {
               maxWidth: '620px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '32px 36px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '18px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
               maxHeight: '90vh',
               overflowY: 'auto',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editProduct ? 'Edit Product' : 'Add New Product'}
               </h3>
               <button
                 onClick={() => setShowProductForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3155,7 +3535,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Anker Soundcore R50i NC Earbuds"
                 value={productForm.title}
                 onChange={(e) => setProductForm((f) => ({ ...f, title: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3165,7 +3545,7 @@ export default function CatalogPage() {
                 value={productForm.description}
                 rows={4}
                 onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3175,7 +3555,7 @@ export default function CatalogPage() {
                 placeholder="4999.00"
                 value={productForm.base_price}
                 onChange={(e) => setProductForm((f) => ({ ...f, base_price: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3183,7 +3563,7 @@ export default function CatalogPage() {
               <select
                 value={productForm.category_id}
                 onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value }))}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.98rem', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
               >
                 <option value="">Select Category…</option>
                 {categories.map((c) => (
@@ -3201,14 +3581,14 @@ export default function CatalogPage() {
                       type="button"
                       onClick={() => setProductForm((f) => ({ ...f, is_active: val }))}
                       style={{
-                        padding: '8px 18px',
-                        borderRadius: '8px',
-                        border: productForm.is_active === val ? '2px solid #0f172a' : '1px solid rgba(0,0,0,0.16)',
-                        background: productForm.is_active === val ? '#0f172a' : '#fff',
-                        color: productForm.is_active === val ? '#fff' : '#0f172a',
+                        padding: '7px 16px',
+                        borderRadius: '2px',
+                        border: productForm.is_active === val ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                        background: productForm.is_active === val ? '#2a9d8f' : '#fff',
+                        color: productForm.is_active === val ? '#fff' : '#1f2937',
                         cursor: 'pointer',
-                        fontSize: '0.92rem',
-                        fontWeight: 700,
+                        fontSize: '0.88rem',
+                        fontWeight: 500,
                       }}
                     >
                       {label}
@@ -3218,13 +3598,13 @@ export default function CatalogPage() {
               </Field>
             )}
 
-            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.9rem', margin: 0, fontWeight: 600 }}>{productFormError}</p>}
+            {productFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{productFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
               <button
                 type="button"
                 onClick={() => setShowProductForm(false)}
-                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
               >
                 Cancel
               </button>
@@ -3232,7 +3612,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveProduct}
                 disabled={productFormSaving}
-                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
               >
                 {productFormSaving ? 'Saving…' : (editProduct ? 'Save Changes' : 'Create Product')}
               </button>
@@ -3265,21 +3645,22 @@ export default function CatalogPage() {
               maxWidth: '560px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '30px 34px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editVariant ? 'Edit Variant' : 'Add Variant'}
               </h3>
               <button
                 onClick={() => setShowVariantForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3291,7 +3672,7 @@ export default function CatalogPage() {
                 placeholder="e.g. ANKER-R50I-BLK"
                 value={variantForm.sku}
                 onChange={(e) => setVariantForm((f) => ({ ...f, sku: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3302,7 +3683,7 @@ export default function CatalogPage() {
                   placeholder="e.g. Color"
                   value={variantForm.attribute_name}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_name: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
               <Field label="Attribute Value">
@@ -3311,7 +3692,7 @@ export default function CatalogPage() {
                   placeholder="e.g. Black"
                   value={variantForm.attribute_value}
                   onChange={(e) => setVariantForm((f) => ({ ...f, attribute_value: e.target.value }))}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </Field>
             </div>
@@ -3322,17 +3703,17 @@ export default function CatalogPage() {
                 placeholder="Leave blank for base price"
                 value={variantForm.price_override}
                 onChange={(e) => setVariantForm((f) => ({ ...f, price_override: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
-            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{variantFormError}</p>}
+            {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{variantFormError}</p>}
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
               <button
                 type="button"
                 onClick={() => setShowVariantForm(false)}
-                style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
               >
                 Cancel
               </button>
@@ -3340,7 +3721,7 @@ export default function CatalogPage() {
                 type="button"
                 onClick={saveVariant}
                 disabled={variantFormSaving}
-                style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
               >
                 {variantFormSaving ? 'Saving…' : (editVariant ? 'Save Changes' : 'Add Variant')}
               </button>
@@ -3373,21 +3754,22 @@ export default function CatalogPage() {
               maxWidth: '540px',
               width: '100%',
               background: '#ffffff',
-              borderRadius: '24px',
-              padding: '30px 34px',
+              borderRadius: '2px',
+              border: '1px solid #e7d7c1',
+              padding: '28px 32px',
               display: 'flex',
               flexDirection: 'column',
               gap: '18px',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.25)',
+              boxShadow: '0 10px 25px rgba(59, 47, 47, 0.15)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 {editCategory ? 'Edit Category' : 'New Category'}
               </h3>
               <button
                 onClick={() => setShowCatForm(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.75rem', cursor: 'pointer', color: '#64748b', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}
               >
                 &times;
               </button>
@@ -3406,7 +3788,7 @@ export default function CatalogPage() {
                       setCatFormError(null);
                     }
                   }}
-                  style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', background: '#fff' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', background: '#fff' }}
                 >
                   {categories.map((c) => (
                     <option key={c.category_id} value={c.category_id}>
@@ -3423,7 +3805,7 @@ export default function CatalogPage() {
                 placeholder="e.g. Wireless Audio"
                 value={catForm.name}
                 onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
@@ -3433,13 +3815,13 @@ export default function CatalogPage() {
                 placeholder="e.g. wireless-audio"
                 value={catForm.slug}
                 onChange={(e) => setCatForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                style={{ width: '100%', padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.16)', fontSize: '0.96rem', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
 
             {catFormError && (
-              <div style={{ background: '#fef2f2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '10px 14px' }}>
-                <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 600 }}>{catFormError}</p>
+              <div style={{ background: '#fef2f2', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '2px', padding: '10px 14px' }}>
+                <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{catFormError}</p>
               </div>
             )}
 
@@ -3450,14 +3832,14 @@ export default function CatalogPage() {
                   onClick={deleteCategory}
                   disabled={catFormDeleting || catFormSaving}
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '9999px',
+                    padding: '8px 18px',
+                    borderRadius: '2px',
                     border: '1px solid rgba(239,68,68,0.3)',
                     background: '#fef2f2',
                     color: '#dc2626',
                     cursor: (catFormDeleting || catFormSaving) ? 'not-allowed' : 'pointer',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontWeight: 500,
+                    fontSize: '0.88rem',
                   }}
                 >
                   {catFormDeleting ? 'Deleting…' : '🗑 Delete Category'}
@@ -3468,7 +3850,7 @@ export default function CatalogPage() {
                 <button
                   type="button"
                   onClick={() => setShowCatForm(false)}
-                  style={{ padding: '10px 22px', borderRadius: '9999px', border: '1px solid rgba(0,0,0,0.15)', background: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                  style={{ padding: '8px 18px', borderRadius: '2px', border: '1px solid #e7d7c1', background: '#fff', color: '#1f2937', cursor: 'pointer', fontWeight: 500, fontSize: '0.88rem' }}
                 >
                   Cancel
                 </button>
@@ -3476,7 +3858,7 @@ export default function CatalogPage() {
                   type="button"
                   onClick={saveCategory}
                   disabled={catFormSaving || catFormDeleting}
-                  style={{ padding: '10px 26px', borderRadius: '9999px', border: 'none', background: '#0f172a', color: '#fff', cursor: (catFormSaving || catFormDeleting) ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(15,23,42,0.25)' }}
+                  style={{ padding: '8px 22px', borderRadius: '2px', border: 'none', background: '#2a9d8f', color: '#fff', cursor: (catFormSaving || catFormDeleting) ? 'not-allowed' : 'pointer', fontWeight: 500, fontSize: '0.88rem', boxShadow: 'none' }}
                 >
                   {catFormSaving ? 'Saving…' : editCategory ? 'Save Changes' : 'Create'}
                 </button>
