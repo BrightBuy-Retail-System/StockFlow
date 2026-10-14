@@ -42,7 +42,7 @@ export default function ManagerDashboard() {
   const [staffForm, setStaffForm] = useState({
     username: '',
     email: '',
-    password: '',
+    password: 'password123',
     role_id: 2,
   });
   const [staffFormSubmitting, setStaffFormSubmitting] = useState(false);
@@ -136,7 +136,7 @@ export default function ManagerDashboard() {
       setStaffForm({
         username: '',
         email: '',
-        password: '',
+        password: 'password123',
         role_id: 2,
       });
       setShowPassword(false);
@@ -935,36 +935,20 @@ export default function ManagerDashboard() {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b' }}>
-                    Temporary Password *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={generateRandomPassword}
-                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Generate Secure Password
-                  </button>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="At least 6 characters"
-                    value={staffForm.password}
-                    onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-                    className="st-modal-form-input"
-                    style={{ paddingRight: '56px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '0.75rem', color: '#826e6e', cursor: 'pointer', fontWeight: 600 }}
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Default Temporary Password
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  value="password123"
+                  className="st-modal-form-input"
+                  style={{ background: '#f5f0f0', color: '#5c4b4b', cursor: 'not-allowed', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px' }}
+                />
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#826e6e' }}>
+                  Fixed default temporary password: <code>password123</code>. The staff member will receive this password in their welcome email and can change it once logged in.
+                </p>
               </div>
 
               <div>

@@ -320,11 +320,12 @@ def register_staff_member():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip()
     email = (data.get('email') or '').strip()
-    password = (data.get('password') or '').strip()
+    # Default temporary password is password123; manager/staff can change it after logging in
+    password = 'password123'
     role_id = data.get('role_id')
 
-    if not username or not email or not password or not role_id:
-        return jsonify({"message": "All fields (Full Name / Username, Email, Password, Role) are required"}), 400
+    if not username or not email or not role_id:
+        return jsonify({"message": "Full Name / Username, Corporate Email, and Role are required"}), 400
 
     try:
         role_id = int(role_id)
@@ -500,6 +501,74 @@ def admin_reset_staff_password(staff_id):
         return jsonify({
             "status": "success",
             "message": f"Password for {target_user['full_name']} ({target_user['email']}) has been successfully updated."
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/staff/<int:staff_id>', methods=['DELETE'])
+@jwt_required()
+def delete_staff_member(staff_id):
+    """
+    Allow System Administrators (role 3 or 4) to remove/decommission a corporate staff account.
+    Prevents self-deletion.
+    """
+    claims = get_jwt()
+    caller_role = claims.get('role_id')
+    current_user_id = int(get_jwt_identity())
+
+    if caller_role not in (3, 4):
+        return jsonify({"message": "Access denied. Only System Administrators can remove staff accounts."}), 403
+
+    if staff_id == current_user_id:
+        return jsonify({"message": "Security Violation: You cannot remove your own active administrator account."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check target user
+        cursor.execute("SELECT user_id, full_name, email, role_id FROM users WHERE user_id = %s", (staff_id,))
+        staff_row = cursor.fetchone()
+        if not staff_row:
+            return jsonify({"message": f"Staff member #{staff_id} not found."}), 404
+
+        if staff_row['role_id'] not in (2, 3, 4):
+            return jsonify({"message": "Target account is not an internal corporate staff member."}), 400
+
+        # Check for historical orders
+        cursor.execute("SELECT COUNT(*) AS order_count FROM orders WHERE user_id = %s", (staff_id,))
+        res_orders = cursor.fetchone()
+        if res_orders and res_orders['order_count'] > 0:
+            return jsonify({
+                "message": f"Cannot permanently remove {staff_row['full_name']} because they have {res_orders['order_count']} linked transaction records."
+            }), 400
+
+        # Clean up cart items and cart
+        cursor.execute("""
+            DELETE FROM cart_items 
+            WHERE cart_id IN (SELECT cart_id FROM carts WHERE user_id = %s)
+        """, (staff_id,))
+        cursor.execute("DELETE FROM carts WHERE user_id = %s", (staff_id,))
+
+        # Clean up audit logs
+        try:
+            cursor.execute("DELETE FROM audit_logs WHERE user_id = %s", (staff_id,))
+        except Exception:
+            pass
+
+        # Delete the user record
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (staff_id,))
+        conn.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Staff account for {staff_row['full_name']} ({staff_row['email']}) has been successfully removed."
         }), 200
 
     except Exception as e:

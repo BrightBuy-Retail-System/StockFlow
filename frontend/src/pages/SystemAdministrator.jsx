@@ -67,7 +67,7 @@ export default function SystemAdministrator() {
   const [staffForm, setStaffForm] = useState({
     username: '',
     email: '',
-    password: '',
+    password: 'password123',
     role_id: 2 // 2: Manager, 3: System Administrator
   });
   const [staffSubmitting, setStaffSubmitting] = useState(false);
@@ -80,6 +80,12 @@ export default function SystemAdministrator() {
   const [resetStaffSubmitting, setResetStaffSubmitting] = useState(false);
   const [resetStaffError, setResetStaffError] = useState('');
   const [resetStaffSuccess, setResetStaffSuccess] = useState('');
+
+  // Staff Deletion State
+  const [selectedStaffToDelete, setSelectedStaffToDelete] = useState(null);
+  const [isDeleteStaffModalOpen, setIsDeleteStaffModalOpen] = useState(false);
+  const [deleteStaffSubmitting, setDeleteStaffSubmitting] = useState(false);
+  const [deleteStaffError, setDeleteStaffError] = useState('');
 
   // Modals for Products and Variants
   const [modalType, setModalType] = useState('none'); // 'none' | 'createProduct' | 'editProduct' | 'createVariant' | 'editVariant'
@@ -408,7 +414,7 @@ export default function SystemAdministrator() {
       setStaffForm({
         username: '',
         email: '',
-        password: '',
+        password: 'password123',
         role_id: 2
       });
       // Refresh staff list
@@ -447,6 +453,25 @@ export default function SystemAdministrator() {
       setResetStaffError(err.response?.data?.message || 'Failed to reset staff password.');
     } finally {
       setResetStaffSubmitting(false);
+    }
+  };
+
+  const handleConfirmDeleteStaff = async () => {
+    if (!selectedStaffToDelete) return;
+    setDeleteStaffSubmitting(true);
+    setDeleteStaffError('');
+    try {
+      await api.delete(`/auth_cart/staff/${selectedStaffToDelete.user_id}`);
+      showNotice(`Successfully removed staff account for ${selectedStaffToDelete.full_name}.`);
+      setIsDeleteStaffModalOpen(false);
+      setSelectedStaffToDelete(null);
+      // Refresh staff list
+      const res = await api.get('/auth_cart/staff');
+      setStaffList(res.data?.staff || []);
+    } catch (err) {
+      setDeleteStaffError(err.response?.data?.message || err.response?.data?.error || 'Failed to remove staff account.');
+    } finally {
+      setDeleteStaffSubmitting(false);
     }
   };
 
@@ -1716,30 +1741,59 @@ export default function SystemAdministrator() {
                               : 'Order fulfillment dispatch, warehouse inventory monitoring'}
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedStaffForReset(st);
-                                setResetStaffPassword('');
-                                setResetStaffError('');
-                                setResetStaffSuccess('');
-                                setIsResetStaffModalOpen(true);
-                              }}
-                              className="st-btn-secondary"
-                              style={{
-                                padding: '4px 10px',
-                                fontSize: '0.75rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                cursor: 'pointer',
-                                borderRadius: '2px',
-                              }}
-                              title={`Reset password for ${st.full_name}`}
-                            >
-                              <span>🔑</span>
-                              <span>Reset Password</span>
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffForReset(st);
+                                  setResetStaffPassword('');
+                                  setResetStaffError('');
+                                  setResetStaffSuccess('');
+                                  setIsResetStaffModalOpen(true);
+                                }}
+                                className="st-btn-secondary"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'pointer',
+                                  borderRadius: '2px',
+                                }}
+                                title={`Reset password for ${st.full_name}`}
+                              >
+                                <span>🔑</span>
+                                <span>Reset Password</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffToDelete(st);
+                                  setDeleteStaffError('');
+                                  setIsDeleteStaffModalOpen(true);
+                                }}
+                                disabled={st.user_id === user?.user_id}
+                                className="st-btn-secondary"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: st.user_id === user?.user_id ? 'not-allowed' : 'pointer',
+                                  borderRadius: '2px',
+                                  color: st.user_id === user?.user_id ? '#94a3b8' : '#dc2626',
+                                  borderColor: st.user_id === user?.user_id ? '#e2e8f0' : '#fca5a5',
+                                  backgroundColor: st.user_id === user?.user_id ? '#f8fafc' : '#fef2f2'
+                                }}
+                                title={st.user_id === user?.user_id ? 'Cannot remove your own active administrator account' : `Remove ${st.full_name}`}
+                              >
+                                <span>🗑️</span>
+                                <span>Remove</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1809,16 +1863,19 @@ export default function SystemAdministrator() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Temporary Password *
+                  Default Temporary Password
                 </label>
                 <input
-                  type="password"
-                  required
-                  placeholder="At least 6 characters"
-                  value={staffForm.password}
-                  onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                  type="text"
+                  disabled
+                  readOnly
+                  value="password123"
                   className="st-modal-form-input"
+                  style={{ background: '#f1f5f9', color: '#475569', cursor: 'not-allowed', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px' }}
                 />
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                  Fixed default temporary password: <code>password123</code>. The staff member will receive this password in their welcome email and can change it once logged in.
+                </p>
               </div>
 
               <div>
@@ -1941,6 +1998,88 @@ export default function SystemAdministrator() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: REMOVE STAFF MEMBER                                           */}
+      {/* ==================================================================== */}
+      {isDeleteStaffModalOpen && selectedStaffToDelete && (
+        <div
+          className="st-admin-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleteStaffSubmitting) {
+              setIsDeleteStaffModalOpen(false);
+            }
+          }}
+        >
+          <div className="st-admin-modal-box" style={{ maxWidth: '450px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#dc2626' }}>
+                  Remove Staff Member
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Decommission corporate access for <strong>{selectedStaffToDelete.full_name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteStaffModalOpen(false)}
+                disabled={deleteStaffSubmitting}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {deleteStaffError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {deleteStaffError}
+              </div>
+            )}
+
+            <div style={{ padding: '14px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '4px', marginBottom: '16px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#991b1b', fontWeight: 600 }}>
+                Are you sure you want to remove this staff member?
+              </p>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#7f1d1d', lineHeight: 1.45 }}>
+                This will immediately revoke system permissions for <strong>{selectedStaffToDelete.full_name}</strong> ({selectedStaffToDelete.email}) and permanently remove their staff account. This action cannot be undone.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setIsDeleteStaffModalOpen(false)}
+                disabled={deleteStaffSubmitting}
+                className="st-btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteStaff}
+                disabled={deleteStaffSubmitting}
+                style={{
+                  padding: '8px 16px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '2px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: deleteStaffSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: deleteStaffSubmitting ? 0.7 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {deleteStaffSubmitting ? 'Removing...' : 'Confirm Removal'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -56,22 +56,6 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
     except urllib.error.HTTPError as exc:
         err_msg = exc.read().decode("utf-8")
         logger.error(f"[Email Service - Resend] HTTP {exc.code} for {to_email}: {err_msg}")
-        
-        # Resend Free Sandbox Fallback: If free tier restricts sending only to owner email, re-route so user receives it
-        if exc.code == 403 and "only send testing emails to your own email address" in err_msg:
-            import re
-            m = re.search(r'\(([^)]+@[^)]+)\)', err_msg)
-            owner_target = m.group(1) if m else "prageethchamuditha@gmail.com"
-            if owner_target and owner_target.lower() != to_email.lower():
-                logger.info(f"[Email Service - Resend Sandbox] Re-routing testing email to owner ({owner_target}) for intended: {to_email}")
-                fallback_banner = f"""
-                <div style="background-color: #eff6ff; border: 1.5px solid #93c5fd; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-family: sans-serif;">
-                    <p style="margin: 0; font-size: 13px; color: #1e40af;">
-                        <strong>ℹ️ Resend Sandbox Notice:</strong> Intended recipient was <code>{to_email}</code>. Because the Resend API key is in free development mode, this email was delivered to your verified owner account (<code>{owner_target}</code>).
-                    </p>
-                </div>
-                """
-                return _send_via_resend(api_key, from_email, owner_target, f"[Intended: {to_email}] {subject}", fallback_banner + html_content)
         return False
     except Exception as exc:
         logger.error(f"[Email Service - Resend] Network error for {to_email}: {exc}")
