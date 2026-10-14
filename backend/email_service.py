@@ -52,14 +52,16 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
         with urllib.request.urlopen(req, timeout=12) as response:
             res_body = response.read().decode("utf-8")
             logger.info(f"[Email Service - Resend] Sent '{subject}' to {to_email}. Response: {res_body}")
-            return True
+            return True, "Welcome email sent successfully."
     except urllib.error.HTTPError as exc:
         err_msg = exc.read().decode("utf-8")
         logger.error(f"[Email Service - Resend] HTTP {exc.code} for {to_email}: {err_msg}")
-        return False
+        if exc.code == 403 and "only send testing emails to your own email address" in err_msg:
+            return False, "Resend Free Tier restriction: onboarding@resend.dev only allows sending to your registered email (prageethchamuditha@gmail.com). To send to other emails, verify a custom domain at resend.com/domains."
+        return False, f"Email delivery failed (HTTP {exc.code})"
     except Exception as exc:
         logger.error(f"[Email Service - Resend] Network error for {to_email}: {exc}")
-        return False
+        return False, f"Network error: {str(exc)}"
 
 
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
@@ -74,7 +76,7 @@ def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str
 
     if not resend_key:
         logger.warning(f"[Email Service - Resend] RESEND_API_KEY not configured. Email '{subject}' to {to_email} skipped.")
-        return False
+        return False, "RESEND_API_KEY not configured."
 
     return _send_via_resend(resend_key, from_email, to_email, subject, html_content)
 
@@ -398,7 +400,7 @@ def send_order_status_update_email(
 
 
 # 8. Staff / Manager Onboarding Welcome
-def send_staff_welcome_email(to_email: str, username: str, role_name: str, temp_password: str):
+def send_staff_welcome_email(to_email: str, username: str, role_name: str, temp_password: str, sync: bool = True):
     subject = f"Welcome to BrightBuy Ecommerce - Your {role_name} Credentials"
     body = f"""
         <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 700;">Welcome to BrightBuy Ecommerce</h2>
@@ -422,6 +424,8 @@ def send_staff_welcome_email(to_email: str, username: str, role_name: str, temp_
             </p>
         </div>
     """
+    if sync:
+        return _dispatch_email(to_email, username, subject, _base_email_template("Staff Welcome", body))
     return send_email_async(to_email, username, subject, _base_email_template("Staff Welcome", body))
 
 

@@ -87,6 +87,9 @@ export default function SystemAdministrator() {
   const [deleteStaffSubmitting, setDeleteStaffSubmitting] = useState(false);
   const [deleteStaffError, setDeleteStaffError] = useState('');
 
+  // Onboarding Success Modal State
+  const [onboardSuccessData, setOnboardSuccessData] = useState(null);
+
   // Modals for Products and Variants
   const [modalType, setModalType] = useState('none'); // 'none' | 'createProduct' | 'editProduct' | 'createVariant' | 'editVariant'
   const [activeItem, setActiveItem] = useState(null);
@@ -408,9 +411,10 @@ export default function SystemAdministrator() {
     setStaffSubmitting(true);
     setStaffError('');
     try {
-      await api.post('/auth_cart/staff/register', staffForm);
+      const res = await api.post('/auth_cart/staff/register', staffForm);
       showNotice(`Successfully onboarded ${staffForm.username} as an internal corporate staff member.`);
       setIsStaffModalOpen(false);
+      setOnboardSuccessData(res.data);
       setStaffForm({
         username: '',
         email: '',
@@ -418,8 +422,8 @@ export default function SystemAdministrator() {
         role_id: 2
       });
       // Refresh staff list
-      const res = await api.get('/auth_cart/staff');
-      setStaffList(res.data?.staff || []);
+      const resStaff = await api.get('/auth_cart/staff');
+      setStaffList(resStaff.data?.staff || []);
     } catch (err) {
       setStaffError(err.response?.data?.message || 'Failed to register staff account.');
     } finally {
@@ -1909,6 +1913,108 @@ export default function SystemAdministrator() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: STAFF ONBOARDING SUCCESS & CREDENTIALS                        */}
+      {/* ==================================================================== */}
+      {onboardSuccessData && (
+        <div className="st-admin-modal-backdrop" onClick={(e) => {
+          if (e.target === e.currentTarget) setOnboardSuccessData(null);
+        }}>
+          <div className="st-admin-modal-box" style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.4rem' }}>🎉</span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                  Staff Account Created
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOnboardSuccessData(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px', fontSize: '0.875rem', color: '#475569', lineHeight: 1.5 }}>
+              Account for <strong>{onboardSuccessData.user?.username}</strong> has been provisioned into the database.
+            </p>
+
+            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Login Username / Name
+                </span>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem', marginTop: '2px' }}>
+                  {onboardSuccessData.user?.username}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Corporate Email
+                </span>
+                <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0f172a', fontSize: '0.9rem', marginTop: '2px' }}>
+                  {onboardSuccessData.user?.email}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Assigned Role
+                </span>
+                <div style={{ fontWeight: 600, color: '#2563eb', fontSize: '0.9rem', marginTop: '2px' }}>
+                  {onboardSuccessData.credentials?.role_title || 'Store Executive & Manager'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Default Login Password
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                  <code style={{ background: '#e2e8f0', padding: '4px 10px', borderRadius: '4px', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                    {onboardSuccessData.credentials?.temp_password || 'password123'}
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            {/* Email Dispatch Status Box */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              border: '1px solid',
+              background: onboardSuccessData.email_dispatched ? '#f0fdf4' : '#fffbeb',
+              borderColor: onboardSuccessData.email_dispatched ? '#bbf7d0' : '#fde68a',
+              color: onboardSuccessData.email_dispatched ? '#166534' : '#92400e',
+              fontSize: '0.825rem',
+              lineHeight: 1.45
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: '3px' }}>
+                {onboardSuccessData.email_dispatched ? '✅ Welcome Email Delivered' : '⚠️ Email Notification Status'}
+              </div>
+              <div>
+                {onboardSuccessData.email_message || (onboardSuccessData.email_dispatched ? 'Credentials sent to corporate email.' : 'Email could not be dispatched.')}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setOnboardSuccessData(null)}
+                className="st-btn-primary"
+                style={{ padding: '8px 20px' }}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

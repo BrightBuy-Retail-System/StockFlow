@@ -360,25 +360,37 @@ def register_staff_member():
         new_user_id = cursor.lastrowid
 
         # Dispatch Welcome Email to newly onboarded staff member
+        role_label = 'System Administrator' if role_id == 3 else 'Store Executive & Manager'
+        email_sent = False
+        email_note = ""
         try:
-            role_label = 'System Administrator' if role_id == 3 else 'Store Executive & Manager'
-            send_staff_welcome_email(
+            email_sent, email_note = send_staff_welcome_email(
                 to_email=email,
                 username=username,
                 role_name=role_label,
-                temp_password=password
+                temp_password=password,
+                sync=True
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            email_sent = False
+            email_note = f"Dispatch error: {str(exc)}"
 
         return jsonify({
-            "message": f"Successfully registered new staff member as {'System Administrator' if role_id == 3 else 'Store Executive & Manager'}.",
+            "message": f"Successfully registered new staff member as {role_label}.",
             "user": {
                 "id": new_user_id,
                 "username": username,
                 "email": email,
                 "role_id": role_id
-            }
+            },
+            "credentials": {
+                "username": username,
+                "email": email,
+                "temp_password": password,
+                "role_title": role_label
+            },
+            "email_dispatched": email_sent,
+            "email_message": email_note
         }), 201
 
     except Exception as e:
