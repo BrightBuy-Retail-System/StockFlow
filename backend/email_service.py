@@ -1,10 +1,15 @@
 import os
+import json
 import logging
 import threading
+import urllib.request
+import urllib.error
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 def _load_env_safely():
     """Ensures .env is loaded whether running from project root or backend dir."""
@@ -23,6 +28,43 @@ _load_env_safely()
 
 logger = logging.getLogger("email_service")
 logger.setLevel(logging.INFO)
+
+
+def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str, html_content: str):
+    """Sends email via Resend HTTPS REST API (Port 443 - works on Railway cloud)."""
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "BrightBuy-Ecommerce/1.0",
+    }
+
+    if not from_email:
+        from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
+
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content,
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(RESEND_API_URL, data=data, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res_body = response.read().decode("utf-8")
+            logger.info(f"[Email Service - Resend API] Sent '{subject}' to {to_email}. Response: {res_body}")
+            return True, "Email sent successfully via Resend."
+    except urllib.error.HTTPError as exc:
+        err_msg = exc.read().decode("utf-8")
+        logger.error(f"[Email Service - Resend API] HTTP {exc.code} for {to_email}: {err_msg}")
+        if exc.code == 403 and "only send testing emails" in err_msg:
+            logger.warning("[Email Service - Resend API] Free tier restriction: onboarding@resend.dev only permits sending to your registered account email.")
+        return False, f"Resend API error (HTTP {exc.code})"
+    except Exception as exc:
+        logger.error(f"[Email Service - Resend API] Network error for {to_email}: {exc}")
+        return False, f"Network error: {str(exc)}"
 
 
 def _send_via_brevo_smtp(smtp_server: str, smtp_port: int, smtp_login: str, smtp_key: str, from_email: str, to_email: str, subject: str, html_content: str):
@@ -51,23 +93,29 @@ def _send_via_brevo_smtp(smtp_server: str, smtp_port: int, smtp_login: str, smtp
 
 
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
-    """Core dispatcher using Brevo SMTP relay."""
+    """Core dispatcher prioritizing Resend HTTPS API (Option B) with fallback to Brevo SMTP."""
     _load_env_safely()
 
+    # 1. Option B: Check Resend API first (Uses standard HTTPS Port 443, allowed on Railway)
+    resend_key = os.getenv("RESEND_API_KEY", "").strip()
+    if resend_key:
+        resend_from = os.getenv("RESEND_FROM_EMAIL", "").strip()
+        return _send_via_resend(resend_key, resend_from, to_email, subject, html_content)
+
+    # 2. Check Brevo SMTP (Works locally or in environments with port 587 open)
     smtp_login = os.getenv("BREVO_SMTP_LOGIN", "").strip()
     smtp_key = os.getenv("BREVO_SMTP_KEY", "").strip()
-    if not smtp_key or not smtp_login:
-        logger.warning(f"[Email Service - Brevo] Brevo SMTP credentials not configured. Email '{subject}' to {to_email} skipped.")
-        return False, "Brevo SMTP credentials not configured."
+    if smtp_key and smtp_login:
+        smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com").strip()
+        try:
+            smtp_port = int(os.getenv("BREVO_SMTP_PORT", "587"))
+        except (ValueError, TypeError):
+            smtp_port = 587
+        from_email = os.getenv("BREVO_FROM_EMAIL", "").strip()
+        return _send_via_brevo_smtp(smtp_server, smtp_port, smtp_login, smtp_key, from_email, to_email, subject, html_content)
 
-    smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com").strip()
-    try:
-        smtp_port = int(os.getenv("BREVO_SMTP_PORT", "587"))
-    except (ValueError, TypeError):
-        smtp_port = 587
-    from_email = os.getenv("BREVO_FROM_EMAIL", "").strip()
-
-    return _send_via_brevo_smtp(smtp_server, smtp_port, smtp_login, smtp_key, from_email, to_email, subject, html_content)
+    logger.warning(f"[Email Service] Neither RESEND_API_KEY nor Brevo SMTP credentials configured. Email '{subject}' to {to_email} skipped.")
+    return False, "Email provider not configured (set RESEND_API_KEY)."
 
 
 def send_email_async(to_email: str, to_name: str, subject: str, html_content: str):
