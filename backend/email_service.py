@@ -49,37 +49,8 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
         return False
 
 
-def _send_via_brevo(api_key: str, sender_email: str, sender_name: str, to_email: str, to_name: str, subject: str, html_content: str):
-    """Sends email via Brevo API using standard library urllib."""
-    headers = {
-        "accept": "application/json",
-        "api-key": api_key,
-        "content-type": "application/json",
-        "User-Agent": "BrightBuy-Ecommerce/1.0",
-    }
-
-    payload = {
-        "sender": {"name": sender_name or "BrightBuy Ecommerce", "email": sender_email},
-        "to": [{"email": to_email, "name": to_name or to_email}],
-        "subject": subject,
-        "htmlContent": html_content,
-    }
-
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request("https://api.brevo.com/v3/smtp/email", data=data, headers=headers, method="POST")
-
-    try:
-        with urllib.request.urlopen(req, timeout=12) as response:
-            res_body = response.read().decode("utf-8")
-            logger.info(f"[Email Service - Brevo] Sent '{subject}' to {to_email}. Response: {res_body}")
-            return True
-    except Exception as exc:
-        logger.error(f"[Email Service - Brevo] Error for {to_email}: {exc}")
-        return False
-
-
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
-    """Core dispatcher that selects configured provider (Resend or Brevo)."""
+    """Core dispatcher that sends emails using Resend."""
     load_dotenv(override=True)
     resend_key = os.getenv("RESEND_API_KEY", "").strip()
     from_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
@@ -88,20 +59,11 @@ def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str
     if not from_email or "StockFlow" in from_email:
         from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
 
-    if resend_key:
-        return _send_via_resend(resend_key, from_email, to_email, subject, html_content)
+    if not resend_key:
+        logger.warning(f"[Email Service - Resend] RESEND_API_KEY not configured. Email '{subject}' to {to_email} skipped.")
+        return False
 
-    brevo_key = os.getenv("BREVO_API_KEY", "").strip()
-    brevo_sender = os.getenv("BREVO_SENDER_EMAIL", "").strip()
-    brevo_name = os.getenv("BREVO_SENDER_NAME", "").strip()
-    if not brevo_name or "StockFlow" in brevo_name:
-        brevo_name = "BrightBuy Ecommerce"
-
-    if brevo_key and brevo_sender:
-        return _send_via_brevo(brevo_key, brevo_sender, brevo_name, to_email, to_name, subject, html_content)
-
-    logger.warning(f"[Email Service] No active email API keys configured. Email '{subject}' to {to_email} skipped.")
-    return False
+    return _send_via_resend(resend_key, from_email, to_email, subject, html_content)
 
 
 def send_email_async(to_email: str, to_name: str, subject: str, html_content: str):
