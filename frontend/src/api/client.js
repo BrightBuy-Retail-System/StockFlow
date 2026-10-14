@@ -1,8 +1,12 @@
 import axios from 'axios';
  
 const getBaseUrl = () => {
-    const rawUrl = import.meta.env.VITE_API_URL;
+    let rawUrl = import.meta.env.VITE_API_URL;
     if (!rawUrl) return '/api';
+    rawUrl = rawUrl.trim();
+    if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://') && !rawUrl.startsWith('/')) {
+        rawUrl = `https://${rawUrl}`;
+    }
     const cleanUrl = rawUrl.replace(/\/+$/, '');
     return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
 };
