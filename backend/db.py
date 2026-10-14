@@ -7,15 +7,31 @@ env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=env_path)
 load_dotenv()
 
-db_host = os.getenv("DB_HOST", "localhost")
-use_ssl = os.getenv("DB_USE_SSL", "false").lower() in ("true", "1", "yes")
+from urllib.parse import urlparse
+
+db_url = os.getenv("MYSQL_URL") or os.getenv("DATABASE_URL")
+if db_url:
+    parsed = urlparse(db_url)
+    db_host = parsed.hostname or "localhost"
+    db_port = parsed.port or 3306
+    db_user = parsed.username or "root"
+    db_password = parsed.password or ""
+    db_name = parsed.path.lstrip('/') or "railway"
+    use_ssl = os.getenv("DB_USE_SSL", "false").lower() in ("true", "1", "yes")
+else:
+    db_host = os.getenv("DB_HOST") or os.getenv("MYSQLHOST") or "localhost"
+    db_port = int(os.getenv("DB_PORT") or os.getenv("MYSQLPORT") or (4000 if "tidbcloud" in db_host else 3306))
+    db_user = os.getenv("DB_USER") or os.getenv("MYSQLUSER") or "root"
+    db_password = os.getenv("DB_PASSWORD") or os.getenv("MYSQLPASSWORD") or ""
+    db_name = os.getenv("DB_NAME") or os.getenv("MYSQLDATABASE") or "brightbuy_db"
+    use_ssl = os.getenv("DB_USE_SSL", "false").lower() in ("true", "1", "yes")
 
 db_config = {
     "host": db_host,
-    "port": int(os.getenv("DB_PORT", 4000 if "tidbcloud" in db_host else 3306)),
-    "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "brightbuy_db"),
+    "port": db_port,
+    "user": db_user,
+    "password": db_password,
+    "database": db_name,
 }
 
 # Apply TLS certificate verification when connecting to TiDB or remote SSL hosts
