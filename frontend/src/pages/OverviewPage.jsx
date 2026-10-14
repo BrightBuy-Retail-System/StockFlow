@@ -25,7 +25,6 @@ import {
   SearchIcon,
   XIcon,
   BoxIcon,
-  SparklesIcon,
   LayersIcon,
 } from '../components/Icons';
 
@@ -145,6 +144,34 @@ const PRESET_PRODUCTS = [
     details: ['500 m³/h clean air delivery', '3-in-1 True HEPA filter', 'OLED air-quality display', 'App and voice control'],
     colors: ['White'],
   },
+  {
+    product_id: 109,
+    name: 'Belkin BoostCharge Pro 3-in-1 MagSafe Charger',
+    image: chargerImg,
+    category: 'Accessories',
+    base_price: 149,
+    mrp: 179,
+    rating: 4.8,
+    reviews_count: 58,
+    badge: 'Popular',
+    description: 'Fast wireless charging for iPhone, Apple Watch and AirPods simultaneously.',
+    details: ['15W MagSafe fast charging', 'Apple Watch fast charging', 'Premium stainless steel finish'],
+    colors: ['White', 'Black'],
+  },
+  {
+    product_id: 110,
+    name: 'Bose QuietComfort Ultra Wireless Earbuds',
+    image: headsetImg,
+    category: 'Audio',
+    base_price: 299,
+    mrp: 349,
+    rating: 4.9,
+    reviews_count: 89,
+    badge: 'Top rated',
+    description: 'Breakthrough spatialized audio and world-class quiet with CustomTune technology.',
+    details: ['Bose Immersive Audio', 'World-class noise cancellation', 'Up to 24 hours total playtime'],
+    colors: ['Black', 'White Smoke'],
+  },
 ];
 
 // The hero only features a few products. Price and image come from the product itself.
@@ -155,7 +182,7 @@ const HERO_SLIDES = [
   { productId: 106, title: 'DJI Osmo Pocket 3', text: 'Smooth 4K/120fps video from a camera that fits in your pocket.' },
 ];
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 
@@ -206,6 +233,92 @@ const HOME_FAQS = [
   },
 ];
 
+// ─── category metadata & thumbnail images (shared with catalog design) ───────
+const CATEGORY_THUMBNAILS = {
+  'smartphones-tablets': {
+    name: 'Smartphones & Tablets',
+    img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=90&auto=format&fit=crop&q=80',
+    icon: '📱',
+  },
+  'laptops-computers': {
+    name: 'Laptops & Computers',
+    img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=90&auto=format&fit=crop&q=80',
+    icon: '💻',
+  },
+  'smart-audio-headphones': {
+    name: 'Smart Audio & Headphones',
+    img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=90&auto=format&fit=crop&q=80',
+    icon: '🎧',
+  },
+  'wearables-smartwatches': {
+    name: 'Wearables & Smartwatches',
+    img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=90&auto=format&fit=crop&q=80',
+    icon: '⌚',
+  },
+  'gaming-consoles-gear': {
+    name: 'Gaming Consoles & Gear',
+    img: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=90&auto=format&fit=crop&q=80',
+    icon: '🎮',
+  },
+  'cameras-drones': {
+    name: 'Cameras & Drones',
+    img: 'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?w=90&auto=format&fit=crop&q=80',
+    icon: '📷',
+  },
+  'smart-home-iot': {
+    name: 'Smart Home & IoT',
+    img: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=90&auto=format&fit=crop&q=80',
+    icon: '🏠',
+  },
+  'electronic-toys-stem': {
+    name: 'Electronic Toys & STEM',
+    img: 'https://images.unsplash.com/photo-1585366119957-e9730b6d0f60?w=90&auto=format&fit=crop&q=80',
+    icon: '🤖',
+  },
+  'power-banks-chargers': {
+    name: 'Power Banks & Chargers',
+    img: 'https://images.unsplash.com/photo-1609592424364-16cf9b71ee3f?w=90&auto=format&fit=crop&q=80',
+    icon: '🔋',
+  },
+  'accessories': {
+    name: 'Computer Accessories',
+    img: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=90&auto=format&fit=crop&q=80',
+    icon: '⌨️',
+  },
+  'storage-networking': {
+    name: 'Storage & Networking',
+    img: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=90&auto=format&fit=crop&q=80',
+    icon: '💾',
+  },
+  'car-electronics': {
+    name: 'Car Electronics & Mounts',
+    img: 'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?w=90&auto=format&fit=crop&q=80',
+    icon: '🚗',
+  },
+};
+
+function getCategoryMeta(catName) {
+  if (!catName || catName === 'All') return { name: 'All Categories', icon: '🏷️' };
+  const raw = String(catName).toLowerCase().trim();
+  const slug = raw.replace(/[^a-z0-9]+/g, '-');
+  const found =
+    CATEGORY_THUMBNAILS[slug] ||
+    Object.entries(CATEGORY_THUMBNAILS).find(
+      ([k, v]) =>
+        v.name.toLowerCase() === raw ||
+        raw.includes(k) ||
+        k.includes(slug) ||
+        slug.includes(k) ||
+        raw.includes(v.name.toLowerCase()) ||
+        v.name.toLowerCase().includes(raw)
+    )?.[1];
+  return {
+    name: catName,
+    img: found?.img || null,
+    icon: found?.icon || '📦',
+  };
+}
+
 /* -------------------------------------------------------------------------
    Component
    ------------------------------------------------------------------------- */
@@ -233,6 +346,7 @@ export default function OverviewPage() {
 
   /* ---- data ---- */
   useEffect(() => {
+    setVisible((v) => (v < PAGE_SIZE ? PAGE_SIZE : v));
     api
       .get('/catalog/products')
       .then((res) => {
@@ -356,7 +470,11 @@ export default function OverviewPage() {
   };
 
   const changeCategory = (c) => {
-    setCategory(c);
+    if (c === 'All') {
+      setCategory('All');
+    } else {
+      setCategory((prev) => (prev === c ? 'All' : c));
+    }
     setVisible(PAGE_SIZE);
   };
 
@@ -487,21 +605,53 @@ export default function OverviewPage() {
         </div>
 
         <div className="ov-chips" role="tablist" aria-label="Categories">
-          <button type="button" role="tab" aria-selected={category === 'All'} className={`ov-chip ${category === 'All' ? 'active' : ''}`} onClick={() => changeCategory('All')}>
-            All<span>{products.length}</span>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={category === 'All'}
+            className={`ov-chip ${category === 'All' ? 'active' : ''}`}
+            onClick={() => changeCategory('All')}
+          >
+            <div className="ov-chip-icon-box">
+              🏷️
+            </div>
+            <span>All Categories</span>
+            <span className="ov-chip-count">{products.length}</span>
           </button>
-          {categories.map(([name, count]) => (
-            <button
-              key={name}
-              type="button"
-              role="tab"
-              aria-selected={category === name}
-              className={`ov-chip ${category === name ? 'active' : ''}`}
-              onClick={() => changeCategory(name)}
-            >
-              {name}<span>{count}</span>
-            </button>
-          ))}
+          {categories.map(([name, count]) => {
+            const meta = getCategoryMeta(name);
+            const isSelected = category === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                className={`ov-chip ${isSelected ? 'active' : ''}`}
+                onClick={() => changeCategory(name)}
+              >
+                <div className="ov-chip-icon-box">
+                  {meta.img ? (
+                    <img
+                      src={meta.img}
+                      alt={name}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) {
+                          e.target.nextSibling.style.display = 'block';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ display: meta.img ? 'none' : 'block' }}>
+                    {meta.icon || '📦'}
+                  </span>
+                </div>
+                <span>{name}</span>
+                <span className="ov-chip-count">{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         {shown.length === 0 ? (
@@ -511,7 +661,7 @@ export default function OverviewPage() {
           </div>
         ) : (
           <div className="ov-grid">
-            {shown.map((p) => {
+            {shown.map((p, idx) => {
               const pct = discountPct(p);
               const tag = pct > 0 ? `-${pct}%` : p.badge;
               return (
@@ -524,7 +674,15 @@ export default function OverviewPage() {
                 >
                   {tag && <span className={`ov-badge ${pct > 0 ? 'sale' : ''}`}>{tag}</span>}
                   <div className="ov-card-img">
-                    <img src={p.image} alt={p.name} loading="lazy" />
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = FALLBACK_IMAGES[idx % FALLBACK_IMAGES.length];
+                      }}
+                    />
                   </div>
                   <div className="ov-card-cat">{p.category}</div>
                   <h3 className="ov-card-title" title={p.name}>{p.name}</h3>
@@ -564,7 +722,7 @@ export default function OverviewPage() {
               Show more ({filtered.length - visible} left)
             </button>
           )}
-          <Link to="/catalog" className="st-view-all-link">
+          <Link to="/catalog" className="st-btn-pill-primary st-view-all-link">
             <span>View full catalog</span>
             <ArrowRightIcon className="w-3.5 h-3.5" />
           </Link>
@@ -576,16 +734,12 @@ export default function OverviewPage() {
           ===================================================================== */}
       <section className="platform-about-section">
         <div className="platform-about-header">
-          <div className="platform-pill">
-            <SparklesIcon className="w-3.5 h-3.5" />
-            <span>Engineered Retail &amp; Supply Chain Engine</span>
-          </div>
           <h2 className="platform-title">
             BrightBuy &bull; Next-Gen Retail Commerce &amp; Distributed Fulfillment
           </h2>
           <p className="platform-subtitle">
-            StockFlow is an enterprise-grade retail platform combining real-time inventory synchronization, 
-            automated regional logistics across Texas distribution hubs, and high-concurrency transactional pipelines 
+            StockFlow is an enterprise-grade retail platform combining real-time inventory synchronization,
+            automated regional logistics across Texas distribution hubs, and high-concurrency transactional pipelines
             for customers, store managers, and system administrators.
           </p>
         </div>
@@ -684,15 +838,15 @@ export default function OverviewPage() {
       {/* FAQ Section */}
       <section
         style={{
-          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-          borderRadius: '20px',
+          background: '#ffffff',
+          borderRadius: '2px',
+          border: '1.5px solid #e7d7c1',
           padding: '36px 32px',
-          color: '#ffffff',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '32px',
+          gap: '36px',
           alignItems: 'flex-start',
-          boxShadow: '0 8px 24px rgba(37, 99, 235, 0.25)',
+          boxShadow: '0 2px 10px rgba(59, 47, 47, 0.04)',
         }}
       >
         <div>
@@ -700,10 +854,12 @@ export default function OverviewPage() {
             style={{
               display: 'inline-block',
               padding: '4px 12px',
-              borderRadius: '9999px',
-              background: 'rgba(255, 255, 255, 0.15)',
+              borderRadius: '2px',
+              background: '#f7eee6',
+              color: '#c08457',
+              border: '1px solid #e7d7c1',
               fontSize: '0.78rem',
-              fontWeight: 700,
+              fontWeight: 800,
               letterSpacing: '0.05em',
               textTransform: 'uppercase',
               marginBottom: '12px',
@@ -711,50 +867,52 @@ export default function OverviewPage() {
           >
             Help &amp; Support
           </span>
-          <h2 style={{ fontSize: '1.85rem', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+          <h2 style={{ fontSize: '1.85rem', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.02em', lineHeight: 1.2, color: '#3b2f2f' }}>
             Frequently Asked Questions
           </h2>
-          <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: '0.95rem', color: '#5c4b4b', margin: 0, lineHeight: 1.6 }}>
             Everything you need to know about shopping on BrightBuy, guest cart ordering, islandwide delivery, and product warranties.
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           {HOME_FAQS.map((item, idx) => {
             const isOpen = !!faqOpen[idx];
             return (
               <div
                 key={idx}
                 style={{
-                  background: 'rgba(255,255,255,0.12)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  transition: 'background 0.2s ease',
+                  background: 'transparent',
+                  padding: '6px 0',
                 }}
               >
                 <button
                   type="button"
+                  className="ov-faq-btn"
                   onClick={() => setFaqOpen((prev) => ({ ...prev, [idx]: !prev[idx] }))}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    background: 'none',
-                    border: 'none',
-                    color: '#ffffff',
-                    fontSize: '0.92rem',
-                    fontWeight: 600,
+                    background: isOpen ? 'rgba(42, 157, 143, 0.08)' : 'transparent',
+                    border: '1.5px solid #2a9d8f',
+                    borderRadius: '2px',
+                    color: isOpen ? '#2a9d8f' : '#3b2f2f',
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    padding: 0,
+                    padding: '12px 16px',
+                    boxShadow: 'none',
+                    transition: 'all 0.2s',
                   }}
                 >
-                  <span>{item.q}</span>
+                  <span style={{ color: isOpen ? '#2a9d8f' : '#3b2f2f' }}>{item.q}</span>
                   <span
                     style={{
                       fontSize: '0.75rem',
+                      color: '#2a9d8f',
                       transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                       transition: 'transform 0.2s',
                       marginLeft: '12px',
@@ -765,7 +923,7 @@ export default function OverviewPage() {
                   </span>
                 </button>
                 {isOpen && (
-                  <div style={{ paddingTop: '10px', fontSize: '0.86rem', color: 'rgba(255,255,255,0.92)', lineHeight: 1.6 }}>
+                  <div style={{ padding: '12px 16px', fontSize: '0.88rem', color: '#5c4b4b', lineHeight: 1.65, borderLeft: '2px solid #2a9d8f', marginTop: '6px', background: 'rgba(42, 157, 143, 0.03)' }}>
                     {item.a}
                   </div>
                 )}

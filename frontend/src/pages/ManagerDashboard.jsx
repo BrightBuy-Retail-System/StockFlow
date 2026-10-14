@@ -229,7 +229,7 @@ export default function ManagerDashboard() {
               <span className="st-pulse-dot" />
               TiDB Cluster Operational
             </span>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+            <span style={{ fontSize: '0.8rem', color: '#826e6e' }}>
               Signed in as <strong>{user.username || user.full_name || user.email}</strong>
             </span>
           </div>
@@ -277,14 +277,14 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Gross Merchandise Value</span>
             <div className="st-admin-kpi-iconbox">
-              <AnalyticsIcon style={{ width: '1rem', height: '1rem', color: '#2563eb' }} />
+              <AnalyticsIcon style={{ width: '1rem', height: '1rem', color: '#2a9d8f' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             ${Number(summary.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            Net settled: <strong style={{ color: '#0f172a' }}>${Number(summary.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            Net settled: <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </div>
         </div>
 
@@ -293,14 +293,14 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Total Orders Placed</span>
             <div className="st-admin-kpi-iconbox">
-              <OrdersIcon style={{ width: '1rem', height: '1rem', color: '#059669' }} />
+              <OrdersIcon style={{ width: '1rem', height: '1rem', color: '#c08457' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             {summary.total_orders || 0}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#0f172a' }}>{ordersBreakdown.confirmed || 0}</strong> confirmed · <strong style={{ color: '#0f172a' }}>{ordersBreakdown.shipped || 0}</strong> in transit
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{ordersBreakdown.confirmed || 0}</strong> confirmed · <strong style={{ color: '#1f2937', fontWeight: 500 }}>{ordersBreakdown.shipped || 0}</strong> in transit
           </div>
         </div>
 
@@ -309,14 +309,14 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Average Order Value</span>
             <div className="st-admin-kpi-iconbox">
-              <LayersIcon style={{ width: '1rem', height: '1rem', color: '#4f46e5' }} />
+              <LayersIcon style={{ width: '1rem', height: '1rem', color: '#2a9d8f' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             ${Number(summary.average_order_value || 0).toFixed(2)}
           </div>
           <div className="st-admin-kpi-foot">
-            Across <strong style={{ color: '#0f172a' }}>{summary.active_customers || 0}</strong> registered buyer accounts
+            Across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{summary.active_customers || 0}</strong> registered buyer accounts
           </div>
         </div>
 
@@ -325,14 +325,14 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-top">
             <span className="st-admin-kpi-label">Inventory Asset Valuation</span>
             <div className="st-admin-kpi-iconbox">
-              <DatabaseIcon style={{ width: '1rem', height: '1rem', color: '#0284c7' }} />
+              <DatabaseIcon style={{ width: '1rem', height: '1rem', color: '#c08457' }} />
             </div>
           </div>
           <div className="st-admin-kpi-value">
             ${Number(invSummary.valuation || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#0f172a' }}>{invSummary.units_on_hand || 0}</strong> units across <strong style={{ color: '#0f172a' }}>{invSummary.total_skus || 0}</strong> SKUs
+            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.units_on_hand || 0}</strong> units across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.total_skus || 0}</strong> SKUs
           </div>
         </div>
       </div>
@@ -469,21 +469,21 @@ export default function ManagerDashboard() {
                       return (
                         <tr key={order.order_id}>
                           <td>
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>#{order.order_id}</span>
-                            <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                            <span style={{ fontWeight: 500, color: '#1f2937' }}>#{order.order_id}</span>
+                            <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>
                               {order.placed_at ? new Date(order.placed_at).toLocaleDateString() : 'Recent'}
                             </div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{order.customer_name || 'Retail Guest'}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{order.customer_email || '—'}</div>
+                            <div style={{ fontWeight: 500, color: '#1f2937' }}>{order.customer_name || 'Retail Guest'}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{order.customer_email || '—'}</div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 500, color: '#334155' }}>{order.destination_city || 'Texas Central'}</div>
-                            <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>{order.fulfillment_hub || 'Direct Dispatch'}</div>
+                            <div style={{ fontWeight: 500, color: '#4b5563' }}>{order.destination_city || 'Texas Central'}</div>
+                            <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>{order.fulfillment_hub || 'Direct Dispatch'}</div>
                           </td>
                           <td>
-                            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#475569' }}>
+                            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#4b5563' }}>
                               {order.tracking_number || 'Pending'}
                             </div>
                           </td>
@@ -507,7 +507,7 @@ export default function ManagerDashboard() {
                               {order.payment_status || 'PENDING'}
                             </span>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>
+                          <td style={{ textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
                             ${Number(order.total_amount || 0).toFixed(2)}
                           </td>
                         </tr>
@@ -565,31 +565,31 @@ export default function ManagerDashboard() {
                           display: 'inline-block',
                           width: '24px',
                           height: '24px',
-                          borderRadius: '50%',
-                          background: idx === 0 ? '#fef3c7' : idx === 1 ? '#f1f5f9' : idx === 2 ? '#eff6ff' : '#ffffff',
-                          color: idx === 0 ? '#92400e' : idx === 1 ? '#334155' : idx === 2 ? '#1d4ed8' : '#64748b',
-                          border: '1px solid #e2e8f0',
+                          borderRadius: '2px',
+                          background: idx === 0 ? '#fef8e7' : idx === 1 ? '#f7eee6' : idx === 2 ? '#e6f6f4' : '#faf7f2',
+                          color: idx === 0 ? '#b45309' : idx === 1 ? '#c08457' : idx === 2 ? '#0f766e' : '#6b7280',
+                          border: '1px solid #e7d7c1',
                           textAlign: 'center',
                           lineHeight: '22px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           fontSize: '0.78rem'
                         }}>
                           {idx + 1}
                         </span>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{p.product_name}</div>
-                        <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>ID #{p.product_id}</div>
+                        <div style={{ fontWeight: 500, color: '#1f2937' }}>{p.product_name}</div>
+                        <div style={{ fontSize: '0.74rem', color: '#6b7280' }}>ID #{p.product_id}</div>
                       </td>
                       <td>
-                        <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', color: '#475569' }}>
+                        <span style={{ background: '#fdfbf7', border: '1px solid #e7d7c1', padding: '2px 8px', borderRadius: '2px', fontSize: '0.76rem', color: '#4b5563' }}>
                           {p.category_name}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'center', fontWeight: 500 }}>
+                      <td style={{ textAlign: 'center', fontWeight: 400, color: '#4b5563' }}>
                         {p.total_units_sold} units
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600, color: '#059669' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
                         ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -618,18 +618,18 @@ export default function ManagerDashboard() {
                 return (
                   <div key={cat.category_id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{cat.category_name}</span>
-                      <strong style={{ color: '#059669' }}>
+                      <span style={{ fontWeight: 500, color: '#1f2937' }}>{cat.category_name}</span>
+                      <span style={{ fontWeight: 500, color: '#1f2937' }}>
                         ${Number(cat.category_revenue || 0).toFixed(2)} ({percentage}%)
-                      </strong>
+                      </span>
                     </div>
 
                     <div
                       style={{
                         width: '100%',
                         height: '7px',
-                        background: '#f1f5f9',
-                        borderRadius: '4px',
+                        background: '#f4ede4',
+                        borderRadius: '2px',
                         overflow: 'hidden',
                       }}
                     >
@@ -637,13 +637,13 @@ export default function ManagerDashboard() {
                         style={{
                           width: `${Math.max(percentage, 4)}%`,
                           height: '100%',
-                          background: '#2563eb',
-                          borderRadius: '4px',
+                          background: '#2a9d8f',
+                          borderRadius: '2px',
                         }}
                       />
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#826e6e' }}>
                       <span>{cat.total_products} catalog items</span>
                       <span>{cat.total_units_sold} units fulfilled</span>
                     </div>
@@ -671,20 +671,20 @@ export default function ManagerDashboard() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Total Gross Merchandise Value</span>
-                <strong style={{ color: '#0f172a' }}>${Number(summary.gross_revenue || 0).toFixed(2)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Total Gross Merchandise Value</span>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.gross_revenue || 0).toFixed(2)}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Successfully Settled Revenue</span>
-                <strong style={{ color: '#059669' }}>${Number(summary.settled_revenue || 0).toFixed(2)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Successfully Settled Revenue</span>
+                <strong style={{ color: '#2a9d8f', fontWeight: 500 }}>${Number(summary.settled_revenue || 0).toFixed(2)}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Average Ticket Size (AOV)</span>
-                <strong style={{ color: '#0f172a' }}>${Number(summary.average_order_value || 0).toFixed(2)}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Average Ticket Size (AOV)</span>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.average_order_value || 0).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '4px' }}>
-                <span style={{ color: '#64748b' }}>Financial Health Rating</span>
+                <span style={{ color: '#826e6e' }}>Financial Health Rating</span>
                 <span className="st-chip-paid">Strong (Grade A)</span>
               </div>
             </div>
@@ -699,22 +699,22 @@ export default function ManagerDashboard() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.875rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Dispatched &amp; In Transit</span>
-                <strong style={{ color: '#2563eb' }}>{ordersBreakdown.shipped || 0} orders</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Dispatched &amp; In Transit</span>
+                <strong style={{ color: '#2a9d8f', fontWeight: 500 }}>{ordersBreakdown.shipped || 0} orders</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Warehouse Queue (Pending)</span>
-                <strong style={{ color: '#d97706' }}>{ordersBreakdown.pending || 0} orders</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Warehouse Queue (Pending)</span>
+                <strong style={{ color: '#c08457', fontWeight: 500 }}>{ordersBreakdown.pending || 0} orders</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                <span style={{ color: '#64748b' }}>Order Cancellation Rate</span>
-                <strong style={{ color: '#0f172a' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4ede4', paddingBottom: '8px' }}>
+                <span style={{ color: '#826e6e' }}>Order Cancellation Rate</span>
+                <strong style={{ color: '#1f2937', fontWeight: 500 }}>
                   {summary.total_orders ? `${Math.round(((ordersBreakdown.cancelled || 0) / summary.total_orders) * 100)}%` : '0%'}
                 </strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '4px' }}>
-                <span style={{ color: '#64748b' }}>Logistics Hub Status</span>
+                <span style={{ color: '#826e6e' }}>Logistics Hub Status</span>
                 <span className="st-chip-confirmed">Texas Hubs Operational</span>
               </div>
             </div>
@@ -729,13 +729,13 @@ export default function ManagerDashboard() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.835rem' }}>
-              <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', color: '#334155' }}>
+              <div style={{ padding: '10px 12px', background: '#fdfbf7', border: '1px solid #e7d7c1', borderRadius: '2px', color: '#5c4b4b' }}>
                 <strong>Read-Only Enforcement:</strong> No accidental inventory mutations from manager reporting views.
               </div>
-              <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', color: '#334155' }}>
+              <div style={{ padding: '10px 12px', background: '#fdfbf7', border: '1px solid #e7d7c1', borderRadius: '2px', color: '#5c4b4b' }}>
                 <strong>Live TiDB Aggregations:</strong> Reporting calculations are derived dynamically from transaction tables.
               </div>
-              <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', color: '#334155' }}>
+              <div style={{ padding: '10px 12px', background: '#fdfbf7', border: '1px solid #e7d7c1', borderRadius: '2px', color: '#5c4b4b' }}>
                 <strong>Audit Trail Compliance:</strong> Session authenticated with JWT Bearer claims for Role ID {user.role_id}.
               </div>
             </div>
@@ -750,7 +750,7 @@ export default function ManagerDashboard() {
       {activeTab === 'staff' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div className="st-admin-card-header" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1.5px solid #e7d7c1' }}>
             <div>
               <h3 className="st-admin-card-title">Corporate Staff Accounts</h3>
               <p className="st-admin-card-subtitle">
@@ -798,10 +798,10 @@ export default function ManagerDashboard() {
                   onClick={() => setStaffRoleFilter(pill.id)}
                   style={{
                     padding: '6px 14px',
-                    borderRadius: '7px',
-                    border: staffRoleFilter === pill.id ? '1px solid #2563eb' : '1px solid #cbd5e1',
-                    background: staffRoleFilter === pill.id ? '#eff6ff' : '#ffffff',
-                    color: staffRoleFilter === pill.id ? '#1d4ed8' : '#64748b',
+                    borderRadius: '2px',
+                    border: staffRoleFilter === pill.id ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                    background: staffRoleFilter === pill.id ? '#e6f6f4' : '#ffffff',
+                    color: staffRoleFilter === pill.id ? '#2a9d8f' : '#5c4b4b',
                     fontWeight: 600,
                     fontSize: '0.8rem',
                     cursor: 'pointer',
@@ -838,7 +838,7 @@ export default function ManagerDashboard() {
                 <tbody>
                   {filteredStaff.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#826e6e' }}>
                         No staff accounts match your search.
                       </td>
                     </tr>
@@ -860,28 +860,28 @@ export default function ManagerDashboard() {
                               <div style={{
                                 width: '30px',
                                 height: '30px',
-                                borderRadius: '50%',
-                                background: isAdmin ? '#eff6ff' : '#f8fafc',
-                                border: '1px solid #e2e8f0',
-                                color: isAdmin ? '#1e40af' : '#475569',
+                                borderRadius: '2px',
+                                background: isAdmin ? '#f7eee6' : '#e6f6f4',
+                                border: isAdmin ? '1px solid #e7d7c1' : '1px solid #a8ded8',
+                                color: isAdmin ? '#c08457' : '#2a9d8f',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '0.75rem',
-                                fontWeight: 700
+                                fontWeight: 600
                               }}>
                                 {initials}
                               </div>
-                              <span style={{ fontWeight: 600, color: '#0f172a' }}>{st.full_name}</span>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>{st.full_name}</span>
                             </div>
                           </td>
-                          <td style={{ color: '#475569' }}>{st.email}</td>
+                          <td style={{ color: '#5c4b4b' }}>{st.email}</td>
                           <td>
                             <span className={isAdmin ? 'st-chip-role-admin' : 'st-chip-role-mgr'}>
                               {isAdmin ? 'System Administrator' : 'Store Manager'}
                             </span>
                           </td>
-                          <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                          <td style={{ fontSize: '0.8rem', color: '#826e6e' }}>
                             {isAdmin
                               ? 'Full administration, catalog edits, staff onboarding, report exports'
                               : 'Order fulfillment dispatch, warehouse inventory monitoring'}
@@ -905,33 +905,33 @@ export default function ManagerDashboard() {
         <div className="st-admin-modal-backdrop">
           <div className="st-admin-modal-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
                 Onboard Staff Member
               </h3>
               <button
                 type="button"
                 onClick={() => setIsRegisterModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#826e6e' }}
               >
                 &times;
               </button>
             </div>
 
             {staffFormError && (
-              <div style={{ padding: '8px 12px', borderRadius: '6px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fdeeed', border: '1px solid #ffcdd2', color: '#c62828', fontSize: '0.825rem', marginBottom: '14px' }}>
                 {staffFormError}
               </div>
             )}
 
             {staffFormSuccess && (
-              <div style={{ padding: '8px 12px', borderRadius: '6px', background: '#ecfdf5', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.825rem', marginBottom: '14px' }}>
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#e8f5e9', border: '1px solid #c8e6c9', color: '#2e7d32', fontSize: '0.825rem', marginBottom: '14px' }}>
                 {staffFormSuccess}
               </div>
             )}
 
             <form onSubmit={handleRegisterStaff} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
                   Full Name *
                 </label>
                 <input
@@ -945,7 +945,7 @@ export default function ManagerDashboard() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
                   Corporate Email *
                 </label>
                 <input
@@ -960,13 +960,13 @@ export default function ManagerDashboard() {
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b' }}>
                     Temporary Password *
                   </label>
                   <button
                     type="button"
                     onClick={generateRandomPassword}
-                    style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
                   >
                     Generate Secure Password
                   </button>
@@ -984,7 +984,7 @@ export default function ManagerDashboard() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '0.75rem', color: '#64748b', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '0.75rem', color: '#826e6e', cursor: 'pointer', fontWeight: 600 }}
                   >
                     {showPassword ? 'Hide' : 'Show'}
                   </button>
@@ -992,7 +992,7 @@ export default function ManagerDashboard() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
                   Assigned Role *
                 </label>
                 <select

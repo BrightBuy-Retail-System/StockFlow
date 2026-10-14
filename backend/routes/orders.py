@@ -4,6 +4,12 @@ from datetime import datetime, date, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from db import get_db_connection
+from email_service import (
+    send_order_placed_email,
+    send_payment_verified_email,
+    send_order_cancelled_email,
+    send_order_status_update_email,
+)
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -613,6 +619,32 @@ def checkout():
 
         conn.commit()
 
+        # Trigger Transactional Emails (Order Placed & Payment Verified)
+        try:
+            customer_email = user_row.get('email') if user_row else None
+            customer_name = recipient_name or (user_row.get('full_name') if user_row else 'Valued Customer')
+            if customer_email:
+                send_order_placed_email(
+                    to_email=customer_email,
+                    customer_name=customer_name,
+                    order_id=order_id,
+                    total_amount=float(total_amount),
+                    items=verified_items,
+                    shipping_address=shipping_address,
+                    tracking_number=tracking_number
+                )
+                if payment_status == 'SUCCESS':
+                    send_payment_verified_email(
+                        to_email=customer_email,
+                        customer_name=customer_name,
+                        order_id=order_id,
+                        amount=float(total_amount),
+                        payment_method=payment_method,
+                        transaction_ref=transaction_ref
+                    )
+        except Exception:
+            pass
+
         return jsonify({
             "status": "success",
             "message": "Order placed successfully.",
@@ -683,9 +715,13 @@ def update_order_status(order_id):
 
         # 1. Fetch current order with row lock
         cursor.execute("""
-            SELECT order_id, shipment_id, status 
-            FROM orders 
-            WHERE order_id = %s 
+            SELECT o.order_id, o.shipment_id, o.status, o.total_amount,
+                   u.email, u.full_name,
+                   s.tracking_number, s.estimated_arrival
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            WHERE o.order_id = %s 
             FOR UPDATE
         """, (order_id,))
         order = cursor.fetchone()
@@ -769,6 +805,30 @@ def update_order_status(order_id):
         """, (new_status, order_id))
 
         conn.commit()
+
+        # Trigger Transactional Email notifications (Cancelled / Status Updated)
+        try:
+            cust_email = order.get('email')
+            cust_name = order.get('full_name') or 'Valued Customer'
+            if cust_email:
+                if new_status == 'CANCELLED':
+                    send_order_cancelled_email(
+                        to_email=cust_email,
+                        customer_name=cust_name,
+                        order_id=order_id,
+                        total_amount=float(order.get('total_amount', 0.0))
+                    )
+                else:
+                    send_order_status_update_email(
+                        to_email=cust_email,
+                        customer_name=cust_name,
+                        order_id=order_id,
+                        new_status=new_status,
+                        tracking_number=order.get('tracking_number') or '',
+                        estimated_arrival=str(order.get('estimated_arrival') or '')
+                    )
+        except Exception:
+            pass
 
         return jsonify({
             "status": "success",

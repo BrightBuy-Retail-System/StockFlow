@@ -215,10 +215,9 @@ export default function DashboardLayout() {
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
         <div className="navbar-inner">
-          {/* Left: Brand Logo & Typography */}
           <Link to="/" className="navbar-brand">
-            <div className="brand-logo-badge">
-              <ShoppingBagIcon className="brand-logo-icon" />
+            <div className="brand-logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
             </div>
             <span className="brand-text">
               Bright<span className="brand-text-accent">Buy</span>
@@ -245,9 +244,39 @@ export default function DashboardLayout() {
             <div
               className={`connection-badge desktop-only ${isOnline ? 'online' : 'offline'}`}
               title={isOnline ? 'Backend Connected (Port 5000)' : 'Backend Offline'}
+              style={{
+                height: '38px',
+                minHeight: '38px',
+                maxHeight: '38px',
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0 14px',
+                border: '1.5px solid #e7d7c1',
+                borderRadius: 'var(--radius-btn, 2px)',
+                background: '#ffffff',
+                color: '#3b2f2f',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
             >
-              <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
-              <span className="badge-text">{isOnline ? 'Online' : 'Offline'}</span>
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  minWidth: '8px',
+                  minHeight: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isOnline ? '#16a34a' : '#dc2626',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                  boxShadow: 'none',
+                  animation: 'none',
+                }}
+              />
+              <span className="badge-text" style={{ lineHeight: 1 }}>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
             </div>
 
             {/* Shopping Cart Button with Real-time Count Badge (Always Available) */}
@@ -256,8 +285,24 @@ export default function DashboardLayout() {
               className="navbar-cart-btn"
               title="Shopping Cart"
               aria-label={`Shopping Cart with ${cartCount} items`}
+              style={{
+                width: '38px',
+                height: '38px',
+                minHeight: '38px',
+                maxHeight: '38px',
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1.5px solid #e7d7c1',
+                borderRadius: 'var(--radius-btn, 2px)',
+                background: '#ffffff',
+                color: '#3b2f2f',
+                position: 'relative',
+                flexShrink: 0,
+              }}
             >
-              <AuthCartIcon className="navbar-cart-icon" />
+              <AuthCartIcon className="navbar-cart-icon" style={{ width: '18px', height: '18px' }} />
               {cartCount > 0 && <span className="navbar-cart-badge">{cartCount}</span>}
             </Link>
 
@@ -276,7 +321,7 @@ export default function DashboardLayout() {
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     padding: '2px 6px',
-                    borderRadius: '4px',
+                    borderRadius: '2px',
                     background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
                     color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
                   }}>
@@ -294,7 +339,7 @@ export default function DashboardLayout() {
                       minWidth: '220px',
                       background: 'var(--bg-card, #1e222d)',
                       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
-                      borderRadius: '10px',
+                      borderRadius: '2px',
                       padding: '8px',
                       boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
                       zIndex: 1000,
@@ -517,8 +562,8 @@ export default function DashboardLayout() {
       <aside className={`mobile-drawer ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="mobile-drawer-header">
           <Link to="/" className="navbar-brand" onClick={() => setMobileMenuOpen(false)}>
-            <div className="brand-logo-badge">
-              <ShoppingBagIcon className="brand-logo-icon" />
+            <div className="brand-logo-badge" style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
             </div>
             <span className="brand-text">
               Bright<span className="brand-text-accent">Buy</span>
@@ -607,7 +652,7 @@ export default function DashboardLayout() {
         <div className="mobile-drawer-footer">
           <div className="mobile-cluster-indicator">
             <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
-            <span>{isOnline ? 'TiDB Backend Connected' : 'Offline / Reconnecting'}</span>
+            <span>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
           </div>
           {user && (
             <button
@@ -634,7 +679,7 @@ export default function DashboardLayout() {
         <div className="footer-inner">
           <div className="footer-col-brand">
             <div className="footer-brand-title">
-              <ShoppingBagIcon style={{ width: '22px', height: '22px', minWidth: '22px', color: 'var(--primary)', flexShrink: 0 }} />
+              <img src="/brightbuy-icon.png" alt="BrightBuy" style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }} />
               <span>Bright Buy Retail Systems</span>
             </div>
             <p className="footer-brand-desc">
