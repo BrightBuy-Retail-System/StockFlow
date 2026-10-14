@@ -1,6 +1,7 @@
 from decimal import Decimal
 from datetime import datetime, date
 from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from db import get_db_connection
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -36,31 +37,64 @@ def run_query(sql, params=None):
 # EXECUTIVE KPI SUMMARY: STORE OVERALL PERFORMANCE EVALUATION
 # -------------------------------------------------------------------------
 @analytics_bp.route('/overview', methods=['GET'])
+@jwt_required(optional=True)
 def get_executive_overview():
     """
     Evaluates the overall financial, order fulfillment, and inventory health of the store.
-    Read-only for executives and store managers.
+    If called by a warehouse manager (role_id 2), metrics are restricted to their assigned regional warehouse.
     """
+    claims = get_jwt() or {}
+    role_id = claims.get('role_id')
+    assigned_city_id = claims.get('assigned_city_id')
+    current_user_id = get_jwt_identity()
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        # Determine if caller is warehouse manager
+        warehouse_info = None
+        if role_id == 2:
+            if not assigned_city_id and current_user_id:
+                cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (current_user_id,))
+                u_row = cursor.fetchone()
+                if u_row:
+                    assigned_city_id = u_row.get('assigned_city_id')
+            if assigned_city_id:
+                cursor.execute("SELECT city_id, city_name, hub_name FROM texas_cities WHERE city_id = %s", (assigned_city_id,))
+                warehouse_info = cursor.fetchone()
+
+        where_orders = ""
+        order_params = []
+        where_cust = ""
+        cust_params = []
+        if role_id == 2 and assigned_city_id:
+            where_orders = "JOIN shipments s ON orders.shipment_id = s.shipment_id WHERE s.destination_city_id = %s"
+            order_params = [assigned_city_id]
+            where_cust = "JOIN shipments s ON orders.shipment_id = s.shipment_id WHERE s.destination_city_id = %s"
+            cust_params = [assigned_city_id]
+
         # 1. Total revenue & orders
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT 
                 COUNT(*) AS total_orders,
-                COALESCE(SUM(CASE WHEN status != 'CANCELLED' THEN total_amount ELSE 0 END), 0) AS gross_revenue,
-                COALESCE(AVG(CASE WHEN status != 'CANCELLED' THEN total_amount ELSE NULL END), 0) AS average_order_value,
-                SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) AS pending_orders,
-                SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed_orders,
-                SUM(CASE WHEN status = 'SHIPPED' THEN 1 ELSE 0 END) AS shipped_orders,
-                SUM(CASE WHEN status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_orders,
-                SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_orders
+                COALESCE(SUM(CASE WHEN orders.status != 'CANCELLED' THEN orders.total_amount ELSE 0 END), 0) AS gross_revenue,
+                COALESCE(AVG(CASE WHEN orders.status != 'CANCELLED' THEN orders.total_amount ELSE NULL END), 0) AS average_order_value,
+                SUM(CASE WHEN orders.status = 'PENDING' THEN 1 ELSE 0 END) AS pending_orders,
+                SUM(CASE WHEN orders.status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed_orders,
+                SUM(CASE WHEN orders.status = 'SHIPPED' THEN 1 ELSE 0 END) AS shipped_orders,
+                SUM(CASE WHEN orders.status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_orders,
+                SUM(CASE WHEN orders.status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_orders
             FROM orders
-        """)
+            {where_orders}
+        """, tuple(order_params))
         order_metrics = serialize_item(cursor.fetchone())
 
         # 2. Total active customers
-        cursor.execute("SELECT COUNT(DISTINCT user_id) AS active_customers FROM orders")
+        cursor.execute(f"""
+            SELECT COUNT(DISTINCT orders.user_id) AS active_customers 
+            FROM orders 
+            {where_cust}
+        """, tuple(cust_params))
         customer_metrics = cursor.fetchone()
 
         # 3. Product & inventory metrics
@@ -77,17 +111,30 @@ def get_executive_overview():
         inv_metrics = serialize_item(cursor.fetchone())
 
         # 4. Payments success rate
-        cursor.execute("""
-            SELECT 
-                COUNT(*) AS total_payments,
-                SUM(CASE WHEN payment_status = 'SUCCESS' THEN 1 ELSE 0 END) AS successful_payments,
-                COALESCE(SUM(CASE WHEN payment_status = 'SUCCESS' THEN amount ELSE 0 END), 0) AS settled_revenue
-            FROM payments
-        """)
+        if role_id == 2 and assigned_city_id:
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) AS total_payments,
+                    SUM(CASE WHEN p.payment_status = 'SUCCESS' THEN 1 ELSE 0 END) AS successful_payments,
+                    COALESCE(SUM(CASE WHEN p.payment_status = 'SUCCESS' THEN p.amount ELSE 0 END), 0) AS settled_revenue
+                FROM payments p
+                JOIN orders o ON p.order_id = o.order_id
+                JOIN shipments s ON o.shipment_id = s.shipment_id
+                WHERE s.destination_city_id = %s
+            """, (assigned_city_id,))
+        else:
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) AS total_payments,
+                    SUM(CASE WHEN payment_status = 'SUCCESS' THEN 1 ELSE 0 END) AS successful_payments,
+                    COALESCE(SUM(CASE WHEN payment_status = 'SUCCESS' THEN amount ELSE 0 END), 0) AS settled_revenue
+                FROM payments
+            """)
         payment_metrics = serialize_item(cursor.fetchone())
 
         return jsonify({
             "status": "success",
+            "assigned_warehouse": serialize_item(warehouse_info),
             "executive_summary": {
                 "gross_revenue": order_metrics.get("gross_revenue", 0.0),
                 "settled_revenue": payment_metrics.get("settled_revenue", 0.0),
@@ -123,42 +170,71 @@ def get_executive_overview():
 # ORDER FULFILLMENT PIPELINE REVIEW
 # -------------------------------------------------------------------------
 @analytics_bp.route('/fulfillment-pipeline', methods=['GET'])
+@jwt_required(optional=True)
 def get_fulfillment_pipeline():
     """
     Returns full order fulfillment pipeline with shipment dispatch & Texas hub logistics.
+    If called by warehouse manager (role 2), only returns orders routed to their warehouse.
     Categorizes orders into stages: PENDING -> CONFIRMED -> IN_TRANSIT / SHIPPED -> DELIVERED.
     """
-    sql = """
-        SELECT 
-            o.order_id,
-            o.user_id,
-            u.full_name AS customer_name,
-            u.email AS customer_email,
-            o.total_amount,
-            o.status AS order_status,
-            o.placed_at,
-            s.shipment_id,
-            s.tracking_number,
-            COALESCE(s.shipping_status, 'UNASSIGNED') AS shipping_status,
-            s.estimated_arrival,
-            s.dispatched_at,
-            s.delivered_at,
-            COALESCE(tc.city_name, 'Direct Dispatch') AS destination_city,
-            COALESCE(tc.hub_name, 'Central Hub') AS fulfillment_hub,
-            COALESCE(tc.shipping_fee, 0.00) AS shipping_fee,
-            COALESCE(p.payment_method, 'STANDARD') AS payment_method,
-            COALESCE(p.payment_status, 'PENDING') AS payment_status
-        FROM orders o
-        JOIN users u ON o.user_id = u.user_id
-        LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
-        LEFT JOIN texas_cities tc ON s.destination_city_id = tc.city_id
-        LEFT JOIN payments p ON o.order_id = p.order_id
-        ORDER BY o.placed_at DESC
-        LIMIT 100
-    """
+    claims = get_jwt() or {}
+    role_id = claims.get('role_id')
+    assigned_city_id = claims.get('assigned_city_id')
+    current_user_id = get_jwt_identity()
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
     try:
-        pipeline = run_query(sql)
-        
+        warehouse_info = None
+        if role_id == 2:
+            if not assigned_city_id and current_user_id:
+                cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (current_user_id,))
+                u_row = cursor.fetchone()
+                if u_row:
+                    assigned_city_id = u_row.get('assigned_city_id')
+            if assigned_city_id:
+                cursor.execute("SELECT city_id, city_name, hub_name FROM texas_cities WHERE city_id = %s", (assigned_city_id,))
+                warehouse_info = cursor.fetchone()
+
+        where_clause = ""
+        params = []
+        if role_id == 2 and assigned_city_id:
+            where_clause = "WHERE s.destination_city_id = %s"
+            params.append(assigned_city_id)
+
+        sql = f"""
+            SELECT 
+                o.order_id,
+                o.user_id,
+                u.full_name AS customer_name,
+                u.email AS customer_email,
+                o.total_amount,
+                o.status AS order_status,
+                o.placed_at,
+                s.shipment_id,
+                s.tracking_number,
+                COALESCE(s.shipping_status, 'UNASSIGNED') AS shipping_status,
+                s.estimated_arrival,
+                s.dispatched_at,
+                s.delivered_at,
+                s.destination_city_id,
+                COALESCE(tc.city_name, 'Direct Dispatch') AS destination_city,
+                COALESCE(tc.hub_name, 'Central Hub') AS fulfillment_hub,
+                COALESCE(tc.shipping_fee, 0.00) AS shipping_fee,
+                COALESCE(p.payment_method, 'STANDARD') AS payment_method,
+                COALESCE(p.payment_status, 'PENDING') AS payment_status
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            LEFT JOIN texas_cities tc ON s.destination_city_id = tc.city_id
+            LEFT JOIN payments p ON o.order_id = p.order_id
+            {where_clause}
+            ORDER BY o.placed_at DESC
+            LIMIT 100
+        """
+        cursor.execute(sql, tuple(params))
+        pipeline = [serialize_item(r) for r in cursor.fetchall()]
+
         # Categorize by pipeline stages for quick executive triage
         stages = {
             "pending": [row for row in pipeline if row['order_status'] == 'PENDING'],
@@ -169,6 +245,7 @@ def get_fulfillment_pipeline():
 
         return jsonify({
             "status": "success",
+            "assigned_warehouse": serialize_item(warehouse_info),
             "total_count": len(pipeline),
             "stages": {
                 "pending_count": len(stages["pending"]),
@@ -180,6 +257,9 @@ def get_fulfillment_pipeline():
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 # -------------------------------------------------------------------------
 # ANALYTICAL REPORTS: TOP SELLING PRODUCTS & CATEGORY PERFORMANCE

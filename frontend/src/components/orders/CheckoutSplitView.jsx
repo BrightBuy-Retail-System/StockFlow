@@ -265,12 +265,21 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         if (res.data && res.data.status === 'success' && Array.isArray(res.data.data)) {
           setCities(res.data.data);
           const draft = getSavedDraft();
-          if (!draft?.selectedCityId && res.data.data.length > 0) {
-            setSelectedCityId(res.data.data[0].city_id);
-            setCityName(res.data.data[0].city_name);
+          let targetCity = res.data.data[0];
+          try {
+            const savedUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+            if (savedUser?.assigned_city_id) {
+              const matched = res.data.data.find((c) => c.city_id === savedUser.assigned_city_id);
+              if (matched) targetCity = matched;
+            }
+          } catch (_) {}
+
+          if (!draft?.selectedCityId && targetCity) {
+            setSelectedCityId(targetCity.city_id);
+            setCityName(targetCity.city_name);
             setPricing((prev) => ({
               ...prev,
-              shipping_fee: parseFloat(res.data.data[0].shipping_fee) || 499.00,
+              shipping_fee: parseFloat(targetCity.shipping_fee) || 499.00,
             }));
           }
         }
@@ -296,6 +305,10 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             setFirstName((prev) => prev || parts[0] || '');
             setLastName((prev) => prev || parts.slice(1).join(' ') || '');
             setCardName((prev) => prev || res.data.username);
+          }
+          if (res.data?.assigned_city_id) {
+            setSelectedCityId((prev) => prev || res.data.assigned_city_id);
+            if (res.data.city_name) setCityName((prev) => prev || res.data.city_name);
           }
         })
         .catch(() => {

@@ -39,6 +39,8 @@ if use_ssl or "tidbcloud" in db_host:
     db_config["ssl_ca"] = certifi.where()
     db_config["ssl_verify_cert"] = True
     db_config["ssl_verify_identity"] = True
+else:
+    db_config["ssl_disabled"] = True
 
 # Shared connection pool (lazily initialized on first request)
 _connection_pool = None

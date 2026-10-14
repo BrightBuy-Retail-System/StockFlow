@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/client';
 import {
@@ -14,18 +14,34 @@ export default function RegisterPage() {
   const searchParams = new URLSearchParams(location.search);
   const redirectUrl = searchParams.get('redirect');
 
-  // Step 1: Details (name, email, password)
+  // Step 1: Details (name, email, password, assigned warehouse)
   // Step 2: OTP verification
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  const [cities, setCities] = useState([]);
+  const [assignedCityId, setAssignedCityId] = useState(1);
 
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+
+  // Load available regional warehouse hubs
+  useEffect(() => {
+    api.get('/orders/shipping-cities')
+      .then((res) => {
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          setCities(res.data.data);
+          if (res.data.data.length > 0) {
+            setAssignedCityId(res.data.data[0].city_id);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load Texas warehouses:', err));
+  }, []);
 
   // Step 1: Send OTP to user's email
   async function handleSendOtp(e) {
@@ -90,6 +106,7 @@ export default function RegisterPage() {
         email: email.trim().toLowerCase(),
         password: password,
         otp: otp.trim(),
+        assigned_city_id: Number(assignedCityId) || 1,
       });
 
       const data = res.data;
@@ -238,6 +255,35 @@ export default function RegisterPage() {
                   minLength={6}
                 />
               </div>
+            </div>
+
+            <div className="st-auth-field">
+              <label className="st-auth-label">Regional Warehouse / Delivery Hub *</label>
+              <div className="st-auth-input-wrap">
+                <span className="st-auth-input-icon">
+                  <TruckIcon style={{ width: '1rem', height: '1rem', color: '#64748b' }} />
+                </span>
+                <select
+                  className="st-auth-input"
+                  value={assignedCityId}
+                  onChange={(e) => setAssignedCityId(Number(e.target.value))}
+                  required
+                  style={{ paddingLeft: '40px', background: 'transparent', cursor: 'pointer' }}
+                >
+                  {cities.length === 0 ? (
+                    <option value={1}>Dallas Hub (DFW Central Hub)</option>
+                  ) : (
+                    cities.map((c) => (
+                      <option key={c.city_id} value={c.city_id}>
+                        {c.city_name} — {c.hub_name || 'Regional Hub'}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', marginInlineStart: '2px' }}>
+                All orders you place will be fulfilled and confirmed by this warehouse manager.
+              </p>
             </div>
 
             <button type="submit" className="st-auth-submit-btn" disabled={loading}>

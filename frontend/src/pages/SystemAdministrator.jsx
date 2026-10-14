@@ -62,13 +62,15 @@ export default function SystemAdministrator() {
 
   // 4. Staff Directory & Access Control
   const [staffList, setStaffList] = useState([]);
+  const [warehouseHubs, setWarehouseHubs] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [staffForm, setStaffForm] = useState({
     username: '',
     email: '',
     password: '',
-    role_id: 2 // 2: Manager, 3: System Administrator
+    role_id: 2, // 2: Manager, 3: System Administrator
+    assigned_city_id: 1,
   });
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffError, setStaffError] = useState('');
@@ -133,7 +135,8 @@ export default function SystemAdministrator() {
         invRes,
         prodRes,
         catRes,
-        staffRes
+        staffRes,
+        citiesRes
       ] = await Promise.allSettled([
         api.get('/analytics/overview'),
         api.get('/analytics/fulfillment-pipeline'),
@@ -145,7 +148,8 @@ export default function SystemAdministrator() {
         api.get('/catalog/admin/inventory'),
         api.get('/catalog/products'),
         api.get('/catalog/categories'),
-        api.get('/auth_cart/staff')
+        api.get('/auth_cart/staff'),
+        api.get('/orders/shipping-cities')
       ]);
 
       if (overviewRes.status === 'fulfilled') {
@@ -187,6 +191,9 @@ export default function SystemAdministrator() {
       }
       if (staffRes.status === 'fulfilled') {
         setStaffList(staffRes.value.data?.staff || []);
+      }
+      if (citiesRes.status === 'fulfilled') {
+        setWarehouseHubs(citiesRes.value.data?.data || []);
       }
 
       setLastRefreshed(new Date());
@@ -394,14 +401,18 @@ export default function SystemAdministrator() {
     setStaffSubmitting(true);
     setStaffError('');
     try {
-      await api.post('/auth_cart/staff/register', staffForm);
+      await api.post('/auth_cart/staff/register', {
+        ...staffForm,
+        assigned_city_id: Number(staffForm.role_id) === 2 ? Number(staffForm.assigned_city_id) || 1 : null,
+      });
       showNotice(`Successfully onboarded ${staffForm.username} as an internal corporate staff member.`);
       setIsStaffModalOpen(false);
       setStaffForm({
         username: '',
         email: '',
         password: '',
-        role_id: 2
+        role_id: 2,
+        assigned_city_id: 1,
       });
       // Refresh staff list
       const res = await api.get('/auth_cart/staff');
@@ -1623,6 +1634,7 @@ export default function SystemAdministrator() {
                     <th>Identity</th>
                     <th>Corporate Email</th>
                     <th>Role</th>
+                    <th>Assigned Warehouse</th>
                     <th>Privilege Scope</th>
                   </tr>
                 </thead>
@@ -1669,13 +1681,25 @@ export default function SystemAdministrator() {
                           <td style={{ color: '#475569' }}>{st.email}</td>
                           <td>
                             <span className={isAdmin ? 'st-chip-role-admin' : 'st-chip-role-mgr'}>
-                              {isAdmin ? 'System Administrator' : 'Store Manager'}
+                              {isAdmin ? 'System Administrator' : 'Warehouse Manager'}
                             </span>
+                          </td>
+                          <td>
+                            {st.city_name ? (
+                              <div>
+                                <span style={{ fontWeight: 600, color: '#1f2937' }}>{st.city_name}</span>
+                                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{st.hub_name || 'Regional Hub'}</div>
+                              </div>
+                            ) : isAdmin ? (
+                              <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 500 }}>All Warehouses (Global)</span>
+                            ) : (
+                              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Unassigned Hub</span>
+                            )}
                           </td>
                           <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
                             {isAdmin
                               ? 'Full administration, catalog edits, staff onboarding, report exports'
-                              : 'Order fulfillment dispatch, warehouse inventory monitoring'}
+                              : `Fulfillment dispatch, order confirmation for ${st.city_name || 'warehouse'}`}
                           </td>
                         </tr>
                       );
@@ -1766,10 +1790,33 @@ export default function SystemAdministrator() {
                   onChange={(e) => setStaffForm({ ...staffForm, role_id: Number(e.target.value) })}
                   className="st-modal-form-input"
                 >
-                  <option value={2}>Store Executive &amp; Manager (Role 2)</option>
+                  <option value={2}>Warehouse Manager (Role 2)</option>
                   <option value={3}>System Administrator (Role 3)</option>
                 </select>
               </div>
+
+              {Number(staffForm.role_id) === 2 && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Assigned Regional Warehouse / Hub *
+                  </label>
+                  <select
+                    value={staffForm.assigned_city_id}
+                    onChange={(e) => setStaffForm({ ...staffForm, assigned_city_id: Number(e.target.value) })}
+                    className="st-modal-form-input"
+                    required
+                  >
+                    {warehouseHubs.map((hub) => (
+                      <option key={hub.city_id} value={hub.city_id}>
+                        {hub.city_name} — {hub.hub_name || 'Regional Hub'}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                    This manager will strictly only see orders and fulfillment metrics for this warehouse.
+                  </p>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
                 <button

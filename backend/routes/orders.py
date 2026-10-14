@@ -104,11 +104,12 @@ def get_shipping_cities():
 @orders_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_all_orders():
-    """Manager & Admin endpoint: Retrieve all platform orders."""
+    """Manager & Admin endpoint: Retrieve platform orders filtered by warehouse for managers."""
     claims = get_jwt()
     role_id = claims.get('role_id', 1)
+    assigned_city_id = claims.get('assigned_city_id')
 
-    if role_id not in (2, 3):
+    if role_id not in (2, 3, 4):
         return jsonify({
             "status": "error",
             "message": "Access forbidden: Manager or Admin permissions required."
@@ -120,7 +121,19 @@ def get_all_orders():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        query = """
+        if role_id == 2 and not assigned_city_id:
+            cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (get_jwt_identity(),))
+            u_row = cursor.fetchone()
+            if u_row:
+                assigned_city_id = u_row.get('assigned_city_id')
+
+        where_sql = ""
+        params = []
+        if role_id == 2 and assigned_city_id:
+            where_sql = "WHERE s.destination_city_id = %s"
+            params.append(assigned_city_id)
+
+        query = f"""
             SELECT 
                 o.order_id,
                 o.user_id,
@@ -128,15 +141,20 @@ def get_all_orders():
                 o.shipment_id,
                 s.tracking_number,
                 s.shipping_status,
+                s.destination_city_id,
+                tc.city_name,
+                tc.hub_name,
                 o.total_amount,
                 o.status,
                 o.placed_at
             FROM orders o
             JOIN users u ON o.user_id = u.user_id
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            LEFT JOIN texas_cities tc ON s.destination_city_id = tc.city_id
+            {where_sql}
             ORDER BY o.placed_at DESC
         """
-        cursor.execute(query)
+        cursor.execute(query, tuple(params))
         orders = cursor.fetchall()
 
         return jsonify({
@@ -188,6 +206,9 @@ def get_order_by_id(order_id):
                 o.billing_address,
                 o.status,
                 o.placed_at,
+                s.destination_city_id,
+                tc.city_name,
+                tc.hub_name,
                 s.tracking_number,
                 s.shipping_status,
                 s.estimated_arrival,
@@ -198,6 +219,7 @@ def get_order_by_id(order_id):
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.user_id
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            LEFT JOIN texas_cities tc ON s.destination_city_id = tc.city_id
             WHERE o.order_id = %s
         """
         cursor.execute(header_query, (order_id,))
@@ -215,6 +237,20 @@ def get_order_by_id(order_id):
                 "status": "error",
                 "message": "Access forbidden: You cannot view orders belonging to another customer."
             }), 403
+
+        # Enforce Warehouse Manager Isolation (Role 2)
+        if role_id == 2:
+            assigned_city_id = claims.get('assigned_city_id')
+            if not assigned_city_id:
+                cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (current_user_id,))
+                u_row = cursor.fetchone()
+                if u_row:
+                    assigned_city_id = u_row.get('assigned_city_id')
+            if order.get('destination_city_id') and assigned_city_id and order.get('destination_city_id') != assigned_city_id:
+                return jsonify({
+                    "status": "error",
+                    "message": "Access forbidden: You cannot view orders assigned to other warehouses."
+                }), 403
 
         # 1. Fetch Line Items
         items_query = """
@@ -432,7 +468,7 @@ def checkout():
         cursor = conn.cursor(dictionary=True)
 
         # 2. Verify Customer
-        cursor.execute("SELECT user_id, full_name, email FROM users WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT user_id, full_name, email, assigned_city_id FROM users WHERE user_id = %s", (user_id,))
         user_row = cursor.fetchone()
         if not user_row:
             conn.rollback()
@@ -441,13 +477,19 @@ def checkout():
         if not recipient_name:
             recipient_name = user_row['full_name']
 
+        # Determine warehouse routing: use customer's assigned warehouse if not explicitly specified
+        customer_city = user_row.get('assigned_city_id')
+        if not payload.get('shipping_city_id') and customer_city:
+            shipping_city_id = customer_city
+        else:
+            shipping_city_id = payload.get('shipping_city_id') or customer_city or 1
+
         # 3. Determine Shipping Fee & Destination
         if delivery_type == 'PICKUP':
             shipping_fee = Decimal('0.00')
             city_name = 'In-Store Pickup'
             lead_days = 0
-            # City ID 1 serves as fallback hub reference for pickup shipments
-            shipping_city_id = shipping_city_id or 1
+            shipping_city_id = shipping_city_id or customer_city or 1
         else:
             cursor.execute(
                 "SELECT city_id, city_name, base_lead_time_days, shipping_fee FROM texas_cities WHERE city_id = %s",
@@ -717,7 +759,7 @@ def update_order_status(order_id):
         cursor.execute("""
             SELECT o.order_id, o.shipment_id, o.status, o.total_amount,
                    u.email, u.full_name,
-                   s.tracking_number, s.estimated_arrival
+                   s.tracking_number, s.estimated_arrival, s.destination_city_id
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.user_id
             LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
@@ -732,6 +774,21 @@ def update_order_status(order_id):
                 "status": "error",
                 "message": f"Order #{order_id} not found."
             }), 404
+
+        current_user_id = int(get_jwt_identity())
+        assigned_city_id = claims.get('assigned_city_id')
+        if role_id == 2:
+            if not assigned_city_id:
+                cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (current_user_id,))
+                u_row = cursor.fetchone()
+                if u_row:
+                    assigned_city_id = u_row.get('assigned_city_id')
+            if order.get('destination_city_id') and assigned_city_id and order.get('destination_city_id') != assigned_city_id:
+                conn.rollback()
+                return jsonify({
+                    "status": "error",
+                    "message": "Access forbidden: You can only update orders for your assigned warehouse."
+                }), 403
 
         current_status = order['status']
 
@@ -778,7 +835,13 @@ def update_order_status(order_id):
         # 3. Synchronize Shipment Status
         shipment_id = order.get('shipment_id')
         if shipment_id:
-            if new_status == 'SHIPPED':
+            if new_status == 'CONFIRMED':
+                cursor.execute("""
+                    UPDATE shipments 
+                    SET shipping_status = 'CONFIRMED' 
+                    WHERE shipment_id = %s
+                """, (shipment_id,))
+            elif new_status == 'SHIPPED':
                 cursor.execute("""
                     UPDATE shipments 
                     SET shipping_status = 'DISPATCHED', dispatched_at = NOW() 
@@ -849,6 +912,114 @@ def update_order_status(order_id):
             "message": f"Database error: {str(e)}"
         }), 500
 
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@orders_bp.route('/<int:order_id>/confirm', methods=['POST'])
+@jwt_required()
+def confirm_order(order_id):
+    """Warehouse Manager & Admin endpoint: Confirm an incoming pending order and route to warehouse fulfillment."""
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+    current_user_id = int(get_jwt_identity())
+    assigned_city_id = claims.get('assigned_city_id')
+
+    if role_id not in (2, 3, 4):
+        return jsonify({
+            "status": "error",
+            "message": "Access forbidden: Only Warehouse Managers or Administrators can confirm orders."
+        }), 403
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        conn.autocommit = False
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT o.order_id, o.shipment_id, o.status, o.total_amount,
+                   u.email, u.full_name,
+                   s.tracking_number, s.estimated_arrival, s.destination_city_id,
+                   tc.city_name, tc.hub_name
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.user_id
+            LEFT JOIN shipments s ON o.shipment_id = s.shipment_id
+            LEFT JOIN texas_cities tc ON s.destination_city_id = tc.city_id
+            WHERE o.order_id = %s 
+            FOR UPDATE
+        """, (order_id,))
+        order = cursor.fetchone()
+
+        if not order:
+            conn.rollback()
+            return jsonify({"status": "error", "message": f"Order #{order_id} not found."}), 404
+
+        if role_id == 2:
+            if not assigned_city_id:
+                cursor.execute("SELECT assigned_city_id FROM users WHERE user_id = %s", (current_user_id,))
+                u_row = cursor.fetchone()
+                if u_row:
+                    assigned_city_id = u_row.get('assigned_city_id')
+            if order.get('destination_city_id') and assigned_city_id and order.get('destination_city_id') != assigned_city_id:
+                conn.rollback()
+                return jsonify({
+                    "status": "error",
+                    "message": "Access forbidden: This order belongs to another regional warehouse."
+                }), 403
+
+        if order['status'] != 'PENDING':
+            conn.rollback()
+            return jsonify({
+                "status": "error",
+                "message": f"Order #{order_id} is already in '{order['status']}' status and cannot be confirmed again."
+            }), 400
+
+        # Update order status to CONFIRMED
+        cursor.execute("UPDATE orders SET status = 'CONFIRMED' WHERE order_id = %s", (order_id,))
+
+        # Update shipment status to CONFIRMED
+        shipment_id = order.get('shipment_id')
+        if shipment_id:
+            cursor.execute("UPDATE shipments SET shipping_status = 'CONFIRMED' WHERE shipment_id = %s", (shipment_id,))
+
+        conn.commit()
+
+        # Trigger Transactional Email confirmation to customer
+        try:
+            cust_email = order.get('email')
+            cust_name = order.get('full_name') or 'Valued Customer'
+            if cust_email:
+                send_order_status_update_email(
+                    to_email=cust_email,
+                    customer_name=cust_name,
+                    order_id=order_id,
+                    new_status='CONFIRMED',
+                    tracking_number=order.get('tracking_number') or '',
+                    estimated_arrival=str(order.get('estimated_arrival') or '')
+                )
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "success",
+            "message": f"Order #{order_id} confirmed successfully. Warehouse fulfillment pipeline updated.",
+            "data": {
+                "order_id": order_id,
+                "status": "CONFIRMED",
+                "hub_name": order.get('hub_name'),
+                "city_name": order.get('city_name'),
+                "shipment_id": shipment_id
+            }
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
     finally:
         if cursor:
             cursor.close()
