@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 from uuid import uuid4
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from db import get_db_connection
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -168,6 +169,7 @@ def get_fulfillment_pipeline():
             "pending": [row for row in pipeline if row['order_status'] == 'PENDING'],
             "confirmed": [row for row in pipeline if row['order_status'] == 'CONFIRMED'],
             "in_transit": [row for row in pipeline if row['order_status'] == 'SHIPPED'],
+            "delivered": [row for row in pipeline if row['order_status'] == 'DELIVERED'],
             "cancelled": [row for row in pipeline if row['order_status'] == 'CANCELLED'],
         }
 
@@ -178,6 +180,7 @@ def get_fulfillment_pipeline():
                 "pending_count": len(stages["pending"]),
                 "confirmed_count": len(stages["confirmed"]),
                 "in_transit_count": len(stages["in_transit"]),
+                "delivered_count": len(stages["delivered"]),
                 "cancelled_count": len(stages["cancelled"]),
             },
             "pipeline": pipeline
@@ -394,7 +397,9 @@ def get_top_selling_report():
                 FROM products p
                 INNER JOIN product_variants pv ON pv.product_id = p.product_id
                 INNER JOIN order_items oi ON oi.variant_id = pv.variant_id
+                INNER JOIN orders o ON o.order_id = oi.order_id
                 LEFT OUTER JOIN categories c ON c.category_id = p.category_id
+                WHERE o.status != 'CANCELLED'
                 GROUP BY p.product_id, p.title, c.name
                 ORDER BY total_revenue DESC
             """)
@@ -419,7 +424,7 @@ def get_category_orders_report():
                 LEFT OUTER JOIN products p ON p.category_id = c.category_id
                 LEFT OUTER JOIN product_variants pv ON pv.product_id = p.product_id
                 LEFT OUTER JOIN order_items oi ON oi.variant_id = pv.variant_id
-                LEFT OUTER JOIN orders o ON o.order_id = oi.order_id
+                LEFT OUTER JOIN orders o ON o.order_id = oi.order_id AND o.status != 'CANCELLED'
                 GROUP BY c.name WITH ROLLUP
             """)
         return jsonify({"status": "success", "count": len(data), "data": data}), 200
@@ -438,7 +443,7 @@ def get_customer_summary_report():
                     u.user_id AS customer_id,
                     u.full_name AS customer_name,
                     u.email,
-                    COALESCE(tc.city_name, 'Texas Regional') AS primary_city,
+                    COALESCE(MAX(tc.city_name), 'Texas Regional') AS primary_city,
                     COUNT(DISTINCT o.order_id) AS total_orders,
                     COALESCE(SUM(o.total_amount), 0.00) AS lifetime_spending,
                     COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
@@ -446,10 +451,10 @@ def get_customer_summary_report():
                     COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN o.total_amount ELSE 0.00 END), 0.00) AS paid_order_value,
                     COALESCE(SUM(CASE WHEN o.payment_status = 'Pending' THEN o.total_amount ELSE 0.00 END), 0.00) AS pending_order_value
                 FROM users u
-                LEFT OUTER JOIN orders o ON o.user_id = u.user_id
+                LEFT OUTER JOIN orders o ON o.user_id = u.user_id AND o.status != 'CANCELLED'
                 LEFT OUTER JOIN shipments s ON s.shipment_id = o.shipment_id
                 LEFT OUTER JOIN texas_cities tc ON tc.city_id = s.destination_city_id
-                GROUP BY u.user_id, u.full_name, u.email, tc.city_name
+                GROUP BY u.user_id, u.full_name, u.email
                 ORDER BY lifetime_spending DESC
             """)
         return jsonify({"status": "success", "count": len(data), "data": data}), 200
@@ -481,10 +486,11 @@ def get_quarterly_sales_report():
                     ) AS moving_avg_quarterly_revenue
                 FROM orders o
                 LEFT OUTER JOIN order_items oi ON oi.order_id = o.order_id
+                WHERE o.status != 'CANCELLED'
             """
             params = None
             if year_filter:
-                base_sql += " WHERE YEAR(o.placed_at) = %s"
+                base_sql += " AND YEAR(o.placed_at) = %s"
                 params = (int(year_filter),)
             base_sql += " GROUP BY YEAR(o.placed_at), QUARTER(o.placed_at) ORDER BY sales_year, sales_quarter"
             data = run_query(base_sql, params)
@@ -512,7 +518,14 @@ def serialize_row(row):
 # ROLE-BASED EXTENSION: Transactions Ledger (Manager & Admin View)
 # ============================================================================
 @analytics_bp.route('/transactions', methods=['GET'])
+@jwt_required(optional=True)
 def get_payment_transactions():
+    current_identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    if current_identity:
+        caller_role = claims.get('role_id', 1)
+        if caller_role not in (2, 3, 4):
+            return jsonify({'status': 'error', 'error': 'Access denied. Staff role required.'}), 403
     conn = None
     cursor = None
     try:
@@ -561,7 +574,16 @@ def get_payment_transactions():
 # ROLE-BASED EXTENSION: Customer Orders & Pending Settlements (Customer View) ***************customer view*********************
 # ============================================================================
 @analytics_bp.route('/customer-orders/<int:user_id>', methods=['GET'])
+@jwt_required(optional=True)
 def get_customer_orders_summary(user_id):
+    current_identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    if current_identity:
+        caller_id = int(current_identity)
+        caller_role = claims.get('role_id', 1)
+        if caller_role == 1 and caller_id != user_id:
+            return jsonify({'status': 'error', 'error': 'Forbidden: You cannot access order analytics of other customers.'}), 403
+
     conn = None
     cursor = None
     try:
@@ -585,13 +607,15 @@ def get_customer_orders_summary(user_id):
         cursor.execute(orders_query, (user_id,))
         orders = cursor.fetchall()
 
-        # 2. Fetch specific summary from v_customer_order_summary
+        # 2. Fetch specific summary from v_customer_order_summary safely consuming all rows
         summary_query = """
             SELECT * FROM v_customer_order_summary
             WHERE customer_id = %s
+            LIMIT 1
         """
         cursor.execute(summary_query, (user_id,))
-        summary_row = cursor.fetchone()
+        summary_rows = cursor.fetchall()
+        summary_row = summary_rows[0] if summary_rows else None
 
         # 3. Fetch recent payments for this user's orders
         payments_query = """
@@ -634,7 +658,14 @@ def get_customer_orders_summary(user_id):
 # ROLE-BASED EXTENSION: DCL Roles & Audit Log Console (Admin View)
 # ============================================================================
 @analytics_bp.route('/dcl-matrix', methods=['GET'])
+@jwt_required(optional=True)
 def get_dcl_matrix():
+    current_identity = get_jwt_identity()
+    claims = get_jwt() or {}
+    if current_identity:
+        caller_role = claims.get('role_id', 1)
+        if caller_role not in (3, 4):
+            return jsonify({'status': 'error', 'error': 'Access denied. Administrator role required.'}), 403
     conn = None
     cursor = None
     try:

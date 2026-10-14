@@ -47,15 +47,15 @@ export default function AnalyticsPage() {
     { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
   ]);
   const [topSellingData, setTopSellingData] = useState([
-    { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-    { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-    { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+    { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+    { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+    { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
   ]);
   const [categoryData, setCategoryData] = useState([
-    { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-    { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-    { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+    { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+    { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+    { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
   ]);
   const [customerData, setCustomerData] = useState([
     { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -75,6 +75,12 @@ export default function AnalyticsPage() {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [customerSummary, setCustomerSummary] = useState(null);
   const [customerPayments, setCustomerPayments] = useState([]);
+
+  // Settlement Modal State
+  const [settleModalOrder, setSettleModalOrder] = useState(null);
+  const [settlePaymentMethod, setSettlePaymentMethod] = useState('Credit Card');
+  const [settlingPayment, setSettlingPayment] = useState(false);
+  const [settleMessage, setSettleMessage] = useState(null);
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -104,9 +110,10 @@ export default function AnalyticsPage() {
       const yearQuery = year ? `?year=${year}` : '';
 
       // If Customer (Role 1): Fetch personal orders and summary
-      if (currentRoleId === 1 && currentUser?.id) {
+      const custId = currentUser?.id || currentUser?.user_id;
+      if (currentRoleId === 1 && custId) {
         try {
-          const resCust = await api.get(`/analytics/customer-orders/${currentUser.id}`, { timeout: 4000 });
+          const resCust = await api.get(`/analytics/customer-orders/${custId}`, { timeout: 4000 });
           if (resCust.data?.data) {
             setCustomerSummary(resCust.data.data.summary);
             setCustomerOrders(resCust.data.data.orders || []);
@@ -169,8 +176,8 @@ export default function AnalyticsPage() {
           populateDemoData(2);
         }
       }
-      // If Admin (Role 3): Fetch full executive suite
-      else if (currentRoleId === 3) {
+      // If Admin / Logistics Executive (Role 3 or 4): Fetch full executive suite
+      else if (currentRoleId === 3 || currentRoleId === 4) {
         try {
           const [resQuarterly, resTop, resCat, resCust, resTxn, resDcl] = await Promise.all([
             api.get(`/analytics/reports/quarterly-sales${yearQuery}`, { timeout: 4000 }).catch(() => null),
@@ -189,10 +196,10 @@ export default function AnalyticsPage() {
           if (resDcl?.data?.data) setDclData(resDcl.data.data);
 
           if (!resQuarterly?.data?.data?.length && !resTop?.data?.data?.length) {
-            populateDemoData(3);
+            populateDemoData(currentRoleId);
           }
         } catch {
-          populateDemoData(3);
+          populateDemoData(currentRoleId);
         }
       }
 
@@ -213,7 +220,7 @@ export default function AnalyticsPage() {
   const populateDemoData = (rId) => {
     if (rId === 1) {
       setCustomerSummary({
-        customer_name: user?.username || 'Test Customer',
+        customer_name: user?.username || user?.full_name || 'Test Customer',
         primary_city: 'Dallas Hub',
         total_orders: 5,
         lifetime_spending: 6524.90,
@@ -238,15 +245,15 @@ export default function AnalyticsPage() {
         { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
       ]);
       setTopSellingData([
-        { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-        { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-        { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+        { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+        { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+        { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
       ]);
       setCategoryData([
-        { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-        { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-        { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+        { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+        { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+        { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
       ]);
       setCustomerData([
         { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -278,10 +285,10 @@ export default function AnalyticsPage() {
       const netCollected = quarterlyData.reduce((acc, q) => acc + (q.net_collected_revenue || 0), 0);
       return {
         grossRevenue: gross,
-        netCollected: netCollected || gross * 0.94,
+        netCollected: netCollected,
         totalOrders: totalOrders,
         totalUnits: totalUnits,
-        collectionRate: gross > 0 ? ((netCollected || gross * 0.94) / gross) * 100 : 100,
+        collectionRate: gross > 0 ? (netCollected / gross) * 100 : 100,
       };
     }
 
@@ -344,6 +351,53 @@ export default function AnalyticsPage() {
     );
   }
 
+  // Payment Settlement Handlers for Customer
+  const handleOpenSettleModal = (order = null) => {
+    setSettleMessage(null);
+    setSettlePaymentMethod('Credit Card');
+    if (order) {
+      setSettleModalOrder(order);
+    } else {
+      const firstPending = customerOrders.find((o) => o.payment_status === 'Pending');
+      if (firstPending) {
+        setSettleModalOrder(firstPending);
+      } else {
+        alert('All your orders are settled! No pending payments required.');
+      }
+    }
+  };
+
+  const handleExecuteSettlement = async (e) => {
+    e?.preventDefault();
+    if (!settleModalOrder) return;
+    setSettlingPayment(true);
+    setSettleMessage(null);
+    try {
+      const res = await api.post('/analytics/payments/process', {
+        order_id: settleModalOrder.order_id,
+        amount: Number(settleModalOrder.total_amount),
+        payment_method: settlePaymentMethod,
+      });
+      if (res.data?.status === 'success') {
+        setSettleMessage({
+          type: 'success',
+          text: `Payment of $${Number(settleModalOrder.total_amount).toFixed(2)} recorded successfully! Ref: ${res.data.data?.transaction_reference || 'CONFIRMED'}`,
+        });
+        setTimeout(() => {
+          fetchReports(selectedYear, 1, user);
+          setSettleModalOrder(null);
+          setSettleMessage(null);
+        }, 1400);
+      } else {
+        setSettleMessage({ type: 'error', text: res.data?.error || 'Payment failed. Please try again.' });
+      }
+    } catch (err) {
+      setSettleMessage({ type: 'error', text: err.response?.data?.error || 'Payment processing failed.' });
+    } finally {
+      setSettlingPayment(false);
+    }
+  };
+
   // ==========================================================================
   // VIEW 1: CUSTOMER VIEW (when role_id === 1)
   // Account: customer@stockflow.test
@@ -380,24 +434,26 @@ export default function AnalyticsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Link
-              to="/payment"
+            <button
+              type="button"
+              onClick={() => handleOpenSettleModal()}
               style={{
                 padding: '10px 18px',
                 borderRadius: '8px',
                 background: 'var(--primary)',
                 color: '#ffffff',
-                textDecoration: 'none',
+                border: 'none',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                cursor: 'pointer',
               }}
             >
               <span>Pay Pending Orders</span>
               <ArrowRightIcon className="w-4 h-4" />
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => fetchReports(selectedYear, 1, user)}
@@ -573,30 +629,218 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
 
-                    <Link
-                      to={`/payment?order_id=${o.order_id}&amount=${Number(o.total_amount || 0).toFixed(2)}`}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettleModal(o)}
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
                         background: 'var(--primary)',
                         color: '#ffffff',
-                        textDecoration: 'none',
+                        border: 'none',
                         fontSize: '0.85rem',
                         fontWeight: 700,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        cursor: 'pointer',
                       }}
                     >
                       <span>Pay Now</span>
                       <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Payment Settlement Modal */}
+        {settleModalOrder && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}>
+            <div style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'var(--primary-light, #eff6ff)',
+                    color: 'var(--primary, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <CreditCardIcon className="w-5 h-5" />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                    Settle Order Payment
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted, #64748b)',
+                    padding: '4px'
+                  }}
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div style={{
+                background: 'var(--bg-muted, #f8fafc)',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order ID:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>#{settleModalOrder.order_id}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order Status:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>{settleModalOrder.order_status || 'PENDING'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', paddingTop: '8px', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>Amount Payable:</span>
+                  <span style={{ fontWeight: 800, color: 'var(--primary, #2563eb)', fontSize: '1.2rem' }}>
+                    ${Number(settleModalOrder.total_amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', marginBottom: '6px' }}>
+                    Payment Method
+                  </label>
+                  <select
+                    value={settlePaymentMethod}
+                    onChange={(e) => setSettlePaymentMethod(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-main, #0f172a)',
+                      fontSize: '0.9rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    <option value="Credit Card">Credit Card (Instant Online Settlement)</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Visa">Visa Direct</option>
+                    <option value="Mastercard">Mastercard SecureCode</option>
+                    <option value="Bank Transfer">Bank Wire Transfer</option>
+                  </select>
+                </div>
+
+                {settleMessage && (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    background: settleMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                    color: settleMessage.type === 'success' ? '#065f46' : '#991b1b',
+                    border: `1px solid ${settleMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {settleMessage.type === 'success' ? (
+                      <CheckCircleIcon className="w-4 h-4" />
+                    ) : (
+                      <XIcon className="w-4 h-4" />
+                    )}
+                    <span>{settleMessage.text}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-secondary, #475569)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 20px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'var(--primary, #2563eb)',
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
+                      cursor: settlingPayment ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: settlingPayment ? 0.7 : 1
+                    }}
+                  >
+                    {settlingPayment ? (
+                      <>
+                        <ZapIcon className="w-4 h-4" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirm &amp; Settle</span>
+                        <ArrowRightIcon className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -645,11 +889,12 @@ export default function AnalyticsPage() {
     const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0) || 48;
     const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
 
+    const isAdmin = roleId === 3 || roleId === 4;
     let branchLabel = managerBranch;
     let branchId = 'TX-DAL-204';
     let docClassification = 'Privileged Branch Operations';
 
-    if (roleId === 3) {
+    if (isAdmin) {
       docClassification = 'Enterprise Multi-Store Executive Operations';
       if (adminStoreBranch === 'all_stores') {
         branchLabel = 'All Stores (Enterprise Consolidated • 5 Texas Branches)';
@@ -672,28 +917,28 @@ export default function AnalyticsPage() {
       }
     }
 
-    let docTitle = roleId === 3 ? 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER' : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
-    let docSubtitle = roleId === 3 ? 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger' : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
+    let docTitle = isAdmin ? 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER' : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
+    let docSubtitle = isAdmin ? 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger' : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
 
     if (targetType === 'selling_products') {
-      docTitle = roleId === 3 ? 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD' : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
-      docSubtitle = roleId === 3 ? 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis' : 'Product SKU Rankings, Units Sold, and Revenue Contribution Analysis';
+      docTitle = isAdmin ? 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD' : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
+      docSubtitle = isAdmin ? 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis' : 'Product SKU Rankings, Units Sold, and Revenue Contribution Analysis';
     } else if (targetType === 'revenue_category') {
-      docTitle = roleId === 3 ? 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT' : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
-      docSubtitle = roleId === 3 ? 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation' : 'Gross Sales Aggregation, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
+      docTitle = isAdmin ? 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT' : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
+      docSubtitle = isAdmin ? 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation' : 'Gross Sales Aggregation, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
     } else if (targetType === 'customer_history') {
-      docTitle = roleId === 3 ? 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST' : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
-      docSubtitle = roleId === 3 ? 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances' : 'Account Purchasing Activity, Paid Settlement Values, and Outstanding Balances';
+      docTitle = isAdmin ? 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST' : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
+      docSubtitle = isAdmin ? 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances' : 'Account Purchasing Activity, Paid Settlement Values, and Outstanding Balances';
     } else if (targetType === 'branch_essential' || targetType === 'admin_essential') {
-      docTitle = roleId === 3 ? 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT' : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
-      docSubtitle = roleId === 3 ? 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification' : 'Official Store Branch Operating Record, Fulfillment Pipeline & Verification';
+      docTitle = isAdmin ? 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT' : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
+      docSubtitle = isAdmin ? 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification' : 'Official Store Branch Operating Record, Fulfillment Pipeline & Verification';
     }
 
-    const includeComparison = roleId === 3 && (targetType === 'all' || targetType === 'admin_essential');
+    const includeComparison = isAdmin && (targetType === 'all' || targetType === 'admin_essential');
     const includeProducts = targetType === 'all' || targetType === 'selling_products' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeRevenue = targetType === 'all' || targetType === 'revenue_category' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeCustomers = targetType === 'all' || targetType === 'customer_history' || targetType === 'branch_essential' || targetType === 'admin_essential';
-    const includeLogistics = (roleId !== 3) && (targetType === 'all' || targetType === 'branch_essential');
+    const includeLogistics = (!isAdmin) && (targetType === 'all' || targetType === 'branch_essential');
 
     // Products table rows
     // Products table rows
@@ -979,7 +1224,7 @@ export default function AnalyticsPage() {
       <div class="brand-sub">${branchLabel} • ID: ${branchId}</div>
     </div>
     <div style="text-align: right;">
-      <div class="doc-badge">${roleId === 3 ? 'Administrator Report' : 'Branch Manager Report'}</div>
+      <div class="doc-badge">${isAdmin ? 'Administrator Report' : 'Branch Manager Report'}</div>
       <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Classification: ${docClassification}</div>
     </div>
   </div>
@@ -997,8 +1242,8 @@ export default function AnalyticsPage() {
       <div class="meta-val">${durationText}</div>
     </div>
     <div>
-      <div class="meta-label">${roleId === 3 ? 'System Administrator' : 'Branch Manager'}</div>
-      <div class="meta-val">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
+      <div class="meta-label">${isAdmin ? 'System Administrator' : 'Branch Manager'}</div>
+      <div class="meta-val">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
     </div>
     <div>
       <div class="meta-label">Store Scope</div>
@@ -1013,9 +1258,9 @@ export default function AnalyticsPage() {
   <!-- Executive Operational KPI Snapshot -->
   <div class="kpi-grid">
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Gross Enterprise Revenue' : 'Gross Category Revenue'}</div>
+      <div class="kpi-label">${isAdmin ? 'Gross Enterprise Revenue' : 'Gross Category Revenue'}</div>
       <div class="kpi-val">$${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across all catalog items and stores' : 'Total catalog sales volume'}</div>
+      <div class="kpi-sub">${isAdmin ? 'Across all catalog items and stores' : 'Total catalog sales volume'}</div>
     </div>
     <div class="kpi-box">
       <div class="kpi-label">Pending / Undelivered</div>
@@ -1028,9 +1273,9 @@ export default function AnalyticsPage() {
       <div class="kpi-sub">Successfully fulfilled to customers</div>
     </div>
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Total Units Dispatched' : 'Units Shipped'}</div>
+      <div class="kpi-label">${isAdmin ? 'Total Units Dispatched' : 'Units Shipped'}</div>
       <div class="kpi-val">${Number(totalUnits).toLocaleString()} Units</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch'}</div>
+      <div class="kpi-sub">${isAdmin ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch'}</div>
     </div>
   </div>
 
@@ -1220,24 +1465,24 @@ export default function AnalyticsPage() {
   <div class="sign-block">
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'System Administrator' : 'Store Branch Manager'}</div>
-      <div class="sign-sub">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
+      <div class="sign-title">${isAdmin ? 'System Administrator' : 'Store Branch Manager'}</div>
+      <div class="sign-sub">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
     </div>
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
-      <div class="sign-sub">${roleId === 3 ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
+      <div class="sign-title">${isAdmin ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
+      <div class="sign-sub">${isAdmin ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
     </div>
     <div>
       <div class="stamp-box">
-        ${roleId === 3 ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
+        ${isAdmin ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
       </div>
     </div>
   </div>
 
   <!-- Document Footer -->
   <div class="footer-note">
-    <span>${roleId === 3 ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
+    <span>${isAdmin ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
     <span>Doc ID: SF-RPT-TX-${Math.floor(Math.random() * 89999 + 10000)} • Page 1 of 1</span>
   </div>
 
@@ -2220,7 +2465,7 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => fetchReports(selectedYear, 3, user)}
+            onClick={() => fetchReports(selectedYear, roleId || 4, user)}
             disabled={loading}
             style={{
               padding: '8px 14px',
@@ -2566,7 +2811,7 @@ export default function AnalyticsPage() {
                 {transactionsData.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No payment settlements executed yet. Run a settlement at <Link to="/payment" style={{ color: 'var(--primary)' }}>Payment Page</Link>.
+                      No payment settlements executed yet. Run a settlement via <Link to="/orders" style={{ color: 'var(--primary)' }}>Orders &amp; Checkout</Link>.
                     </td>
                   </tr>
                 ) : (
