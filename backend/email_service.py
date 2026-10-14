@@ -25,6 +25,50 @@ logger = logging.getLogger("email_service")
 logger.setLevel(logging.INFO)
 
 
+import json
+import urllib.request
+import urllib.error
+
+RESEND_API_URL = "https://api.resend.com/emails"
+
+
+def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str, html_content: str):
+    """Sends email via Resend API using standard library urllib."""
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "BrightBuy-Ecommerce/1.0",
+    }
+
+    if not from_email:
+        from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
+
+    payload = {
+        "from": from_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content,
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(RESEND_API_URL, data=data, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res_body = response.read().decode("utf-8")
+            logger.info(f"[Email Service - Resend] Sent '{subject}' to {to_email}. Response: {res_body}")
+            return True, "Welcome email sent successfully."
+    except urllib.error.HTTPError as exc:
+        err_msg = exc.read().decode("utf-8")
+        logger.error(f"[Email Service - Resend] HTTP {exc.code} for {to_email}: {err_msg}")
+        if exc.code == 403 and "only send testing emails to your own email address" in err_msg:
+            return False, "Resend Free Tier restriction: onboarding@resend.dev only allows sending to your registered email (prageethchamuditha@gmail.com). To send to other emails, verify a custom domain at resend.com/domains."
+        return False, f"Email delivery failed (HTTP {exc.code})"
+    except Exception as exc:
+        logger.error(f"[Email Service - Resend] Network error for {to_email}: {exc}")
+        return False, f"Network error: {str(exc)}"
+
+
 def _send_via_brevo_smtp(smtp_server: str, smtp_port: int, smtp_login: str, smtp_key: str, from_email: str, to_email: str, subject: str, html_content: str):
     """Sends email via Brevo SMTP relay using standard library smtplib."""
     try:
@@ -51,23 +95,29 @@ def _send_via_brevo_smtp(smtp_server: str, smtp_port: int, smtp_login: str, smtp
 
 
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
-    """Core dispatcher that sends emails using Brevo SMTP."""
+    """Core dispatcher supporting both Brevo SMTP relay and Resend API."""
     _load_env_safely()
-    smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com").strip()
-    try:
-        smtp_port = int(os.getenv("BREVO_SMTP_PORT", "587"))
-    except (ValueError, TypeError):
-        smtp_port = 587
 
+    # 1. Check Brevo SMTP
     smtp_login = os.getenv("BREVO_SMTP_LOGIN", "").strip()
     smtp_key = os.getenv("BREVO_SMTP_KEY", "").strip()
-    from_email = os.getenv("BREVO_FROM_EMAIL", "").strip()
+    if smtp_key and smtp_login:
+        smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com").strip()
+        try:
+            smtp_port = int(os.getenv("BREVO_SMTP_PORT", "587"))
+        except (ValueError, TypeError):
+            smtp_port = 587
+        from_email = os.getenv("BREVO_FROM_EMAIL", "").strip()
+        return _send_via_brevo_smtp(smtp_server, smtp_port, smtp_login, smtp_key, from_email, to_email, subject, html_content)
 
-    if not smtp_key or not smtp_login:
-        logger.warning(f"[Email Service - Brevo] Brevo SMTP credentials not configured. Email '{subject}' to {to_email} skipped.")
-        return False, "Brevo SMTP credentials not configured."
+    # 2. Check Resend API
+    resend_key = os.getenv("RESEND_API_KEY", "").strip()
+    if resend_key:
+        resend_from = os.getenv("RESEND_FROM_EMAIL", "").strip()
+        return _send_via_resend(resend_key, resend_from, to_email, subject, html_content)
 
-    return _send_via_brevo_smtp(smtp_server, smtp_port, smtp_login, smtp_key, from_email, to_email, subject, html_content)
+    logger.warning(f"[Email Service] Neither Brevo SMTP nor Resend API configured. Email '{subject}' to {to_email} skipped.")
+    return False, "Email provider not configured (Brevo SMTP or Resend)."
 
 
 def send_email_async(to_email: str, to_name: str, subject: str, html_content: str):
