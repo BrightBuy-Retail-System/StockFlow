@@ -85,7 +85,8 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
       String(o.order_id).includes(q) ||
       String(o.user_id).includes(q) ||
       (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
-      (o.shipping_address && o.shipping_address.toLowerCase().includes(q));
+      (o.tracking_number && o.tracking_number.toLowerCase().includes(q)) ||
+      (o.destination_city && o.destination_city.toLowerCase().includes(q));
     return matchesStatus && matchesSearch;
   });
 

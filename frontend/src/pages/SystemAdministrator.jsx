@@ -67,11 +67,28 @@ export default function SystemAdministrator() {
   const [staffForm, setStaffForm] = useState({
     username: '',
     email: '',
-    password: '',
+    password: 'password123',
     role_id: 2 // 2: Manager, 3: System Administrator
   });
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffError, setStaffError] = useState('');
+
+  // Staff Password Reset State
+  const [selectedStaffForReset, setSelectedStaffForReset] = useState(null);
+  const [isResetStaffModalOpen, setIsResetStaffModalOpen] = useState(false);
+  const [resetStaffPassword, setResetStaffPassword] = useState('');
+  const [resetStaffSubmitting, setResetStaffSubmitting] = useState(false);
+  const [resetStaffError, setResetStaffError] = useState('');
+  const [resetStaffSuccess, setResetStaffSuccess] = useState('');
+
+  // Staff Deletion State
+  const [selectedStaffToDelete, setSelectedStaffToDelete] = useState(null);
+  const [isDeleteStaffModalOpen, setIsDeleteStaffModalOpen] = useState(false);
+  const [deleteStaffSubmitting, setDeleteStaffSubmitting] = useState(false);
+  const [deleteStaffError, setDeleteStaffError] = useState('');
+
+  // Onboarding Success Modal State
+  const [onboardSuccessData, setOnboardSuccessData] = useState(null);
 
   // Modals for Products and Variants
   const [modalType, setModalType] = useState('none'); // 'none' | 'createProduct' | 'editProduct' | 'createVariant' | 'editVariant'
@@ -394,22 +411,71 @@ export default function SystemAdministrator() {
     setStaffSubmitting(true);
     setStaffError('');
     try {
-      await api.post('/auth_cart/staff/register', staffForm);
+      const res = await api.post('/auth_cart/staff/register', staffForm);
       showNotice(`Successfully onboarded ${staffForm.username} as an internal corporate staff member.`);
       setIsStaffModalOpen(false);
+      setOnboardSuccessData(res.data);
       setStaffForm({
         username: '',
         email: '',
-        password: '',
+        password: 'password123',
         role_id: 2
       });
       // Refresh staff list
-      const res = await api.get('/auth_cart/staff');
-      setStaffList(res.data?.staff || []);
+      const resStaff = await api.get('/auth_cart/staff');
+      setStaffList(resStaff.data?.staff || []);
     } catch (err) {
       setStaffError(err.response?.data?.message || 'Failed to register staff account.');
     } finally {
       setStaffSubmitting(false);
+    }
+  };
+
+  const handleResetStaffPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedStaffForReset) return;
+    if (resetStaffPassword.length < 6) {
+      setResetStaffError('Temporary password must be at least 6 characters.');
+      return;
+    }
+    setResetStaffSubmitting(true);
+    setResetStaffError('');
+    setResetStaffSuccess('');
+    try {
+      const res = await api.post(`/auth_cart/staff/${selectedStaffForReset.user_id}/reset-password`, {
+        new_password: resetStaffPassword
+      });
+      setResetStaffSuccess(res.data?.message || 'Password reset successfully!');
+      showNotice(`Successfully updated credentials for ${selectedStaffForReset.full_name}. Notification dispatched.`);
+      setTimeout(() => {
+        setIsResetStaffModalOpen(false);
+        setSelectedStaffForReset(null);
+        setResetStaffPassword('');
+        setResetStaffSuccess('');
+      }, 2000);
+    } catch (err) {
+      setResetStaffError(err.response?.data?.message || 'Failed to reset staff password.');
+    } finally {
+      setResetStaffSubmitting(false);
+    }
+  };
+
+  const handleConfirmDeleteStaff = async () => {
+    if (!selectedStaffToDelete) return;
+    setDeleteStaffSubmitting(true);
+    setDeleteStaffError('');
+    try {
+      await api.delete(`/auth_cart/staff/${selectedStaffToDelete.user_id}`);
+      showNotice(`Successfully removed staff account for ${selectedStaffToDelete.full_name}.`);
+      setIsDeleteStaffModalOpen(false);
+      setSelectedStaffToDelete(null);
+      // Refresh staff list
+      const res = await api.get('/auth_cart/staff');
+      setStaffList(res.data?.staff || []);
+    } catch (err) {
+      setDeleteStaffError(err.response?.data?.message || err.response?.data?.error || 'Failed to remove staff account.');
+    } finally {
+      setDeleteStaffSubmitting(false);
     }
   };
 
@@ -1624,12 +1690,13 @@ export default function SystemAdministrator() {
                     <th>Corporate Email</th>
                     <th>Role</th>
                     <th>Privilege Scope</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {staffList.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
                         No staff accounts found.
                       </td>
                     </tr>
@@ -1676,6 +1743,61 @@ export default function SystemAdministrator() {
                             {isAdmin
                               ? 'Full administration, catalog edits, staff onboarding, report exports'
                               : 'Order fulfillment dispatch, warehouse inventory monitoring'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffForReset(st);
+                                  setResetStaffPassword('');
+                                  setResetStaffError('');
+                                  setResetStaffSuccess('');
+                                  setIsResetStaffModalOpen(true);
+                                }}
+                                className="st-btn-secondary"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'pointer',
+                                  borderRadius: '2px',
+                                }}
+                                title={`Reset password for ${st.full_name}`}
+                              >
+                                <span>🔑</span>
+                                <span>Reset Password</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffToDelete(st);
+                                  setDeleteStaffError('');
+                                  setIsDeleteStaffModalOpen(true);
+                                }}
+                                disabled={st.user_id === user?.user_id}
+                                className="st-btn-secondary"
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: st.user_id === user?.user_id ? 'not-allowed' : 'pointer',
+                                  borderRadius: '2px',
+                                  color: st.user_id === user?.user_id ? '#94a3b8' : '#dc2626',
+                                  borderColor: st.user_id === user?.user_id ? '#e2e8f0' : '#fca5a5',
+                                  backgroundColor: st.user_id === user?.user_id ? '#f8fafc' : '#fef2f2'
+                                }}
+                                title={st.user_id === user?.user_id ? 'Cannot remove your own active administrator account' : `Remove ${st.full_name}`}
+                              >
+                                <span>🗑️</span>
+                                <span>Remove</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1745,16 +1867,19 @@ export default function SystemAdministrator() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Temporary Password *
+                  Default Temporary Password
                 </label>
                 <input
-                  type="password"
-                  required
-                  placeholder="At least 6 characters"
-                  value={staffForm.password}
-                  onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                  type="text"
+                  disabled
+                  readOnly
+                  value="password123"
                   className="st-modal-form-input"
+                  style={{ background: '#f1f5f9', color: '#475569', cursor: 'not-allowed', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px' }}
                 />
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                  Fixed default temporary password: <code>password123</code>. The staff member will receive this password in their welcome email and can change it once logged in.
+                </p>
               </div>
 
               <div>
@@ -1791,6 +1916,280 @@ export default function SystemAdministrator() {
           </div>
         </div>
       )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: STAFF ONBOARDING SUCCESS & CREDENTIALS                        */}
+      {/* ==================================================================== */}
+      {onboardSuccessData && (
+        <div className="st-admin-modal-backdrop" onClick={(e) => {
+          if (e.target === e.currentTarget) setOnboardSuccessData(null);
+        }}>
+          <div className="st-admin-modal-box" style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.4rem' }}>🎉</span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                  Staff Account Created
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOnboardSuccessData(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px', fontSize: '0.875rem', color: '#475569', lineHeight: 1.5 }}>
+              Account for <strong>{onboardSuccessData.user?.username}</strong> has been provisioned into the database.
+            </p>
+
+            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '6px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Login Username / Name
+                </span>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.95rem', marginTop: '2px' }}>
+                  {onboardSuccessData.user?.username}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Corporate Email
+                </span>
+                <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0f172a', fontSize: '0.9rem', marginTop: '2px' }}>
+                  {onboardSuccessData.user?.email}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Assigned Role
+                </span>
+                <div style={{ fontWeight: 600, color: '#2563eb', fontSize: '0.9rem', marginTop: '2px' }}>
+                  {onboardSuccessData.credentials?.role_title || 'Store Executive & Manager'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  Default Login Password
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                  <code style={{ background: '#e2e8f0', padding: '4px 10px', borderRadius: '4px', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
+                    {onboardSuccessData.credentials?.temp_password || 'password123'}
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            {/* Email Dispatch Status Box */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              border: '1px solid',
+              background: onboardSuccessData.email_dispatched ? '#f0fdf4' : '#fffbeb',
+              borderColor: onboardSuccessData.email_dispatched ? '#bbf7d0' : '#fde68a',
+              color: onboardSuccessData.email_dispatched ? '#166534' : '#92400e',
+              fontSize: '0.825rem',
+              lineHeight: 1.45
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: '3px' }}>
+                {onboardSuccessData.email_dispatched ? '✅ Welcome Email Delivered' : '⚠️ Email Notification Status'}
+              </div>
+              <div>
+                {onboardSuccessData.email_message || (onboardSuccessData.email_dispatched ? 'Credentials sent to corporate email.' : 'Email could not be dispatched.')}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setOnboardSuccessData(null)}
+                className="st-btn-primary"
+                style={{ padding: '8px 20px' }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: RESET STAFF PASSWORD                                          */}
+      {/* ==================================================================== */}
+      {isResetStaffModalOpen && selectedStaffForReset && (
+        <div className="st-admin-modal-backdrop" onClick={(e) => {
+          if (e.target === e.currentTarget && !resetStaffSubmitting) setIsResetStaffModalOpen(false);
+        }}>
+          <div className="st-admin-modal-box" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                  Reset Staff Password
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Setting new credentials for <strong>{selectedStaffForReset.full_name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetStaffModalOpen(false)}
+                disabled={resetStaffSubmitting}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {resetStaffError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {resetStaffError}
+              </div>
+            )}
+
+            {resetStaffSuccess && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {resetStaffSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleResetStaffPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Corporate Email
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={selectedStaffForReset.email}
+                  className="st-modal-form-input"
+                  style={{ background: '#f1f5f9', cursor: 'not-allowed' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  New Temporary Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter at least 6 characters"
+                  value={resetStaffPassword}
+                  onChange={(e) => setResetStaffPassword(e.target.value)}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsResetStaffModalOpen(false)}
+                  disabled={resetStaffSubmitting}
+                  className="st-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetStaffSubmitting}
+                  className="st-btn-primary"
+                >
+                  {resetStaffSubmitting ? 'Updating...' : 'Update & Notify Staff'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: REMOVE STAFF MEMBER                                           */}
+      {/* ==================================================================== */}
+      {isDeleteStaffModalOpen && selectedStaffToDelete && (
+        <div
+          className="st-admin-modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deleteStaffSubmitting) {
+              setIsDeleteStaffModalOpen(false);
+            }
+          }}
+        >
+          <div className="st-admin-modal-box" style={{ maxWidth: '450px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#dc2626' }}>
+                  Remove Staff Member
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Decommission corporate access for <strong>{selectedStaffToDelete.full_name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDeleteStaffModalOpen(false)}
+                disabled={deleteStaffSubmitting}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {deleteStaffError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {deleteStaffError}
+              </div>
+            )}
+
+            <div style={{ padding: '14px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '4px', marginBottom: '16px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: '0.85rem', color: '#991b1b', fontWeight: 600 }}>
+                Are you sure you want to remove this staff member?
+              </p>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#7f1d1d', lineHeight: 1.45 }}>
+                This will immediately revoke system permissions for <strong>{selectedStaffToDelete.full_name}</strong> ({selectedStaffToDelete.email}) and permanently remove their staff account. This action cannot be undone.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setIsDeleteStaffModalOpen(false)}
+                disabled={deleteStaffSubmitting}
+                className="st-btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteStaff}
+                disabled={deleteStaffSubmitting}
+                style={{
+                  padding: '8px 16px',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '2px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: deleteStaffSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: deleteStaffSubmitting ? 0.7 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {deleteStaffSubmitting ? 'Removing...' : 'Confirm Removal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ==================================================================== */}
       {/* MODAL: CREATE / EDIT PRODUCT                                         */}

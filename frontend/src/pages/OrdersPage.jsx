@@ -13,10 +13,17 @@ export default function OrdersPage({ defaultTab = 'history' }) {
   // User Identity & Role Context
   const storedUser = localStorage.getItem('user');
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-  const activeUserId = parsedUser?.user_id || parsedUser?.id || 4;
+  const activeUserId = parsedUser?.user_id || parsedUser?.id || null;
   const activeRoleId = parsedUser?.role_id || 1; // 1 = Customer, 2 = Manager, 3 = Admin
   const isStaff = activeRoleId === 2 || activeRoleId === 3 || activeRoleId === 4;
-  const userName = parsedUser?.full_name || parsedUser?.username || `Customer #${activeUserId}`;
+  const userName = parsedUser?.full_name || parsedUser?.username || (activeUserId ? `Customer #${activeUserId}` : 'Guest');
+
+  // Redirect unauthenticated visitors to login
+  useEffect(() => {
+    if (!storedUser) {
+      navigate('/login?redirect=/orders', { replace: true });
+    }
+  }, [storedUser, navigate]);
 
   // Read URL query parameters (?tab=checkout | history | lookup | fulfillment, ?id=...)
   const queryParams = new URLSearchParams(location.search);
@@ -453,6 +460,16 @@ export default function OrdersPage({ defaultTab = 'history' }) {
                       setCartItemCount(count);
                     })
                     .catch(() => setCartItemCount(0));
+
+                  if (activeUserId) {
+                    try {
+                      localStorage.removeItem(`cart_${activeUserId}`);
+                    } catch (_) {}
+                  }
+                  try {
+                    localStorage.removeItem('cart');
+                  } catch (_) {}
+                  window.dispatchEvent(new Event('cartUpdated'));
 
                   if (order?.order_id) {
                     setInspectedOrderId(order.order_id);

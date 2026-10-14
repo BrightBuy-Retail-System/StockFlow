@@ -31,8 +31,22 @@ class TestOrdersAPI(unittest.TestCase):
                 identity="2",
                 additional_claims={"username": "Test Manager", "role_id": 2, "email": "manager@brightbuy.test"}
             )
+            # Mint admin token (user_id: 3, role_id: 4)
+            self.admin_token = create_access_token(
+                identity="3",
+                additional_claims={"username": "Test Admin", "role_id": 4, "email": "admin@brightbuy.test"}
+            )
         self.customer_headers = {'Authorization': f'Bearer {self.customer_token}'}
         self.manager_headers = {'Authorization': f'Bearer {self.manager_token}'}
+        self.admin_headers = {'Authorization': f'Bearer {self.admin_token}'}
+
+        # Ensure test variant has ample inventory stock
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE inventory SET stock_quantity = 50 WHERE variant_id = 1")
+        conn.commit()
+        cur.close()
+        conn.close()
 
     def test_01_ping_health_check(self):
         res = self.client.get('/api/orders/ping')
@@ -41,12 +55,29 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertEqual(data.get('status'), 'healthy')
 
     def test_02_get_order_by_id_success(self):
-        res = self.client.get('/api/orders/1', headers=self.customer_headers)
+        # Dynamically locate or create an order belonging to customer user_id 4
+        conn = get_db_connection()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT order_id FROM orders WHERE user_id = 4 ORDER BY order_id ASC LIMIT 1")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if row:
+            target_order_id = row['order_id']
+        else:
+            checkout_res = self.client.post('/api/orders/checkout', json={
+                "user_id": 4, "shipping_city_id": 1, "items": [{"variant_id": 1, "quantity": 1}]
+            }, headers=self.customer_headers)
+            self.assertEqual(checkout_res.status_code, 201)
+            target_order_id = checkout_res.get_json()['data']['order_id']
+
+        res = self.client.get(f'/api/orders/{target_order_id}', headers=self.customer_headers)
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
         self.assertEqual(data.get('status'), 'success')
         order = data.get('data', {})
-        self.assertEqual(order.get('order_id'), 1)
+        self.assertEqual(order.get('order_id'), target_order_id)
         self.assertIn('items', order)
 
     def test_03_get_order_by_id_not_found(self):
@@ -119,7 +150,8 @@ class TestOrdersAPI(unittest.TestCase):
         data = res.get_json()
         self.assertEqual(data.get('status'), 'verified')
         calc = data.get('calculation', {})
-        self.assertEqual(calc['total_amount'], round(calc['subtotal'] + calc['shipping_fee'], 2))
+        expected_total = round(calc['subtotal'] + calc['shipping_fee'] + calc.get('service_fee', 0.0), 2)
+        self.assertEqual(calc['total_amount'], expected_total)
 
     def test_12_checkout_insufficient_stock_conflict(self):
         payload = {
@@ -295,6 +327,60 @@ class TestOrdersAPI(unittest.TestCase):
         self.assertIn('city_name', first_city)
         self.assertIn('shipping_fee', first_city)
         self.assertIn('base_lead_time_days', first_city)
+
+    def test_23_checkout_duplicate_variants_merged(self):
+        """Verifies duplicate variant IDs in the checkout request are merged by summing quantities."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "items": [
+                {"variant_id": 1, "quantity": 1},
+                {"variant_id": 1, "quantity": 2}
+            ]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
+        self.assertEqual(res.status_code, 201)
+        data = res.get_json()['data']
+        order_id = data['order_id']
+        verify_res = self.client.get(f'/api/orders/{order_id}', headers=self.customer_headers)
+        self.assertEqual(verify_res.status_code, 200)
+        items = verify_res.get_json()['data']['items']
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['quantity'], 3)
+
+    def test_24_checkout_negative_service_fee_rejected(self):
+        """Verifies negative or non-numeric service fees are rejected with 400."""
+        payload = {
+            "user_id": 4,
+            "shipping_city_id": 1,
+            "service_fee": "-150.00",
+            "items": [{"variant_id": 1, "quantity": 1}]
+        }
+        res = self.client.post('/api/orders/checkout', json=payload, headers=self.customer_headers)
+        self.assertEqual(res.status_code, 400)
+
+    def test_25_backward_status_transition_rejected(self):
+        """Verifies status cannot transition backwards (e.g., DELIVERED -> PENDING)."""
+        # Place an order
+        checkout_res = self.client.post('/api/orders/checkout', json={
+            "user_id": 4, "shipping_city_id": 1, "items": [{"variant_id": 1, "quantity": 1}]
+        }, headers=self.customer_headers)
+        self.assertEqual(checkout_res.status_code, 201)
+        order_id = checkout_res.get_json()['data']['order_id']
+
+        # Transition to DELIVERED
+        deliver_res = self.client.patch(f'/api/orders/{order_id}/status', json={"status": "DELIVERED"}, headers=self.manager_headers)
+        self.assertEqual(deliver_res.status_code, 200)
+
+        # Attempt to transition backwards to PENDING -> 400
+        backward_res = self.client.patch(f'/api/orders/{order_id}/status', json={"status": "PENDING"}, headers=self.manager_headers)
+        self.assertEqual(backward_res.status_code, 400)
+
+    def test_26_role_4_admin_access(self):
+        """Verifies Admin (role 4) can view all orders feed."""
+        res = self.client.get('/api/orders/', headers=self.admin_headers)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.get_json().get('status'), 'success')
 
 
 if __name__ == '__main__':

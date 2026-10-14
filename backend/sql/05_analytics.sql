@@ -74,6 +74,7 @@ SELECT
     ) AS moving_avg_quarterly_revenue
 FROM orders o
 LEFT OUTER JOIN order_items oi ON oi.order_id = o.order_id
+WHERE o.status != 'CANCELLED'
 GROUP BY YEAR(o.placed_at), QUARTER(o.placed_at)
 ORDER BY sales_year, sales_quarter;
 
@@ -98,7 +99,9 @@ FROM (
     FROM products p
     INNER JOIN product_variants pv ON pv.product_id = p.product_id
     INNER JOIN order_items oi ON oi.variant_id = pv.variant_id
+    INNER JOIN orders o ON o.order_id = oi.order_id
     LEFT OUTER JOIN categories c ON c.category_id = p.category_id
+    WHERE o.status != 'CANCELLED'
     GROUP BY p.product_id, p.title, c.name
 ) ranked_products
 ORDER BY total_revenue DESC;
@@ -115,7 +118,7 @@ FROM categories c
 LEFT OUTER JOIN products p ON p.category_id = c.category_id
 LEFT OUTER JOIN product_variants pv ON pv.product_id = p.product_id
 LEFT OUTER JOIN order_items oi ON oi.variant_id = pv.variant_id
-LEFT OUTER JOIN orders o ON o.order_id = oi.order_id
+LEFT OUTER JOIN orders o ON o.order_id = oi.order_id AND o.status != 'CANCELLED'
 GROUP BY c.name WITH ROLLUP;
 
 -- VIEW 4: Customer Order Summary & Lifetime Value
@@ -125,7 +128,7 @@ SELECT
     u.user_id AS customer_id,
     u.full_name AS customer_name,
     u.email,
-    COALESCE(tc.city_name, 'Texas Regional') AS primary_city,
+    COALESCE(MAX(tc.city_name), 'Texas Regional') AS primary_city,
     COUNT(DISTINCT o.order_id) AS total_orders,
     COALESCE(SUM(o.total_amount), 0.00) AS lifetime_spending,
     COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN 1 ELSE 0 END), 0) AS paid_orders,
@@ -133,10 +136,10 @@ SELECT
     COALESCE(SUM(CASE WHEN o.payment_status = 'Paid' THEN o.total_amount ELSE 0.00 END), 0.00) AS paid_order_value,
     COALESCE(SUM(CASE WHEN o.payment_status = 'Pending' THEN o.total_amount ELSE 0.00 END), 0.00) AS pending_order_value
 FROM users u
-LEFT OUTER JOIN orders o ON o.user_id = u.user_id
+LEFT OUTER JOIN orders o ON o.user_id = u.user_id AND o.status != 'CANCELLED'
 LEFT OUTER JOIN shipments s ON s.shipment_id = o.shipment_id
 LEFT OUTER JOIN texas_cities tc ON tc.city_id = s.destination_city_id
-GROUP BY u.user_id, u.full_name, u.email, tc.city_name
+GROUP BY u.user_id, u.full_name, u.email
 ORDER BY lifetime_spending DESC;
 
 -- ----------------------------------------------------------------------------
@@ -194,12 +197,12 @@ AFTER INSERT ON PAYMENT_TRANSACTION
 FOR EACH ROW
 BEGIN
     -- Log transaction event into audit_logs if table exists
-    INSERT INTO audit_logs (action, table_name, record_id, details, created_at)
+    INSERT INTO audit_logs (user_id, event_action, event_details, ip_address, created_at)
     VALUES (
+        NULL,
         'PAYMENT_RECORDED',
-        'PAYMENT_TRANSACTION',
-        NEW.payment_id,
         CONCAT('Ref: ', NEW.transaction_reference, ', Amount: $', NEW.amount, ', Order: #', NEW.order_id),
+        '127.0.0.1',
         NOW()
     );
 END$$
