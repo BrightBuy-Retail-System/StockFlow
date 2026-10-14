@@ -73,6 +73,14 @@ export default function SystemAdministrator() {
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffError, setStaffError] = useState('');
 
+  // Staff Password Reset State
+  const [selectedStaffForReset, setSelectedStaffForReset] = useState(null);
+  const [isResetStaffModalOpen, setIsResetStaffModalOpen] = useState(false);
+  const [resetStaffPassword, setResetStaffPassword] = useState('');
+  const [resetStaffSubmitting, setResetStaffSubmitting] = useState(false);
+  const [resetStaffError, setResetStaffError] = useState('');
+  const [resetStaffSuccess, setResetStaffSuccess] = useState('');
+
   // Modals for Products and Variants
   const [modalType, setModalType] = useState('none'); // 'none' | 'createProduct' | 'editProduct' | 'createVariant' | 'editVariant'
   const [activeItem, setActiveItem] = useState(null);
@@ -410,6 +418,35 @@ export default function SystemAdministrator() {
       setStaffError(err.response?.data?.message || 'Failed to register staff account.');
     } finally {
       setStaffSubmitting(false);
+    }
+  };
+
+  const handleResetStaffPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedStaffForReset) return;
+    if (resetStaffPassword.length < 6) {
+      setResetStaffError('Temporary password must be at least 6 characters.');
+      return;
+    }
+    setResetStaffSubmitting(true);
+    setResetStaffError('');
+    setResetStaffSuccess('');
+    try {
+      const res = await api.post(`/auth_cart/staff/${selectedStaffForReset.user_id}/reset-password`, {
+        new_password: resetStaffPassword
+      });
+      setResetStaffSuccess(res.data?.message || 'Password reset successfully!');
+      showNotice(`Successfully updated credentials for ${selectedStaffForReset.full_name}. Notification dispatched.`);
+      setTimeout(() => {
+        setIsResetStaffModalOpen(false);
+        setSelectedStaffForReset(null);
+        setResetStaffPassword('');
+        setResetStaffSuccess('');
+      }, 2000);
+    } catch (err) {
+      setResetStaffError(err.response?.data?.message || 'Failed to reset staff password.');
+    } finally {
+      setResetStaffSubmitting(false);
     }
   };
 
@@ -1624,12 +1661,13 @@ export default function SystemAdministrator() {
                     <th>Corporate Email</th>
                     <th>Role</th>
                     <th>Privilege Scope</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {staffList.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#94a3b8' }}>
                         No staff accounts found.
                       </td>
                     </tr>
@@ -1676,6 +1714,32 @@ export default function SystemAdministrator() {
                             {isAdmin
                               ? 'Full administration, catalog edits, staff onboarding, report exports'
                               : 'Order fulfillment dispatch, warehouse inventory monitoring'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStaffForReset(st);
+                                setResetStaffPassword('');
+                                setResetStaffError('');
+                                setResetStaffSuccess('');
+                                setIsResetStaffModalOpen(true);
+                              }}
+                              className="st-btn-secondary"
+                              style={{
+                                padding: '4px 10px',
+                                fontSize: '0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                                borderRadius: '2px',
+                              }}
+                              title={`Reset password for ${st.full_name}`}
+                            >
+                              <span>🔑</span>
+                              <span>Reset Password</span>
+                            </button>
                           </td>
                         </tr>
                       );
@@ -1791,6 +1855,96 @@ export default function SystemAdministrator() {
           </div>
         </div>
       )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: RESET STAFF PASSWORD                                          */}
+      {/* ==================================================================== */}
+      {isResetStaffModalOpen && selectedStaffForReset && (
+        <div className="st-admin-modal-backdrop" onClick={(e) => {
+          if (e.target === e.currentTarget && !resetStaffSubmitting) setIsResetStaffModalOpen(false);
+        }}>
+          <div className="st-admin-modal-box" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                  Reset Staff Password
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Setting new credentials for <strong>{selectedStaffForReset.full_name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetStaffModalOpen(false)}
+                disabled={resetStaffSubmitting}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {resetStaffError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {resetStaffError}
+              </div>
+            )}
+
+            {resetStaffSuccess && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {resetStaffSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleResetStaffPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Corporate Email
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={selectedStaffForReset.email}
+                  className="st-modal-form-input"
+                  style={{ background: '#f1f5f9', cursor: 'not-allowed' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  New Temporary Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter at least 6 characters"
+                  value={resetStaffPassword}
+                  onChange={(e) => setResetStaffPassword(e.target.value)}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsResetStaffModalOpen(false)}
+                  disabled={resetStaffSubmitting}
+                  className="st-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetStaffSubmitting}
+                  className="st-btn-primary"
+                >
+                  {resetStaffSubmitting ? 'Updating...' : 'Update & Notify Staff'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {/* ==================================================================== */}
       {/* MODAL: CREATE / EDIT PRODUCT                                         */}

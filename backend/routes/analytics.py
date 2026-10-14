@@ -1,6 +1,8 @@
-from decimal import Decimal
+import os
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
-from flask import Blueprint, jsonify
+from uuid import uuid4
+from flask import Blueprint, jsonify, request
 from db import get_db_connection
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -20,6 +22,7 @@ def serialize_item(item):
             clean[k] = v
     return clean
 
+#use this function to not repeating codes and build finally to handle exceptions
 def run_query(sql, params=None):
     """Helper to execute SQL queries and return serialized dictionary rows."""
     conn = get_db_connection()
@@ -32,9 +35,7 @@ def run_query(sql, params=None):
         cursor.close()
         conn.close()
 
-# -------------------------------------------------------------------------
-# EXECUTIVE KPI SUMMARY: STORE OVERALL PERFORMANCE EVALUATION
-# -------------------------------------------------------------------------
+# add overview to url and give access to get data as method = get
 @analytics_bp.route('/overview', methods=['GET'])
 def get_executive_overview():
     """
@@ -86,6 +87,7 @@ def get_executive_overview():
         """)
         payment_metrics = serialize_item(cursor.fetchone())
 
+        #call to jsonify to convert backend data to frontend
         return jsonify({
             "status": "success",
             "executive_summary": {
@@ -128,6 +130,8 @@ def get_fulfillment_pipeline():
     Returns full order fulfillment pipeline with shipment dispatch & Texas hub logistics.
     Categorizes orders into stages: PENDING -> CONFIRMED -> IN_TRANSIT / SHIPPED -> DELIVERED.
     """
+
+    #we are using pipeline here to send data to frontend to show from backend. 5 different tables here
     sql = """
         SELECT 
             o.order_id,
@@ -181,10 +185,9 @@ def get_fulfillment_pipeline():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
-# -------------------------------------------------------------------------
-# ANALYTICAL REPORTS: TOP SELLING PRODUCTS & CATEGORY PERFORMANCE
-# -------------------------------------------------------------------------
-@analytics_bp.route('/reports/top-products', methods=['GET'])
+
+# TOP SELLING PRODUCTS & CATEGORY PERFORMANCE *******************************************************
+@analytics_bp.route('/reports/top-products', methods=['GET'])            #******Top 10 Products***********
 def get_top_selling_products():
     """
     Ranks top performing products by revenue, units sold, and active warehouse stock.
@@ -229,7 +232,7 @@ def get_top_selling_products():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
-@analytics_bp.route('/reports/category-performance', methods=['GET'])
+@analytics_bp.route('/reports/category-performance', methods=['GET'])                     #******Top Category Products***********
 def get_category_performance():
     """
     Aggregate business intelligence by category: sales volume, products count, revenue.
@@ -258,11 +261,127 @@ def get_category_performance():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
+# ============================================================================
+# PHASE 1: ENDPOINT 1 - Payment Processing & Order Verification
+# References:
+#   Lecture Note 2 (DML: INSERT & UPDATE)
+#   Lecture Note 6 (ACID Transactions: COMMIT, ROLLBACK)
+#   Lecture Note 7 (Prepared Statements: parameterized queries)
+# ============================================================================
+@analytics_bp.route('/payments/process', methods=['POST'])
+def process_payment():
+    data = request.get_json(silent=True) or {}
+
+    order_id = data.get('order_id')
+    amount = data.get('amount')
+    payment_method = data.get('payment_method')
+
+    # Input validation
+    if order_id is None or amount is None or not payment_method:
+        return jsonify({
+            'status': 'error',
+            'error': 'Missing required fields: order_id, amount, and payment_method are mandatory.'
+        }), 400
+
+    try:
+        amount_decimal = Decimal(str(amount))
+    except (InvalidOperation, TypeError, ValueError):
+        return jsonify({
+            'status': 'error',
+            'error': 'Field amount must be a valid numeric decimal quantity.'
+        }), 400
+
+    if amount_decimal <= Decimal('0.00'):
+        return jsonify({
+            'status': 'error',
+            'error': 'Field amount must be strictly greater than zero.'
+        }), 400
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_db_connection()
+        conn.autocommit = False
+        cursor = conn.cursor(dictionary=True)
+
+        # 1. Verify target order exists
+        cursor.execute("SELECT order_id, total_amount, payment_status FROM orders WHERE order_id = %s FOR UPDATE", (order_id,))
+        order_row = cursor.fetchone()
+
+        if not order_row:
+            conn.rollback()
+            return jsonify({'status': 'error', 'error': f'Order #{order_id} does not exist.'}), 404
+
+        method_text = str(payment_method).strip().lower()
+        is_card = method_text in {'card', 'card payment', 'credit card', 'credit_card', 'debit card', 'visa', 'mastercard', 'amex'}
+        payment_status = 'Paid' if is_card else 'Pending'
+        transaction_reference = f"TXN-{uuid4().hex[:12].upper()}"
+
+        # 2. Insert payment transaction (Prepared Statement - Lecture Note 7)
+        insert_query = """
+            INSERT INTO PAYMENT_TRANSACTION (order_id, amount, transaction_reference, processed_at)
+            VALUES (%s, %s, %s, NOW())
+        """
+        cursor.execute(insert_query, (order_id, amount_decimal, transaction_reference))
+        payment_id = cursor.lastrowid
+
+        # 3. Synchronize parent order payment status
+        update_query = "UPDATE orders SET payment_status = %s WHERE order_id = %s"
+        cursor.execute(update_query, (payment_status, order_id))
+
+        # 4. Optional: Log to audit_logs if table exists
+        try:
+            audit_query = """
+                INSERT INTO audit_logs (action, table_name, record_id, details, created_at)
+                VALUES (%s, %s, %s, %s, NOW())
+            """
+            cursor.execute(audit_query, (
+                'PAYMENT_RECORDED',
+                'PAYMENT_TRANSACTION',
+                payment_id,
+                f"Txn Ref: {transaction_reference} | Amount: ${amount_decimal:.2f} | Status: {payment_status}"
+            ))
+        except Exception:
+            pass
+
+        conn.commit()
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Payment processed and verified successfully.',
+            'data': {
+                'payment_id': payment_id,
+                'order_id': order_id,
+                'amount': float(amount_decimal),
+                'payment_method': payment_method,
+                'payment_status': payment_status,
+                'transaction_reference': transaction_reference,
+                'processed_at': datetime.now().isoformat()
+            }
+        }), 200
+
+    except Exception as exc:
+        if conn:
+            conn.rollback()
+        return jsonify({
+            'status': 'error',
+            'error': 'Payment processing failed during transaction execution.',
+            'details': str(exc)
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @analytics_bp.route('/reports/top-selling', methods=['GET'])
 def get_top_selling_report():
     try:
         try:
-            data = run_query("SELECT * FROM v_top_selling_products")
+            data = run_query("SELECT * FROM v_top_selling_products WHERE revenue_rank <= 10 ORDER BY revenue_rank ASC")
         except Exception:
             data = run_query("""
                 SELECT
@@ -279,9 +398,10 @@ def get_top_selling_report():
                 GROUP BY p.product_id, p.title, c.name
                 ORDER BY total_revenue DESC
             """)
-        return jsonify({"status": "success", "data": data}), 200
+        return jsonify({"status": "success", "count": len(data), "data": data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @analytics_bp.route('/reports/category-orders', methods=['GET'])
 def get_category_orders_report():
@@ -302,15 +422,16 @@ def get_category_orders_report():
                 LEFT OUTER JOIN orders o ON o.order_id = oi.order_id
                 GROUP BY c.name WITH ROLLUP
             """)
-        return jsonify({"status": "success", "data": data}), 200
+        return jsonify({"status": "success", "count": len(data), "data": data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @analytics_bp.route('/reports/customer-summary', methods=['GET'])
 def get_customer_summary_report():
     try:
         try:
-            data = run_query("SELECT * FROM v_customer_order_summary")
+            data = run_query("SELECT * FROM v_customer_order_summary ORDER BY lifetime_spending DESC")
         except Exception:
             data = run_query("""
                 SELECT
@@ -331,17 +452,22 @@ def get_customer_summary_report():
                 GROUP BY u.user_id, u.full_name, u.email, tc.city_name
                 ORDER BY lifetime_spending DESC
             """)
-        return jsonify({"status": "success", "data": data}), 200
+        return jsonify({"status": "success", "count": len(data), "data": data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @analytics_bp.route('/reports/quarterly-sales', methods=['GET'])
 def get_quarterly_sales_report():
+    year_filter = request.args.get('year')
     try:
         try:
-            data = run_query("SELECT * FROM v_quarterly_sales_report")
+            if year_filter:
+                data = run_query("SELECT * FROM v_quarterly_sales_report WHERE sales_year = %s ORDER BY sales_year, sales_quarter", (int(year_filter),))
+            else:
+                data = run_query("SELECT * FROM v_quarterly_sales_report ORDER BY sales_year, sales_quarter")
         except Exception:
-            data = run_query("""
+            base_sql = """
                 SELECT
                     YEAR(o.placed_at) AS sales_year,
                     QUARTER(o.placed_at) AS sales_quarter,
@@ -355,10 +481,14 @@ def get_quarterly_sales_report():
                     ) AS moving_avg_quarterly_revenue
                 FROM orders o
                 LEFT OUTER JOIN order_items oi ON oi.order_id = o.order_id
-                GROUP BY YEAR(o.placed_at), QUARTER(o.placed_at)
-                ORDER BY sales_year, sales_quarter
-            """)
-        return jsonify({"status": "success", "data": data}), 200
+            """
+            params = None
+            if year_filter:
+                base_sql += " WHERE YEAR(o.placed_at) = %s"
+                params = (int(year_filter),)
+            base_sql += " GROUP BY YEAR(o.placed_at), QUARTER(o.placed_at) ORDER BY sales_year, sales_quarter"
+            data = run_query(base_sql, params)
+        return jsonify({"status": "success", "count": len(data), "data": data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -378,11 +508,8 @@ def serialize_row(row):
             cleaned[k] = v
     return cleaned
 
-# ============================================================================
+# ============================================================================*********************admin & manager view***********
 # ROLE-BASED EXTENSION: Transactions Ledger (Manager & Admin View)
-# References:
-#   Lecture Note 1 (Tables: PAYMENT_TRANSACTION)
-#   Lecture Note 3 (Inner / Outer Joins with orders & users)
 # ============================================================================
 @analytics_bp.route('/transactions', methods=['GET'])
 def get_payment_transactions():
@@ -431,10 +558,7 @@ def get_payment_transactions():
             conn.close()
 
 # ============================================================================
-# ROLE-BASED EXTENSION: Customer Orders & Pending Settlements (Customer View)
-# References:
-#   Lecture Note 2 (DML: SELECT with WHERE user_id)
-#   Lecture Note 7 (Prepared Statements: parameterized user_id)
+# ROLE-BASED EXTENSION: Customer Orders & Pending Settlements (Customer View) ***************customer view*********************
 # ============================================================================
 @analytics_bp.route('/customer-orders/<int:user_id>', methods=['GET'])
 def get_customer_orders_summary(user_id):
@@ -508,9 +632,6 @@ def get_customer_orders_summary(user_id):
 
 # ============================================================================
 # ROLE-BASED EXTENSION: DCL Roles & Audit Log Console (Admin View)
-# References:
-#   Lecture Note 5 (Database Triggers & audit_logs)
-#   Lecture Note 8 (Data Control Language: CREATE ROLE, GRANT Privileges)
 # ============================================================================
 @analytics_bp.route('/dcl-matrix', methods=['GET'])
 def get_dcl_matrix():

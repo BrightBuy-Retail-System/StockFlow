@@ -282,10 +282,6 @@ export default function LogisticsPage() {
       {/* Page Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <div className="tag-pill" style={{ marginBottom: '10px' }}>
-            <LogisticsIcon className="btn-icon" />
-            <span>MEMBER 4: TEXAS LOGISTICS &amp; WAREHOUSE HUBS</span>
-          </div>
           <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--text-main)', marginBottom: '6px' }}>
             Logistics &amp; Fulfillment Network
           </h1>

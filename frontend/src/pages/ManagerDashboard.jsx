@@ -253,18 +253,6 @@ export default function ManagerDashboard() {
             <RefreshCwIcon style={{ width: '0.875rem', height: '0.875rem', animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             <span>{refreshing ? 'Syncing...' : 'Refresh'}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setStaffFormError('');
-              setStaffFormSuccess('');
-              setIsRegisterModalOpen(true);
-            }}
-            className="st-btn-primary"
-          >
-            + Onboard Staff Member
-          </button>
         </div>
       </div>
 
@@ -754,21 +742,9 @@ export default function ManagerDashboard() {
             <div>
               <h3 className="st-admin-card-title">Corporate Staff Accounts</h3>
               <p className="st-admin-card-subtitle">
-                Manage internal credentials, store managers, and administrators with role-based access.
+                View internal directory of store managers and system administrators.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStaffFormError('');
-                setStaffFormSuccess('');
-                setIsRegisterModalOpen(true);
-              }}
-              className="st-btn-primary"
-            >
-              + Onboard Staff Member
-            </button>
           </div>
 
           {/* Search & Filter Bar */}

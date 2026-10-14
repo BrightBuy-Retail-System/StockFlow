@@ -6,7 +6,20 @@ import urllib.request
 import urllib.error
 from dotenv import load_dotenv
 
-load_dotenv()
+def _load_env_safely():
+    """Ensures .env is loaded whether running from project root or backend dir."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, ".env"),
+        os.path.join(base_dir, "..", ".env"),
+        os.path.join(os.getcwd(), "backend", ".env"),
+        os.path.join(os.getcwd(), ".env"),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            load_dotenv(p, override=True)
+
+_load_env_safely()
 
 logger = logging.getLogger("email_service")
 logger.setLevel(logging.INFO)
@@ -22,7 +35,7 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
         "User-Agent": "BrightBuy-Ecommerce/1.0",
     }
 
-    if not from_email or "StockFlow" in from_email:
+    if not from_email:
         from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
 
     payload = {
@@ -43,6 +56,22 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
     except urllib.error.HTTPError as exc:
         err_msg = exc.read().decode("utf-8")
         logger.error(f"[Email Service - Resend] HTTP {exc.code} for {to_email}: {err_msg}")
+        
+        # Resend Free Sandbox Fallback: If free tier restricts sending only to owner email, re-route so user receives it
+        if exc.code == 403 and "only send testing emails to your own email address" in err_msg:
+            import re
+            m = re.search(r'\(([^)]+@[^)]+)\)', err_msg)
+            owner_target = m.group(1) if m else "prageethchamuditha@gmail.com"
+            if owner_target and owner_target.lower() != to_email.lower():
+                logger.info(f"[Email Service - Resend Sandbox] Re-routing testing email to owner ({owner_target}) for intended: {to_email}")
+                fallback_banner = f"""
+                <div style="background-color: #eff6ff; border: 1.5px solid #93c5fd; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-family: sans-serif;">
+                    <p style="margin: 0; font-size: 13px; color: #1e40af;">
+                        <strong>ℹ️ Resend Sandbox Notice:</strong> Intended recipient was <code>{to_email}</code>. Because the Resend API key is in free development mode, this email was delivered to your verified owner account (<code>{owner_target}</code>).
+                    </p>
+                </div>
+                """
+                return _send_via_resend(api_key, from_email, owner_target, f"[Intended: {to_email}] {subject}", fallback_banner + html_content)
         return False
     except Exception as exc:
         logger.error(f"[Email Service - Resend] Network error for {to_email}: {exc}")
@@ -51,12 +80,12 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
 
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
     """Core dispatcher that sends emails using Resend."""
-    load_dotenv(override=True)
+    _load_env_safely()
     resend_key = os.getenv("RESEND_API_KEY", "").strip()
     from_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
 
-    # Always ensure BrightBuy Ecommerce is used as the sender name
-    if not from_email or "StockFlow" in from_email:
+    # Default to BrightBuy Ecommerce sender
+    if not from_email:
         from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
 
     if not resend_key:
@@ -382,3 +411,57 @@ def send_order_status_update_email(
         </div>
     """
     return send_email_async(to_email, customer_name, subject, _base_email_template(f"Order #{order_id} Update", body))
+
+
+# 8. Staff / Manager Onboarding Welcome
+def send_staff_welcome_email(to_email: str, username: str, role_name: str, temp_password: str):
+    subject = f"Welcome to BrightBuy Ecommerce - Your {role_name} Credentials"
+    body = f"""
+        <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 700;">Welcome to BrightBuy Ecommerce</h2>
+        <p style="margin: 0 0 16px 0; font-size: 15px; color: #475569;">
+            Hi <strong>{username or 'there'}</strong>, your corporate account has been provisioned as a <strong>{role_name}</strong>.
+        </p>
+        <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong>Login Email:</strong> <span style="font-family: monospace; color: #0f172a;">{to_email}</span>
+            </p>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong>Role:</strong> <span style="color: #2563eb; font-weight: 600;">{role_name}</span>
+            </p>
+            <p style="margin: 0; font-size: 14px; color: #334155;">
+                <strong>Temporary Password:</strong> <code style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">{temp_password}</code>
+            </p>
+        </div>
+        <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #92400e;">
+                <strong>Security Action Required:</strong> For security compliance, please log in and immediately change your password using the "Change Password" option in your account menu.
+            </p>
+        </div>
+    """
+    return send_email_async(to_email, username, subject, _base_email_template("Staff Welcome", body))
+
+
+# 9. Staff / Manager Password Reset by Admin
+def send_staff_credentials_reset_email(to_email: str, username: str, new_temp_password: str):
+    subject = "BrightBuy Ecommerce - Your Account Password Has Been Reset"
+    body = f"""
+        <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 700;">Staff Password Reset</h2>
+        <p style="margin: 0 0 16px 0; font-size: 15px; color: #475569;">
+            Hi <strong>{username or 'there'}</strong>, your BrightBuy account password has been reset by a System Administrator.
+        </p>
+        <div style="background-color: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong>Login Email:</strong> <span style="font-family: monospace; color: #0f172a;">{to_email}</span>
+            </p>
+            <p style="margin: 0; font-size: 14px; color: #334155;">
+                <strong>New Temporary Password:</strong> <code style="background: #e2e8f0; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #0f172a;">{new_temp_password}</code>
+            </p>
+        </div>
+        <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #1e40af;">
+                Please sign in with this temporary password and update it to your personal secure password as soon as possible.
+            </p>
+        </div>
+    """
+    return send_email_async(to_email, username, subject, _base_email_template("Staff Password Reset", body))
+
