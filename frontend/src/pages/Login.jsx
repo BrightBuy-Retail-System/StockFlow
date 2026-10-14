@@ -115,8 +115,11 @@ export default function LoginPage() {
       }, 500);
     } catch (error) {
       console.error("Login error:", error);
-      setMessage(error.response?.data?.message || "An error occurred during login. Please try again.");
-
+      const cleanMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Invalid credentials. Please check your email and password.";
+      setMessage(cleanMessage);
     } finally {
       setLoading(false);
     }
