@@ -56,6 +56,7 @@ def root_status():
         "endpoints": ["/api/health", "/api/catalog", "/api/auth_cart", "/api/orders", "/api/logistics", "/api/analytics"]
     }), 200
 
+@app.route('/health', methods=['GET'])
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy", "service": "brightbuy-api"}), 200
