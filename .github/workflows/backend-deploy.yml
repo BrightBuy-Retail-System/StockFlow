@@ -78,7 +78,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Backend Docker Image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -86,10 +86,25 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/stockflow-backend:latest
 
+      - name: Build and Push Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/stockflow-frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+
       - name: Install Railway CLI & Trigger Redeploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           npm install -g @railway/cli
+          echo "Redeploying Backend Service..."
           railway redeploy --service 5037143c-2027-4c20-8153-57db693f4f8c --yes
+
+          echo "Redeploying Frontend Service..."
+          railway redeploy --service 8f44419e-ef02-4629-bc6b-d86e105f800d --yes
+
 
