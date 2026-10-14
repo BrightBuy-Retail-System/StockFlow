@@ -462,6 +462,7 @@ def upcoming_shipments():
             JOIN texas_cities c ON s.destination_city_id = c.city_id
             LEFT JOIN orders o ON o.shipment_id = s.shipment_id
             WHERE s.shipping_status != 'DELIVERED'
+              AND (o.status IS NULL OR o.status != 'CANCELLED')
             ORDER BY s.estimated_arrival ASC
             LIMIT 50
             """
