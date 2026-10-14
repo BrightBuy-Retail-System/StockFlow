@@ -101,6 +101,81 @@ def get_shipping_cities():
         if conn:
             conn.close()
 
+@orders_bp.route('/shipping-cities', methods=['POST'])
+@jwt_required()
+def add_shipping_city():
+    """Administrator endpoint: Add a new regional warehouse hub, lead times, and freight tariffs."""
+    claims = get_jwt()
+    role_id = claims.get('role_id', 1)
+    if role_id not in (3, 4):
+        return jsonify({
+            "status": "error",
+            "message": "Access forbidden: Only System Administrators can configure new warehouse hubs."
+        }), 403
+
+    payload = request.get_json(silent=True) or {}
+    city_name = (payload.get('city_name') or '').strip()
+    hub_name = (payload.get('hub_name') or '').strip()
+    raw_lead = payload.get('base_lead_time_days', 3)
+    raw_fee = payload.get('shipping_fee', 499.00)
+
+    if not city_name:
+        return jsonify({"status": "error", "message": "City name is required."}), 400
+    if not hub_name:
+        hub_name = f"{city_name} Regional Fulfillment Hub"
+
+    try:
+        lead_time = max(1, int(raw_lead))
+        shipping_fee = Decimal(str(raw_fee))
+    except (ValueError, TypeError, Exception):
+        return jsonify({"status": "error", "message": "Invalid lead time or shipping fee."}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT city_id FROM texas_cities WHERE LOWER(city_name) = LOWER(%s)", (city_name,))
+        if cursor.fetchone():
+            return jsonify({
+                "status": "error",
+                "message": f"A warehouse hub for '{city_name}' already exists."
+            }), 409
+
+        cursor.execute("""
+            INSERT INTO texas_cities (city_name, hub_name, base_lead_time_days, shipping_fee)
+            VALUES (%s, %s, %s, %s)
+        """, (city_name, hub_name, lead_time, shipping_fee))
+        conn.commit()
+        new_city_id = cursor.lastrowid
+
+        return jsonify({
+            "status": "success",
+            "message": f"Warehouse hub '{city_name}' ({hub_name}) registered successfully.",
+            "data": {
+                "city_id": new_city_id,
+                "city_name": city_name,
+                "hub_name": hub_name,
+                "base_lead_time_days": lead_time,
+                "shipping_fee": float(shipping_fee)
+            }
+        }), 201
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({
+            "status": "error",
+            "message": f"Database error: {str(e)}"
+        }), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 @orders_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_all_orders():

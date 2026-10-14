@@ -42,13 +42,21 @@ export default function CustomerDashboard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [toast, setToast] = useState(null);
 
+  // Profile Edit State (Telephone and Warehouse without OTP)
+  const [editPhone, setEditPhone] = useState('');
+  const [editCityId, setEditCityId] = useState(1);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   // Authentication check
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (!savedUser) {
       navigate('/login');
     } else {
-      setUser(JSON.parse(savedUser));
+      const u = JSON.parse(savedUser);
+      setUser(u);
+      if (u.phone) setEditPhone(u.phone);
+      if (u.assigned_city_id) setEditCityId(u.assigned_city_id);
     }
   }, [navigate]);
 
@@ -64,6 +72,7 @@ export default function CustomerDashboard() {
       const requests = [
         api.get('/auth_cart/cart').catch(() => ({ data: { items: [], item_count: 0, subtotal: 0 } })),
         api.get('/orders/shipping-cities').catch(() => ({ data: { data: [] } })),
+        api.get('/auth_cart/me').catch(() => ({ data: { user: null } })),
       ];
 
       if (userId) {
@@ -73,10 +82,18 @@ export default function CustomerDashboard() {
       const results = await Promise.all(requests);
       const cartRes = results[0];
       const hubsRes = results[1];
-      const ordersRes = results[2];
+      const meRes = results[2];
+      const ordersRes = results[3];
 
       setCartData(cartRes.data || { items: [], item_count: 0, subtotal: 0 });
       setShippingHubs(hubsRes.data?.data || []);
+      if (meRes.data?.user) {
+        const freshUser = meRes.data.user;
+        setUser((prev) => ({ ...prev, ...freshUser }));
+        setEditPhone((prev) => (freshUser.phone !== undefined && freshUser.phone !== null ? freshUser.phone : prev));
+        setEditCityId((prev) => (freshUser.assigned_city_id || prev || 1));
+        localStorage.setItem('user', JSON.stringify({ ...parsedUser, ...freshUser }));
+      }
       setOrders(ordersRes?.data?.data || []);
       setLastRefreshed(new Date());
     } catch (err) {
@@ -88,10 +105,33 @@ export default function CustomerDashboard() {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchCustomerData();
+    fetchCustomerData();
+  }, []);
+
+  // Save updated phone & warehouse directly without OTP
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const res = await api.put('/auth_cart/profile', {
+        phone: editPhone.trim(),
+        assigned_city_id: Number(editCityId) || 1,
+      });
+
+      if (res.data?.user) {
+        setUser(res.data.user);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      }
+      if (res.data?.access_token) {
+        localStorage.setItem('token', res.data.access_token);
+      }
+      showToast('Profile Updated! 🎉', 'Telephone number and assigned warehouse hub updated successfully without needing OTP.');
+    } catch (err) {
+      showToast('Update Failed ⚠️', err.response?.data?.message || 'Failed to update profile.', 'error');
+    } finally {
+      setSavingProfile(false);
     }
-  }, [user]);
+  };
 
   // Toast feedback
   const showToast = (title, message, type = 'success') => {
@@ -1403,7 +1443,7 @@ export default function CustomerDashboard() {
           ========================================================================== */}
       {activeTab === 'profile' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
-          {/* User Profile Card */}
+          {/* User Profile & Direct Settings Card */}
           <div
             style={{
               background: '#ffffff',
@@ -1413,11 +1453,26 @@ export default function CustomerDashboard() {
               boxShadow: '0 2px 10px rgba(59, 47, 47, 0.04)',
             }}
           >
-            <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 18px', color: '#3b2f2f' }}>
-              Account Identity
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#3b2f2f' }}>
+                Account Identity &amp; Contact
+              </h3>
+              <span
+                style={{
+                  background: '#e6f6f4',
+                  color: '#2a9d8f',
+                  border: '1px solid #a4dbd4',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                }}
+              >
+                Instant Edit • No OTP Required
+              </span>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#826e6e', textTransform: 'uppercase', fontWeight: 700 }}>
                   Full Customer Name
@@ -1437,15 +1492,103 @@ export default function CustomerDashboard() {
               </div>
 
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#826e6e', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Account Level / Role
-                </span>
-                <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a9d8f', marginTop: '2px' }}>
-                  Verified Consumer (Role ID: {user.role_id || 1})
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#826e6e', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                  Telephone Number (Directly Editable) *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#826e6e' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+1 (555) 000-0000 or +94 77 123 4567"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 38px',
+                      borderRadius: '2px',
+                      border: '1.5px solid #e7d7c1',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      color: '#3b2f2f',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#826e6e', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
+                  Assigned Regional Warehouse / Delivery Hub *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#826e6e' }}>
+                    <TruckIcon style={{ width: '16px', height: '16px' }} />
+                  </span>
+                  <select
+                    value={editCityId}
+                    onChange={(e) => setEditCityId(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px 10px 38px',
+                      borderRadius: '2px',
+                      border: '1.5px solid #e7d7c1',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      color: '#3b2f2f',
+                      background: '#ffffff',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {shippingHubs.map((hub) => (
+                      <option key={hub.city_id} value={hub.city_id}>
+                        {hub.city_name} — {hub.hub_name || 'Regional Fulfillment Hub'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p style={{ fontSize: '0.72rem', color: '#826e6e', marginTop: '4px' }}>
+                  All future retail orders will automatically be routed to this warehouse facility for confirmation and dispatch.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingProfile}
+                style={{
+                  background: '#2a9d8f',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '11px 22px',
+                  borderRadius: '2px',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: savingProfile ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(42, 157, 143, 0.25)',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginTop: '4px',
+                }}
+              >
+                {savingProfile ? (
+                  <>
+                    <RefreshCwIcon className="w-4 h-4 spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <span>Save Changes (No OTP Needed)</span>
+                )}
+              </button>
+
+              <div style={{ borderTop: '1px dashed #e7d7c1', paddingTop: '14px', marginTop: '4px' }}>
                 <span style={{ fontSize: '0.75rem', color: '#826e6e', textTransform: 'uppercase', fontWeight: 700 }}>
                   VIP Voucher Code
                 </span>
@@ -1482,7 +1625,7 @@ export default function CustomerDashboard() {
                   </button>
                 </div>
               </div>
-            </div>
+            </form>
           </div>
 
           {/* Security & Stack Credentials */}

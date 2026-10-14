@@ -1219,21 +1219,45 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       />
                     </div>
 
-                    {/* City & Postal Code */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div>
-                        <select
-                          value={selectedCityId}
-                          onChange={handleCityChange}
-                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
-                        >
-                          {cities.map((c) => (
-                            <option key={c.city_id} value={c.city_id}>
-                              {c.city_name} (Rs {parseFloat(c.shipping_fee).toFixed(2)})
-                            </option>
-                          ))}
-                        </select>
+                    {/* Destination Warehouse & Hub Selector */}
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '4px', padding: '14px 16px', margin: '4px 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🏢 Destination Fulfillment Warehouse *</span>
+                        </label>
+                        <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                          Editable Destination
+                        </span>
                       </div>
+                      <select
+                        value={selectedCityId}
+                        onChange={handleCityChange}
+                        style={{
+                          width: '100%',
+                          padding: '11px 12px',
+                          borderRadius: '4px',
+                          border: '1.5px solid #94a3b8',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {cities.map((c) => (
+                          <option key={c.city_id} value={c.city_id}>
+                            {c.city_name} — {c.hub_name || 'Regional Hub'} (Lead time: ~{c.base_lead_time_days || 2} days • Shipping: ${parseFloat(c.shipping_fee || 0).toFixed(2)})
+                          </option>
+                        ))}
+                      </select>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.73rem', color: '#64748b' }}>
+                        Orders will route to this warehouse facility. You can freely edit this destination prior to order confirmation.
+                      </p>
+                    </div>
+
+                    {/* Postal Code & Phone */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
                         <input
                           type="text"
@@ -1243,24 +1267,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                           style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
                         />
                       </div>
-                    </div>
-
-                    {/* Phone Number */}
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="tel"
-                        placeholder="Phone (e.g. 214-555-0199)"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        required
-                        style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
-                      />
-                      <span
-                        title="In case we need to contact you regarding order delivery"
-                        style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', fontSize: '0.9rem', cursor: 'help' }}
-                      >
-                        ❓
-                      </span>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="tel"
+                          placeholder="Phone (e.g. 214-555-0199)"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          required
+                          style={{ width: '100%', padding: '11px 12px', borderRadius: '2px', border: '1.5px solid #e7d7c1', fontSize: '0.875rem', background: '#ffffff', color: '#3b2f2f', outline: 'none' }}
+                        />
+                        <span
+                          title="In case we need to contact you regarding order delivery"
+                          style={{ position: 'absolute', right: '12px', top: '12px', color: '#826e6e', fontSize: '0.9rem', cursor: 'help' }}
+                        >
+                          ?
+                        </span>
+                      </div>
                     </div>
 
                     {/* Save Info Checkbox */}
@@ -1376,7 +1398,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   </button>
                 </div>
                 {/* Ship to Row */}
-                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ede6dc' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
                     <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Ship to</span>
                     <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
@@ -1387,6 +1409,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     onClick={() => setCurrentStep(1)}
                   >
                     Change
+                  </button>
+                </div>
+                {/* Destination Warehouse Hub Row */}
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                  <div style={{ display: 'flex', gap: '24px' }}>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Destination Hub</span>
+                    <span style={{ color: '#0369a1', fontWeight: 700 }}>
+                      🏢 {cities.find((c) => c.city_id === selectedCityId)?.city_name || cityName} — {cities.find((c) => c.city_id === selectedCityId)?.hub_name || 'Regional Fulfillment Hub'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={() => setCurrentStep(1)}
+                  >
+                    Edit Destination
                   </button>
                 </div>
               </div>
@@ -1507,6 +1545,18 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   </div>
                   <button type="button" style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setCurrentStep(1)}>
                     Change
+                  </button>
+                </div>
+                {/* Destination Warehouse Hub Row */}
+                <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                  <div style={{ display: 'flex', gap: '24px' }}>
+                    <span style={{ color: '#64748b', minWidth: '70px' }}>Destination Hub</span>
+                    <span style={{ color: '#0369a1', fontWeight: 600 }}>
+                      🏢 {cities.find((c) => c.city_id === selectedCityId)?.city_name || cityName} — {cities.find((c) => c.city_id === selectedCityId)?.hub_name || 'Regional Fulfillment Hub'}
+                    </span>
+                  </div>
+                  <button type="button" style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setCurrentStep(1)}>
+                    Edit Destination
                   </button>
                 </div>
                 {/* Shipping Method Row */}

@@ -75,6 +75,17 @@ export default function SystemAdministrator() {
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffError, setStaffError] = useState('');
 
+  // 5. Regional Warehouse Creation Modal State
+  const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+  const [warehouseForm, setWarehouseForm] = useState({
+    city_name: '',
+    hub_name: '',
+    base_lead_time_days: 2,
+    shipping_fee: '499.00',
+  });
+  const [warehouseSubmitting, setWarehouseSubmitting] = useState(false);
+  const [warehouseError, setWarehouseError] = useState('');
+
   // Modals for Products and Variants
   const [modalType, setModalType] = useState('none'); // 'none' | 'createProduct' | 'editProduct' | 'createVariant' | 'editVariant'
   const [activeItem, setActiveItem] = useState(null);
@@ -425,6 +436,40 @@ export default function SystemAdministrator() {
   };
 
   // --------------------------------------------------------------------------
+  // Regional Warehouse Creation Handler
+  // --------------------------------------------------------------------------
+  const handleAddWarehouse = async (e) => {
+    e.preventDefault();
+    setWarehouseSubmitting(true);
+    setWarehouseError('');
+    try {
+      await api.post('/orders/shipping-cities', {
+        city_name: warehouseForm.city_name.trim(),
+        hub_name: warehouseForm.hub_name.trim() || `${warehouseForm.city_name.trim()} Regional Fulfillment Hub`,
+        base_lead_time_days: Number(warehouseForm.base_lead_time_days) || 2,
+        shipping_fee: warehouseForm.shipping_fee,
+      });
+      showNotice(`Warehouse hub "${warehouseForm.city_name}" successfully registered!`);
+      setIsWarehouseModalOpen(false);
+      setWarehouseForm({
+        city_name: '',
+        hub_name: '',
+        base_lead_time_days: 2,
+        shipping_fee: '499.00',
+      });
+      // Refresh warehouse hubs list
+      const res = await api.get('/orders/shipping-cities');
+      if (res.data?.data) {
+        setWarehouseHubs(res.data.data);
+      }
+    } catch (err) {
+      setWarehouseError(err.response?.data?.message || 'Failed to create warehouse hub.');
+    } finally {
+      setWarehouseSubmitting(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
   // Filtered Data Sets
   // --------------------------------------------------------------------------
   const filteredPipeline = useMemo(() => {
@@ -740,6 +785,16 @@ export default function SystemAdministrator() {
         >
           <UserIcon style={{ width: '0.95rem', height: '0.95rem' }} />
           <span>Staff Directory</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('warehouses')}
+          className={`st-admin-tab-btn ${activeTab === 'warehouses' ? 'active' : ''}`}
+        >
+          <TruckIcon style={{ width: '0.95rem', height: '0.95rem' }} />
+          <span>Regional Warehouses</span>
+          <span className="st-pill-badge-blue">{warehouseHubs.length} Hubs</span>
         </button>
       </div>
 
@@ -1710,6 +1765,235 @@ export default function SystemAdministrator() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB CONTENT 5: REGIONAL WAREHOUSES & HUBS                            */}
+      {/* ==================================================================== */}
+      {activeTab === 'warehouses' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="st-admin-card" style={{ padding: '24px 28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 6px', color: '#1f2937', fontFamily: 'Outfit, sans-serif' }}>
+                  Regional Warehouses &amp; Logistics Hubs
+                </h3>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.875rem', maxWidth: '650px' }}>
+                  Manage multi-regional distribution centers, standard delivery tariffs, and base lead times. As System Administrator, you can commission new warehouse hubs to expand fulfillment coverage.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsWarehouseModalOpen(true)}
+                  className="st-btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <TruckIcon style={{ width: '1rem', height: '1rem' }} />
+                  <span>+ Add New Warehouse Hub</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Warehouse Hubs Table */}
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th>Hub ID</th>
+                    <th>City / Region</th>
+                    <th>Warehouse Hub Facility</th>
+                    <th>Base Lead Time</th>
+                    <th>Delivery Tariff</th>
+                    <th>Assigned Manager(s)</th>
+                    <th>Network Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {warehouseHubs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                        No warehouse hubs registered.
+                      </td>
+                    </tr>
+                  ) : (
+                    warehouseHubs.map((hub) => {
+                      const managers = staffList.filter((s) => Number(s.assigned_city_id) === Number(hub.city_id));
+                      return (
+                        <tr key={hub.city_id}>
+                          <td style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#64748b', fontSize: '0.8rem' }}>
+                            WH-{String(hub.city_id).padStart(3, '0')}
+                          </td>
+                          <td style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {hub.city_name}
+                          </td>
+                          <td style={{ color: '#334155', fontWeight: 600 }}>
+                            {hub.hub_name || `${hub.city_name} Regional Hub`}
+                          </td>
+                          <td>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}>
+                              ~{hub.base_lead_time_days || 2} Business Days
+                            </span>
+                          </td>
+                          <td style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#2a9d8f' }}>
+                            Rs {parseFloat(hub.shipping_fee || 0).toFixed(2)}
+                          </td>
+                          <td>
+                            {managers.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {managers.map((m) => (
+                                  <span
+                                    key={m.user_id}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: '#f1f5f9',
+                                      color: '#0f172a',
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      width: 'fit-content',
+                                    }}
+                                  >
+                                    👤 {m.username}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                None Assigned
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="st-pill-badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="pulse-dot dot-online" style={{ width: '6px', height: '6px' }} />
+                              <span>Operational</span>
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: ADD NEW WAREHOUSE HUB                                         */}
+      {/* ==================================================================== */}
+      {isWarehouseModalOpen && (
+        <div className="st-admin-modal-backdrop">
+          <div className="st-admin-modal-box">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                Commission New Regional Warehouse Hub
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsWarehouseModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94a3b8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {warehouseError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {warehouseError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  City / Region Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., San Antonio or Kandy"
+                  value={warehouseForm.city_name}
+                  onChange={(e) => setWarehouseForm({ ...warehouseForm, city_name: e.target.value })}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Warehouse Facility / Hub Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Bexar Regional Fulfillment Center"
+                  value={warehouseForm.hub_name}
+                  onChange={(e) => setWarehouseForm({ ...warehouseForm, hub_name: e.target.value })}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Base Lead Time (Days) *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    required
+                    value={warehouseForm.base_lead_time_days}
+                    onChange={(e) => setWarehouseForm({ ...warehouseForm, base_lead_time_days: Number(e.target.value) })}
+                    className="st-modal-form-input"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Standard Freight Tariff (Rs) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={warehouseForm.shipping_fee}
+                    onChange={(e) => setWarehouseForm({ ...warehouseForm, shipping_fee: e.target.value })}
+                    className="st-modal-form-input"
+                  />
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '4px 0 0' }}>
+                Once registered, customers will be able to select this warehouse during registration and checkout, and you can assign dedicated managers to oversee its fulfillment.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsWarehouseModalOpen(false)}
+                  className="st-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={warehouseSubmitting}
+                  className="st-btn-primary"
+                >
+                  {warehouseSubmitting ? 'Registering...' : 'Create Warehouse Hub'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

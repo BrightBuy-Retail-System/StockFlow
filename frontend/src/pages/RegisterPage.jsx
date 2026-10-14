@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [cities, setCities] = useState([]);
@@ -105,6 +106,7 @@ export default function RegisterPage() {
         username: name.trim(),
         email: email.trim().toLowerCase(),
         password: password,
+        phone: phone.trim(),
         otp: otp.trim(),
         assigned_city_id: Number(assignedCityId) || 1,
       });
@@ -231,6 +233,26 @@ export default function RegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="st-auth-field">
+              <label className="st-auth-label">Telephone Number *</label>
+              <div className="st-auth-input-wrap">
+                <span className="st-auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </span>
+                <input
+                  type="tel"
+                  className="st-auth-input"
+                  placeholder="+1 (555) 000-0000 or +94 77 123 4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  autoComplete="tel"
                 />
               </div>
             </div>

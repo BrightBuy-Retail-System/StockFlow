@@ -35,7 +35,7 @@ def login():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        query = """ SELECT u.user_id, u.full_name, u.email, u.password_hash, u.role_id, 
+        query = """ SELECT u.user_id, u.full_name, u.email, u.phone, u.password_hash, u.role_id, 
                            u.assigned_city_id, c.city_name, c.hub_name
                     FROM users u
                     LEFT JOIN texas_cities c ON u.assigned_city_id = c.city_id
@@ -50,6 +50,7 @@ def login():
             assigned_city_id = user.get("assigned_city_id")
             city_name = user.get("city_name")
             hub_name = user.get("hub_name")
+            phone = user.get("phone") or ""
 
             access_token = create_access_token(
                 identity=str(user["user_id"]),
@@ -57,6 +58,7 @@ def login():
                     "username": user["full_name"],
                     "role_id": role_id,
                     "email": user["email"],
+                    "phone": phone,
                     "assigned_city_id": assigned_city_id,
                     "city_name": city_name,
                     "hub_name": hub_name
@@ -69,6 +71,7 @@ def login():
                     "id": user["user_id"], 
                     "username": user["full_name"],
                     "email": user["email"],
+                    "phone": phone,
                     "role_id": role_id,
                     "assigned_city_id": assigned_city_id,
                     "city_name": city_name,
@@ -88,16 +91,121 @@ def login():
 @jwt_required()
 def get_current_user():
     user_id = get_jwt_identity()
-    claims = get_jwt()
-    return jsonify({
-        "user_id": int(user_id) if user_id and str(user_id).isdigit() else user_id,
-        "username": claims.get("username"),
-        "role_id": claims.get("role_id"),
-        "email": claims.get("email"),
-        "assigned_city_id": claims.get("assigned_city_id"),
-        "city_name": claims.get("city_name"),
-        "hub_name": claims.get("hub_name")
-    }), 200
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT u.user_id, u.full_name, u.email, u.phone, u.role_id, 
+                   u.assigned_city_id, c.city_name, c.hub_name
+            FROM users u
+            LEFT JOIN texas_cities c ON u.assigned_city_id = c.city_id
+            WHERE u.user_id = %s
+        """, (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        return jsonify({
+            "user_id": user["user_id"],
+            "id": user["user_id"],
+            "username": user["full_name"],
+            "full_name": user["full_name"],
+            "role_id": user["role_id"],
+            "email": user["email"],
+            "phone": user.get("phone") or "",
+            "assigned_city_id": user.get("assigned_city_id"),
+            "city_name": user.get("city_name"),
+            "hub_name": user.get("hub_name")
+        }), 200
+    except Exception as e:
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@auth_cart_bp.route('/profile', methods=['PUT', 'PATCH'])
+@jwt_required()
+def update_profile():
+    """Allow users to update telephone number and warehouse in dashboard without needing OTP."""
+    user_id = get_jwt_identity()
+    data = request.get_json() or {}
+
+    phone = data.get('phone')
+    raw_city = data.get('assigned_city_id') or data.get('city_id')
+    full_name = data.get('full_name') or data.get('username')
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT user_id, full_name, email, phone, assigned_city_id FROM users WHERE user_id = %s", (user_id,))
+        current_user = cursor.fetchone()
+        if not current_user:
+            return jsonify({"message": "User not found"}), 404
+
+        new_phone = phone.strip() if phone is not None else current_user.get('phone')
+        
+        new_city_id = current_user.get('assigned_city_id')
+        if raw_city is not None:
+            try:
+                new_city_id = int(raw_city)
+            except (ValueError, TypeError):
+                pass
+
+        new_name = full_name.strip() if full_name else current_user['full_name']
+
+        cursor.execute("""
+            UPDATE users 
+            SET phone = %s, assigned_city_id = %s, full_name = %s 
+            WHERE user_id = %s
+        """, (new_phone, new_city_id, new_name, user_id))
+        conn.commit()
+
+        # Fetch updated user with city/hub
+        cursor.execute("""
+            SELECT u.user_id, u.full_name, u.email, u.phone, u.role_id, 
+                   u.assigned_city_id, c.city_name, c.hub_name
+            FROM users u
+            LEFT JOIN texas_cities c ON u.assigned_city_id = c.city_id
+            WHERE u.user_id = %s
+        """, (user_id,))
+        updated_user = cursor.fetchone()
+
+        new_token = create_access_token(
+            identity=str(updated_user["user_id"]),
+            additional_claims={
+                "username": updated_user["full_name"],
+                "role_id": updated_user["role_id"],
+                "email": updated_user["email"],
+                "phone": updated_user.get("phone") or "",
+                "assigned_city_id": updated_user.get("assigned_city_id"),
+                "city_name": updated_user.get("city_name"),
+                "hub_name": updated_user.get("hub_name")
+            }
+        )
+
+        return jsonify({
+            "status": "success",
+            "message": "Profile updated successfully.",
+            "access_token": new_token,
+            "user": {
+                "id": updated_user["user_id"],
+                "username": updated_user["full_name"],
+                "email": updated_user["email"],
+                "phone": updated_user.get("phone") or "",
+                "role_id": updated_user["role_id"],
+                "assigned_city_id": updated_user.get("assigned_city_id"),
+                "city_name": updated_user.get("city_name"),
+                "hub_name": updated_user.get("hub_name")
+            }
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 @auth_cart_bp.route('/send-register-otp', methods=['POST'])
 def send_register_otp():
@@ -145,6 +253,7 @@ def register():
     username = (data.get('username') or '').strip()
     password = data.get('password')
     email    = (data.get('email') or '').strip().lower()
+    phone    = (data.get('phone') or '').strip()
     otp      = (data.get('otp') or '').strip()
     role_id  = 1
     raw_city = data.get('assigned_city_id') or data.get('city_id') or 1
@@ -188,12 +297,12 @@ def register():
 
         query = """
                 INSERT INTO users(
-                    role_id, full_name, email, password_hash, assigned_city_id
-                ) VALUES(%s, %s, %s, %s, %s)
+                    role_id, full_name, email, phone, password_hash, assigned_city_id
+                ) VALUES(%s, %s, %s, %s, %s, %s)
                 """
         
         cursor.execute(query, (
-            role_id, username, email, password_hash, assigned_city_id
+            role_id, username, email, phone, password_hash, assigned_city_id
         ))
         conn.commit()
         new_user_id = cursor.lastrowid
@@ -204,6 +313,7 @@ def register():
                 "username": username,
                 "role_id": role_id,
                 "email": email,
+                "phone": phone,
                 "assigned_city_id": assigned_city_id,
                 "city_name": city_info.get("city_name"),
                 "hub_name": city_info.get("hub_name")
@@ -217,6 +327,7 @@ def register():
                 "id": new_user_id,
                 "username": username,
                 "email": email,
+                "phone": phone,
                 "role_id": role_id,
                 "assigned_city_id": assigned_city_id,
                 "city_name": city_info.get("city_name"),
