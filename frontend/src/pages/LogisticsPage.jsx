@@ -275,7 +275,7 @@ export default function LogisticsPage() {
     }
   })();
   const currentUserRole = Number(storedUser?.role_id ?? 1);
-  const isManagerOrAdmin = [2, 3].includes(currentUserRole);
+  const isManagerOrAdmin = [2, 3, 4].includes(currentUserRole);
 
   return (
     <div>
