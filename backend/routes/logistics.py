@@ -13,6 +13,38 @@ logistics_bp = Blueprint('logistics', __name__)
 OUT_OF_STOCK_PENALTY_DAYS = 3
 
 
+def _get_jwt_role():
+    """Return the authenticated user's role ID, defaulting to customer role 1."""
+    try:
+        role_id = get_jwt().get('role_id')
+        return int(role_id) if role_id is not None else 1
+    except Exception:
+        return 1
+
+
+def _require_manager_or_admin():
+    """Allow managers and system administrators to access operations views."""
+    return _get_jwt_role() in (2, 3, 4)
+
+
+def _customer_lookup_is_forbidden(current_user_id, shipment_user_id):
+    """Ensure customers can only view their own shipments."""
+    if shipment_user_id is None:
+        return False
+    return int(shipment_user_id) != int(current_user_id)
+
+
+def _is_valid_transition(old_status, new_status):
+    """Validate shipment lifecycle transitions across the dispatch pipeline."""
+    allowed = {
+        'PENDING': {'DISPATCHED'},
+        'DISPATCHED': {'IN_TRANSIT'},
+        'IN_TRANSIT': {'DELIVERED'},
+        'DELIVERED': set(),
+    }
+    return new_status in allowed.get(old_status, set())
+
+
 def serialize_value(val):
     """Safely convert Decimal, datetime, and date objects to JSON primitives."""
     if isinstance(val, Decimal):
