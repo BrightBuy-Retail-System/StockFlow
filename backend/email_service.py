@@ -2,6 +2,9 @@ import os
 import json
 import logging
 import threading
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import urllib.request
 import urllib.error
 from dotenv import load_dotenv
@@ -12,6 +15,39 @@ logger = logging.getLogger("email_service")
 logger.setLevel(logging.INFO)
 
 RESEND_API_URL = "https://api.resend.com/emails"
+
+
+def _send_via_brevo_smtp(smtp_server: str, smtp_port: int, login: str, key: str, from_email: str, to_email: str, subject: str, html_content: str):
+    """Sends email via Brevo SMTP relay using standard library smtplib."""
+    try:
+        sender_addr = "prageethchamuditha@gmail.com"
+        sender_header = "BrightBuy Ecommerce <prageethchamuditha@gmail.com>"
+        if from_email:
+            if "<" in from_email and ">" in from_email:
+                sender_addr = from_email.split("<")[1].split(">")[0].strip()
+                sender_header = from_email
+            else:
+                sender_addr = from_email.strip()
+                sender_header = f"BrightBuy Ecommerce <{sender_addr}>"
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = sender_header
+        msg["To"] = to_email
+
+        html_part = MIMEText(html_content, "html", "utf-8")
+        msg.attach(html_part)
+
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
+        server.starttls()
+        server.login(login, key)
+        server.sendmail(sender_addr, [to_email], msg.as_string())
+        server.quit()
+        logger.info(f"[Email Service - Brevo SMTP] Successfully sent '{subject}' to {to_email}")
+        return True
+    except Exception as exc:
+        logger.error(f"[Email Service - Brevo SMTP] Failed to send to {to_email}: {exc}")
+        return False
 
 
 def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str, html_content: str):
@@ -50,20 +86,36 @@ def _send_via_resend(api_key: str, from_email: str, to_email: str, subject: str,
 
 
 def _dispatch_email(to_email: str, to_name: str, subject: str, html_content: str):
-    """Core dispatcher that sends emails using Resend."""
+    """Core dispatcher that prioritizes Brevo SMTP with fallback to Resend API."""
     load_dotenv(override=True)
+
+    # 1. Primary: Brevo SMTP (Active credentials configured in environment)
+    smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com").strip()
+    try:
+        smtp_port = int(os.getenv("BREVO_SMTP_PORT", 587))
+    except (ValueError, TypeError):
+        smtp_port = 587
+    smtp_login = os.getenv("BREVO_SMTP_LOGIN", "").strip()
+    smtp_key = os.getenv("BREVO_SMTP_KEY", "").strip()
+    brevo_from = os.getenv("BREVO_FROM_EMAIL", "").strip()
+
+    if smtp_login and smtp_key:
+        ok = _send_via_brevo_smtp(smtp_server, smtp_port, smtp_login, smtp_key, brevo_from, to_email, subject, html_content)
+        if ok:
+            return True
+
+    # 2. Secondary: Resend API
     resend_key = os.getenv("RESEND_API_KEY", "").strip()
     from_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
+    if resend_key:
+        if not from_email or "StockFlow" in from_email:
+            from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
+        ok = _send_via_resend(resend_key, from_email, to_email, subject, html_content)
+        if ok:
+            return True
 
-    # Always ensure BrightBuy Ecommerce is used as the sender name
-    if not from_email or "StockFlow" in from_email:
-        from_email = "BrightBuy Ecommerce <onboarding@resend.dev>"
-
-    if not resend_key:
-        logger.warning(f"[Email Service - Resend] RESEND_API_KEY not configured. Email '{subject}' to {to_email} skipped.")
-        return False
-
-    return _send_via_resend(resend_key, from_email, to_email, subject, html_content)
+    logger.warning(f"[Email Service] No active email delivery succeeded for '{subject}' to {to_email}.")
+    return False
 
 
 def send_email_async(to_email: str, to_name: str, subject: str, html_content: str):

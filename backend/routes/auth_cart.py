@@ -230,6 +230,7 @@ def send_register_otp():
                 return jsonify({"message": "This username is already taken."}), 409
 
         otp_code = generate_otp(email, purpose="register")
+        print(f"[OTP DEBUG] Generated registration OTP for {email}: {otp_code}", flush=True)
         send_registration_otp_email(to_email=email, username=username or 'Customer', otp_code=otp_code)
 
         return jsonify({
