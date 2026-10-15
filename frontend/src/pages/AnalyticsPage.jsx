@@ -39,36 +39,16 @@ export default function AnalyticsPage() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewReportHtml, setPreviewReportHtml] = useState('');
 
-  // Data State - Pre-initialized with viva evaluation data for instant, non-blocking rendering
-  const [quarterlyData, setQuarterlyData] = useState([
-    { sales_year: 2026, sales_quarter: 1, total_orders: 142, gross_revenue: 68450.0, net_collected_revenue: 62100.0, total_units_sold: 412, moving_avg_quarterly_revenue: 68450.0 },
-    { sales_year: 2026, sales_quarter: 2, total_orders: 198, gross_revenue: 94200.0, net_collected_revenue: 89400.0, total_units_sold: 580, moving_avg_quarterly_revenue: 81325.0 },
-    { sales_year: 2026, sales_quarter: 3, total_orders: 224, gross_revenue: 112800.0, net_collected_revenue: 106500.0, total_units_sold: 695, moving_avg_quarterly_revenue: 103500.0 },
-    { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
-  ]);
-  const [topSellingData, setTopSellingData] = useState([
-    { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-    { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-    { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
-  ]);
-  const [categoryData, setCategoryData] = useState([
-    { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-    { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-    { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
-  ]);
-  const [customerData, setCustomerData] = useState([
-    { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
-    { customer_id: 4, customer_name: 'Dallas Freight Systems', email: 'admin@dallasfreight.net', primary_city: 'Dallas Hub', total_orders: 11, lifetime_spending: 31200.0, paid_orders: 11, pending_orders: 0, paid_order_value: 31200.0, pending_order_value: 0.0 },
-    { customer_id: 2, customer_name: 'Houston Metro Supply', email: 'orders@houstonmetro.com', primary_city: 'Houston Hub', total_orders: 9, lifetime_spending: 24800.0, paid_orders: 8, pending_orders: 1, paid_order_value: 22100.0, pending_order_value: 2700.0 },
-    { customer_id: 5, customer_name: 'San Antonio Tech Logistics', email: 'logistics@satxtech.com', primary_city: 'San Antonio Hub', total_orders: 7, lifetime_spending: 18450.0, paid_orders: 7, pending_orders: 0, paid_order_value: 18450.0, pending_order_value: 0.0 },
-    { customer_id: 8, customer_name: 'Fort Worth Distribution Corp', email: 'purchasing@ftwdist.com', primary_city: 'Fort Worth Hub', total_orders: 6, lifetime_spending: 15920.0, paid_orders: 5, pending_orders: 1, paid_order_value: 13420.0, pending_order_value: 2500.0 },
-  ]);
+  // Data State - Initialized as empty arrays/objects backed strictly by database views
+  const [quarterlyData, setQuarterlyData] = useState([]);
+  const [topSellingData, setTopSellingData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
+  const [customerData, setCustomerData] = useState([]);
   const [transactionsData, setTransactionsData] = useState([]);
   const [dclData, setDclData] = useState({ roles: [], grants: [], recent_audit_logs: [] });
   const [executiveOverview, setExecutiveOverview] = useState({
-    order_breakdown: { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 },
-    total_orders: 76,
+    order_breakdown: { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 },
+    total_orders: 0,
   });
 
   // Customer Specific Data
@@ -113,159 +93,76 @@ export default function AnalyticsPage() {
       const custId = currentUser?.id || currentUser?.user_id;
       if (currentRoleId === 1 && custId) {
         try {
-          const resCust = await api.get(`/analytics/customer-orders/${custId}`, { timeout: 4000 });
+          const resCust = await api.get(`/analytics/customer-orders/${custId}`, { timeout: 6000 });
           if (resCust.data?.data) {
-            setCustomerSummary(resCust.data.data.summary);
+            setCustomerSummary(resCust.data.data.summary || null);
             setCustomerOrders(resCust.data.data.orders || []);
             setCustomerPayments(resCust.data.data.payments || []);
-          } else {
-            populateDemoData(1);
           }
-        } catch {
-          populateDemoData(1);
+        } catch (err) {
+          console.warn('Customer analytics load error:', err);
         }
       }
       // If Manager (Role 2): Fetch top-selling, category totals, recent transactions, customer summary, and overview
       else if (currentRoleId === 2) {
-        let loadedTop = null;
-        let loadedCat = null;
-        let loadedTxn = null;
-        let loadedOverview = null;
-        let loadedCust = null;
-
         try {
           const [resTop, resCat, resTxn, resOverview, resCust] = await Promise.all([
-            api.get('/analytics/reports/top-selling', { timeout: 3500 })
-              .catch(() => api.get('/analytics/reports/top-products', { timeout: 3500 }))
+            api.get('/analytics/reports/top-selling', { timeout: 6000 })
+              .catch(() => api.get('/analytics/reports/top-products', { timeout: 6000 }))
               .catch(() => null),
-            api.get('/analytics/reports/category-orders', { timeout: 3500 })
-              .catch(() => api.get('/analytics/reports/category-performance', { timeout: 3500 }))
+            api.get('/analytics/reports/category-orders', { timeout: 6000 })
+              .catch(() => api.get('/analytics/reports/category-performance', { timeout: 6000 }))
               .catch(() => null),
-            api.get('/analytics/transactions', { timeout: 3500 }).catch(() => null),
-            api.get('/analytics/overview', { timeout: 3500 }).catch(() => null),
-            api.get('/analytics/reports/customer-summary', { timeout: 3500 }).catch(() => null),
+            api.get('/analytics/transactions', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/overview', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/reports/customer-summary', { timeout: 6000 }).catch(() => null),
           ]);
 
-          loadedTop = resTop?.data?.data || resTop?.data?.top_products;
-          loadedCat = resCat?.data?.data || resCat?.data?.category_performance;
-          loadedTxn = resTxn?.data?.data;
-          loadedOverview = resOverview?.data?.executive_summary;
-          loadedCust = resCust?.data?.data;
+          const loadedTop = resTop?.data?.data || resTop?.data?.top_products;
+          const loadedCat = resCat?.data?.data || resCat?.data?.category_performance;
+          const loadedTxn = resTxn?.data?.data;
+          const loadedOverview = resOverview?.data?.executive_summary;
+          const loadedCust = resCust?.data?.data;
+
+          if (Array.isArray(loadedTop)) setTopSellingData(loadedTop);
+          if (Array.isArray(loadedCat)) setCategoryData(loadedCat);
+          if (Array.isArray(loadedTxn)) setTransactionsData(loadedTxn);
+          if (loadedOverview && Object.keys(loadedOverview).length > 0) setExecutiveOverview(loadedOverview);
+          if (Array.isArray(loadedCust)) setCustomerData(loadedCust);
         } catch (fetchErr) {
-          console.warn('Live API request failed, applying evaluation datasets:', fetchErr);
-        }
-
-        if (Array.isArray(loadedTop) && loadedTop.length > 0) {
-          setTopSellingData(loadedTop);
-        }
-        if (Array.isArray(loadedCat) && loadedCat.length > 0) {
-          setCategoryData(loadedCat);
-        }
-        if (Array.isArray(loadedTxn) && loadedTxn.length > 0) {
-          setTransactionsData(loadedTxn);
-        }
-        if (loadedOverview && Object.keys(loadedOverview).length > 0) {
-          setExecutiveOverview(loadedOverview);
-        }
-        if (Array.isArray(loadedCust) && loadedCust.length > 0) {
-          setCustomerData(loadedCust);
-        }
-
-        // If neither top selling products nor category data was returned by the live backend, fallback to demo data
-        if ((!loadedTop || loadedTop.length === 0) && (!loadedCat || loadedCat.length === 0)) {
-          populateDemoData(2);
+          console.warn('Manager analytics load error:', fetchErr);
         }
       }
       // If Admin / Logistics Executive (Role 3 or 4): Fetch full executive suite
       else if (currentRoleId === 3 || currentRoleId === 4) {
         try {
           const [resQuarterly, resTop, resCat, resCust, resTxn, resDcl] = await Promise.all([
-            api.get(`/analytics/reports/quarterly-sales${yearQuery}`, { timeout: 4000 }).catch(() => null),
-            api.get('/analytics/reports/top-selling', { timeout: 4000 }).catch(() => null),
-            api.get('/analytics/reports/category-orders', { timeout: 4000 }).catch(() => null),
-            api.get('/analytics/reports/customer-summary', { timeout: 4000 }).catch(() => null),
-            api.get('/analytics/transactions', { timeout: 4000 }).catch(() => null),
-            api.get('/analytics/dcl-matrix', { timeout: 4000 }).catch(() => null),
+            api.get(`/analytics/reports/quarterly-sales${yearQuery}`, { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/reports/top-selling', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/reports/category-orders', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/reports/customer-summary', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/transactions', { timeout: 6000 }).catch(() => null),
+            api.get('/analytics/dcl-matrix', { timeout: 6000 }).catch(() => null),
           ]);
 
-          if (resQuarterly?.data?.data?.length) setQuarterlyData(resQuarterly.data.data);
-          if (resTop?.data?.data?.length) setTopSellingData(resTop.data.data);
-          if (resCat?.data?.data?.length) setCategoryData(resCat.data.data);
-          if (resCust?.data?.data?.length) setCustomerData(resCust.data.data);
-          if (resTxn?.data?.data?.length) setTransactionsData(resTxn.data.data);
+          if (Array.isArray(resQuarterly?.data?.data)) setQuarterlyData(resQuarterly.data.data);
+          if (Array.isArray(resTop?.data?.data)) setTopSellingData(resTop.data.data);
+          if (Array.isArray(resCat?.data?.data)) setCategoryData(resCat.data.data);
+          if (Array.isArray(resCust?.data?.data)) setCustomerData(resCust.data.data);
+          if (Array.isArray(resTxn?.data?.data)) setTransactionsData(resTxn.data.data);
           if (resDcl?.data?.data) setDclData(resDcl.data.data);
-
-          if (!resQuarterly?.data?.data?.length && !resTop?.data?.data?.length) {
-            populateDemoData(currentRoleId);
-          }
-        } catch {
-          populateDemoData(currentRoleId);
+        } catch (fetchErr) {
+          console.warn('Admin analytics load error:', fetchErr);
         }
       }
 
       setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
       console.warn('Backend reporting endpoint offline or empty:', err);
-      setError(
-        err.response?.data?.error ||
-        'Unable to load live database views. Showing evaluation dataset for viva.'
-      );
-      populateDemoData(currentRoleId);
+      setError(err.response?.data?.error || 'Unable to load live database views.');
       setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const populateDemoData = (rId) => {
-    if (rId === 1) {
-      setCustomerSummary({
-        customer_name: user?.username || user?.full_name || 'Test Customer',
-        primary_city: 'Dallas Hub',
-        total_orders: 5,
-        lifetime_spending: 6524.90,
-        paid_orders: 1,
-        pending_orders: 4,
-        paid_order_value: 1304.98,
-        pending_order_value: 5219.92
-      });
-      setCustomerOrders([
-        { order_id: 90002, total_amount: 1304.98, payment_status: 'Pending', order_status: 'PENDING', placed_at: '2026-10-01' },
-        { order_id: 90003, total_amount: 1304.98, payment_status: 'Pending', order_status: 'SHIPPED', placed_at: '2026-10-01' },
-        { order_id: 150006, total_amount: 1304.98, payment_status: 'Pending', order_status: 'PENDING', placed_at: '2026-10-04' },
-      ]);
-      setCustomerPayments([
-        { payment_id: 1, order_id: 90001, amount: 1304.98, transaction_reference: 'TXN-7B93AE489D01', processed_at: '2026-10-01T10:35:00', payment_status: 'Paid' }
-      ]);
-    } else {
-      setQuarterlyData([
-        { sales_year: 2026, sales_quarter: 1, total_orders: 142, gross_revenue: 68450.0, net_collected_revenue: 62100.0, total_units_sold: 412, moving_avg_quarterly_revenue: 68450.0 },
-        { sales_year: 2026, sales_quarter: 2, total_orders: 198, gross_revenue: 94200.0, net_collected_revenue: 89400.0, total_units_sold: 580, moving_avg_quarterly_revenue: 81325.0 },
-        { sales_year: 2026, sales_quarter: 3, total_orders: 224, gross_revenue: 112800.0, net_collected_revenue: 106500.0, total_units_sold: 695, moving_avg_quarterly_revenue: 103500.0 },
-        { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
-      ]);
-      setTopSellingData([
-        { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-        { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-        { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
-      ]);
-      setCategoryData([
-        { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-        { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-        { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
-      ]);
-      setCustomerData([
-        { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
-        { customer_id: 4, customer_name: 'Dallas Freight Systems', email: 'admin@dallasfreight.net', primary_city: 'Dallas Hub', total_orders: 11, lifetime_spending: 31200.0, paid_orders: 11, pending_orders: 0, paid_order_value: 31200.0, pending_order_value: 0.0 },
-        { customer_id: 2, customer_name: 'Houston Metro Supply', email: 'orders@houstonmetro.com', primary_city: 'Houston Hub', total_orders: 9, lifetime_spending: 24800.0, paid_orders: 8, pending_orders: 1, paid_order_value: 22100.0, pending_order_value: 2700.0 },
-        { customer_id: 5, customer_name: 'San Antonio Tech Logistics', email: 'logistics@satxtech.com', primary_city: 'San Antonio Hub', total_orders: 7, lifetime_spending: 18450.0, paid_orders: 7, pending_orders: 0, paid_order_value: 18450.0, pending_order_value: 0.0 },
-        { customer_id: 8, customer_name: 'Fort Worth Distribution Corp', email: 'purchasing@ftwdist.com', primary_city: 'Fort Worth Hub', total_orders: 6, lifetime_spending: 15920.0, paid_orders: 5, pending_orders: 1, paid_order_value: 13420.0, pending_order_value: 2500.0 },
-      ]);
-      setExecutiveOverview({
-        order_breakdown: { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 },
-        total_orders: 76,
-      });
     }
   };
 
@@ -895,87 +792,37 @@ export default function AnalyticsPage() {
     const dateStamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const timeStamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    const branchPerformanceMap = {
-      dallas: {
-        id: 'TX-DAL-204',
-        name: 'Dallas Branch #204 (Central Distribution Hub)',
-        city: 'Dallas',
-        revenue: 172400.0,
-        orders: 28,
-        units: 390,
-        settlement: '96.2%',
-        pending: 8,
-        confirmed: 5,
-        shipped: 5,
-        delivered: 10,
-        status: 'Operational Leader',
-        ratio: 0.406
-      },
-      austin: {
-        id: 'TX-AUS-101',
-        name: 'Austin Branch #101 (Tech Corridor Hub)',
-        city: 'Austin',
-        revenue: 112850.0,
-        orders: 22,
-        units: 215,
-        settlement: '94.8%',
-        pending: 6,
-        confirmed: 3,
-        shipped: 3,
-        delivered: 10,
-        status: 'High Velocity',
-        ratio: 0.266
-      },
-      houston: {
-        id: 'TX-HOU-305',
-        name: 'Houston Branch #305 (Gulf Coast Terminal)',
-        city: 'Houston',
-        revenue: 78600.0,
-        orders: 16,
-        units: 134,
-        settlement: '92.4%',
-        pending: 4,
-        confirmed: 2,
-        shipped: 2,
-        delivered: 8,
-        status: 'Standard Fulfilled',
-        ratio: 0.185
-      },
-      san_antonio: {
-        id: 'TX-SAT-402',
-        name: 'San Antonio Branch #402 (Regional Facility)',
-        city: 'San Antonio',
-        revenue: 42150.0,
-        orders: 12,
-        units: 72,
-        settlement: '91.0%',
-        pending: 3,
-        confirmed: 1,
-        shipped: 1,
-        delivered: 7,
-        status: 'Steady Fulfillment',
-        ratio: 0.099
-      },
-      fort_worth: {
-        id: 'TX-FTW-508',
-        name: 'Fort Worth Branch #508 (North Texas Hub)',
-        city: 'Fort Worth',
-        revenue: 18350.0,
-        orders: 8,
-        units: 38,
-        settlement: '95.0%',
-        pending: 3,
-        confirmed: 1,
-        shipped: 1,
-        delivered: 3,
-        status: 'Consistent SLA',
-        ratio: 0.044
+    // Dynamically derive regional hub metrics from active customer accounts data
+    const dynamicHubMap = {};
+    for (const c of customerData) {
+      const city = c.primary_city || 'Texas Regional Hub';
+      const key = city.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      if (!dynamicHubMap[key]) {
+        dynamicHubMap[key] = {
+          id: `HUB-${key.toUpperCase()}`,
+          name: `${city} Distribution Hub`,
+          city: city,
+          revenue: 0,
+          orders: 0,
+          paid: 0,
+          pending: 0,
+          confirmed: 0,
+          shipped: 0,
+          delivered: 0,
+          units: 0,
+          status: 'Active Logistics Facility',
+        };
       }
-    };
+      dynamicHubMap[key].revenue += Number(c.lifetime_spending || 0);
+      dynamicHubMap[key].orders += Number(c.total_orders || 0);
+      dynamicHubMap[key].paid += Number(c.paid_order_value || 0);
+      dynamicHubMap[key].pending += Number(c.pending_orders || 0);
+      dynamicHubMap[key].delivered += Number(c.paid_orders || 0);
+    }
 
     const isAdmin = roleId === 3 || roleId === 4;
-    const isSingleBranch = isAdmin && overrideBranch && overrideBranch !== 'all_stores' && branchPerformanceMap[overrideBranch];
-    const branchSpec = isSingleBranch ? branchPerformanceMap[overrideBranch] : null;
+    const isSingleBranch = isAdmin && overrideBranch && overrideBranch !== 'all_stores' && dynamicHubMap[overrideBranch];
+    const branchSpec = isSingleBranch ? dynamicHubMap[overrideBranch] : null;
 
     let branchLabel = managerBranch;
     let branchId = 'TX-DAL-204';
@@ -987,7 +834,7 @@ export default function AnalyticsPage() {
         branchId = branchSpec.id;
         docClassification = `Single Branch Operations Audit (${branchSpec.city} Hub)`;
       } else {
-        branchLabel = 'All Stores (Enterprise Consolidated • 5 Texas Branches)';
+        branchLabel = 'All Stores (Enterprise Consolidated • Texas Regional Hubs)';
         branchId = 'ENT-TX-ALL';
         docClassification = 'Enterprise Multi-Store Executive Operations';
       }
@@ -1003,13 +850,11 @@ export default function AnalyticsPage() {
       : (grandTotalRow.total_units_sold || categoryData.reduce((a, b) => a + Number(b.total_units_sold || 0), 0));
 
     const orderBreakdown = isSingleBranch
-      ? { pending: branchSpec.pending, confirmed: branchSpec.confirmed, shipped: branchSpec.shipped, delivered: branchSpec.delivered, cancelled: 2 }
-      : ((executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
-          ? executiveOverview.order_breakdown
-          : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 });
+      ? { pending: branchSpec.pending, confirmed: 0, shipped: 0, delivered: branchSpec.delivered, cancelled: 0 }
+      : (executiveOverview?.order_breakdown || { pending: 0, confirmed: 0, shipped: 0, delivered: 0, cancelled: 0 });
 
     const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0);
-    const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
+    const completedOrders = Number(orderBreakdown.delivered) || 0;
 
     let docTitle = isAdmin
       ? (isSingleBranch ? `${branchSpec.name.toUpperCase()} EXECUTIVE AUDIT & PERFORMANCE DOSSIER` : 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER')
@@ -1431,28 +1276,33 @@ export default function AnalyticsPage() {
       </tr>
     </thead>
     <tbody>
-      ${Object.entries(branchPerformanceMap).map(([key, b]) => {
+      ${Object.entries(dynamicHubMap).length > 0 ? Object.entries(dynamicHubMap).map(([key, b]) => {
         const isCurrentBranch = isSingleBranch && overrideBranch === key;
+        const settlementRate = b.revenue > 0 ? ((b.paid / b.revenue) * 100).toFixed(1) + '%' : '100.0%';
         return `
           <tr style="${isCurrentBranch ? 'background: #eff6ff; font-weight: 600;' : ''}">
             <td>
               ${isCurrentBranch ? '▶ <strong>' + b.name + '</strong> <span style="font-size: 10px; background: #2563eb; color: #ffffff; padding: 1px 6px; border-radius: 3px; margin-left: 6px;">Active Scope</span>' : b.name}
             </td>
             <td style="text-align: right; font-weight: 500;">${b.orders}</td>
-            <td style="text-align: right; font-weight: 500;">${b.units}</td>
+            <td style="text-align: right; font-weight: 500;">-</td>
             <td style="text-align: right; font-weight: 600; color: #0f172a;">$${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            <td style="text-align: right; color: #475569;">${b.settlement}</td>
+            <td style="text-align: right; color: #475569;">${settlementRate}</td>
             <td><span style="color: ${isCurrentBranch ? '#1d4ed8' : '#475569'}; font-weight: 500;">${b.status}</span></td>
           </tr>
         `;
-      }).join('')}
+      }).join('') : `
+        <tr>
+          <td colspan="6" style="text-align: center; color: #64748b; padding: 14px;">No regional logistics facility records found in live database.</td>
+        </tr>
+      `}
       <tr class="row-rollup" style="${!isSingleBranch ? 'background: #f8fafc;' : ''}">
-        <td><span style="font-weight: 600;">⭐ ALL STORES CONSOLIDATED (5 BRANCHES)</span></td>
-        <td style="text-align: right; font-weight: 600;">86</td>
-        <td style="text-align: right; font-weight: 600;">849</td>
-        <td style="text-align: right; font-weight: 600;">$424,350.00</td>
-        <td style="text-align: right; font-weight: 600;">94.1%</td>
-        <td><span style="color: #0f172a; font-weight: 600;">All Stores Audited</span></td>
+        <td><span style="font-weight: 600;">⭐ ALL REGIONAL HUBS CONSOLIDATED</span></td>
+        <td style="text-align: right; font-weight: 600;">${Object.values(dynamicHubMap).reduce((a, b) => a + b.orders, 0)}</td>
+        <td style="text-align: right; font-weight: 600;">-</td>
+        <td style="text-align: right; font-weight: 600;">$${Object.values(dynamicHubMap).reduce((a, b) => a + b.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td style="text-align: right; font-weight: 600;">${Object.values(dynamicHubMap).reduce((a, b) => a + b.revenue, 0) > 0 ? ((Object.values(dynamicHubMap).reduce((a, b) => a + b.paid, 0) / Object.values(dynamicHubMap).reduce((a, b) => a + b.revenue, 0)) * 100).toFixed(1) + '%' : '100%'}</td>
+        <td><span style="color: #0f172a; font-weight: 600;">All Hubs Audited</span></td>
       </tr>
     </tbody>
   </table>
