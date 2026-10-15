@@ -47,15 +47,15 @@ export default function AnalyticsPage() {
     { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
   ]);
   const [topSellingData, setTopSellingData] = useState([
-    { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-    { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-    { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+    { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+    { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+    { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
   ]);
   const [categoryData, setCategoryData] = useState([
-    { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-    { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-    { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+    { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+    { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+    { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
   ]);
   const [customerData, setCustomerData] = useState([
     { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -75,6 +75,12 @@ export default function AnalyticsPage() {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [customerSummary, setCustomerSummary] = useState(null);
   const [customerPayments, setCustomerPayments] = useState([]);
+
+  // Settlement Modal State
+  const [settleModalOrder, setSettleModalOrder] = useState(null);
+  const [settlePaymentMethod, setSettlePaymentMethod] = useState('Credit Card');
+  const [settlingPayment, setSettlingPayment] = useState(false);
+  const [settleMessage, setSettleMessage] = useState(null);
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -104,9 +110,10 @@ export default function AnalyticsPage() {
       const yearQuery = year ? `?year=${year}` : '';
 
       // If Customer (Role 1): Fetch personal orders and summary
-      if (currentRoleId === 1 && currentUser?.id) {
+      const custId = currentUser?.id || currentUser?.user_id;
+      if (currentRoleId === 1 && custId) {
         try {
-          const resCust = await api.get(`/analytics/customer-orders/${currentUser.id}`, { timeout: 4000 });
+          const resCust = await api.get(`/analytics/customer-orders/${custId}`, { timeout: 4000 });
           if (resCust.data?.data) {
             setCustomerSummary(resCust.data.data.summary);
             setCustomerOrders(resCust.data.data.orders || []);
@@ -169,8 +176,8 @@ export default function AnalyticsPage() {
           populateDemoData(2);
         }
       }
-      // If Admin (Role 3): Fetch full executive suite
-      else if (currentRoleId === 3) {
+      // If Admin / Logistics Executive (Role 3 or 4): Fetch full executive suite
+      else if (currentRoleId === 3 || currentRoleId === 4) {
         try {
           const [resQuarterly, resTop, resCat, resCust, resTxn, resDcl] = await Promise.all([
             api.get(`/analytics/reports/quarterly-sales${yearQuery}`, { timeout: 4000 }).catch(() => null),
@@ -189,10 +196,10 @@ export default function AnalyticsPage() {
           if (resDcl?.data?.data) setDclData(resDcl.data.data);
 
           if (!resQuarterly?.data?.data?.length && !resTop?.data?.data?.length) {
-            populateDemoData(3);
+            populateDemoData(currentRoleId);
           }
         } catch {
-          populateDemoData(3);
+          populateDemoData(currentRoleId);
         }
       }
 
@@ -213,7 +220,7 @@ export default function AnalyticsPage() {
   const populateDemoData = (rId) => {
     if (rId === 1) {
       setCustomerSummary({
-        customer_name: user?.username || 'Test Customer',
+        customer_name: user?.username || user?.full_name || 'Test Customer',
         primary_city: 'Dallas Hub',
         total_orders: 5,
         lifetime_spending: 6524.90,
@@ -238,15 +245,15 @@ export default function AnalyticsPage() {
         { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
       ]);
       setTopSellingData([
-        { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-        { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-        { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+        { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+        { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+        { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
       ]);
       setCategoryData([
-        { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-        { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-        { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+        { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+        { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+        { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
       ]);
       setCustomerData([
         { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -278,10 +285,10 @@ export default function AnalyticsPage() {
       const netCollected = quarterlyData.reduce((acc, q) => acc + (q.net_collected_revenue || 0), 0);
       return {
         grossRevenue: gross,
-        netCollected: netCollected || gross * 0.94,
+        netCollected: netCollected,
         totalOrders: totalOrders,
         totalUnits: totalUnits,
-        collectionRate: gross > 0 ? ((netCollected || gross * 0.94) / gross) * 100 : 100,
+        collectionRate: gross > 0 ? (netCollected / gross) * 100 : 100,
       };
     }
 
@@ -299,17 +306,34 @@ export default function AnalyticsPage() {
     };
   }, [categoryData, quarterlyData]);
 
-  // Filtered customer list for Admin
+  // Filtered customer list for Admin (respecting search and selected store branch)
   const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customerData;
+    let list = customerData;
+    if (adminStoreBranch && adminStoreBranch !== 'all_stores') {
+      const branchCityMap = {
+        dallas: 'Dallas',
+        austin: 'Austin',
+        houston: 'Houston',
+        san_antonio: 'San Antonio',
+        fort_worth: 'Fort Worth',
+      };
+      const targetCity = branchCityMap[adminStoreBranch]?.toLowerCase();
+      if (targetCity) {
+        const branchMatches = list.filter((c) => c.primary_city?.toLowerCase().includes(targetCity));
+        if (branchMatches.length > 0) {
+          list = branchMatches;
+        }
+      }
+    }
+    if (!customerSearch.trim()) return list;
     const q = customerSearch.toLowerCase();
-    return customerData.filter(
+    return list.filter(
       (c) =>
         c.customer_name?.toLowerCase().includes(q) ||
         c.email?.toLowerCase().includes(q) ||
         c.primary_city?.toLowerCase().includes(q)
     );
-  }, [customerData, customerSearch]);
+  }, [customerData, customerSearch, adminStoreBranch]);
 
   if (!authChecked) {
     return null;
@@ -343,6 +367,53 @@ export default function AnalyticsPage() {
       </div>
     );
   }
+
+  // Payment Settlement Handlers for Customer
+  const handleOpenSettleModal = (order = null) => {
+    setSettleMessage(null);
+    setSettlePaymentMethod('Credit Card');
+    if (order) {
+      setSettleModalOrder(order);
+    } else {
+      const firstPending = customerOrders.find((o) => o.payment_status === 'Pending');
+      if (firstPending) {
+        setSettleModalOrder(firstPending);
+      } else {
+        alert('All your orders are settled! No pending payments required.');
+      }
+    }
+  };
+
+  const handleExecuteSettlement = async (e) => {
+    e?.preventDefault();
+    if (!settleModalOrder) return;
+    setSettlingPayment(true);
+    setSettleMessage(null);
+    try {
+      const res = await api.post('/analytics/payments/process', {
+        order_id: settleModalOrder.order_id,
+        amount: Number(settleModalOrder.total_amount),
+        payment_method: settlePaymentMethod,
+      });
+      if (res.data?.status === 'success') {
+        setSettleMessage({
+          type: 'success',
+          text: `Payment of $${Number(settleModalOrder.total_amount).toFixed(2)} recorded successfully! Ref: ${res.data.data?.transaction_reference || 'CONFIRMED'}`,
+        });
+        setTimeout(() => {
+          fetchReports(selectedYear, 1, user);
+          setSettleModalOrder(null);
+          setSettleMessage(null);
+        }, 1400);
+      } else {
+        setSettleMessage({ type: 'error', text: res.data?.error || 'Payment failed. Please try again.' });
+      }
+    } catch (err) {
+      setSettleMessage({ type: 'error', text: err.response?.data?.error || 'Payment processing failed.' });
+    } finally {
+      setSettlingPayment(false);
+    }
+  };
 
   // ==========================================================================
   // VIEW 1: CUSTOMER VIEW (when role_id === 1)
@@ -380,24 +451,26 @@ export default function AnalyticsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Link
-              to="/payment"
+            <button
+              type="button"
+              onClick={() => handleOpenSettleModal()}
               style={{
                 padding: '10px 18px',
                 borderRadius: '8px',
                 background: 'var(--primary)',
                 color: '#ffffff',
-                textDecoration: 'none',
+                border: 'none',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                cursor: 'pointer',
               }}
             >
               <span>Pay Pending Orders</span>
               <ArrowRightIcon className="w-4 h-4" />
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => fetchReports(selectedYear, 1, user)}
@@ -430,7 +503,7 @@ export default function AnalyticsPage() {
               ${Number(summary.lifetime_spending || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Aggregated from view <code>v_customer_order_summary</code>
+              Customer lifetime total spend
             </div>
           </div>
 
@@ -440,7 +513,7 @@ export default function AnalyticsPage() {
               {summary.total_orders || 0}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Total records in <code>orders</code>
+              Total orders recorded
             </div>
           </div>
 
@@ -450,7 +523,7 @@ export default function AnalyticsPage() {
               {summary.paid_orders || 0}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Recorded in <code>PAYMENT_TRANSACTION</code>
+              Confirmed settled payments
             </div>
           </div>
 
@@ -573,30 +646,218 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
 
-                    <Link
-                      to={`/payment?order_id=${o.order_id}&amount=${Number(o.total_amount || 0).toFixed(2)}`}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettleModal(o)}
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
                         background: 'var(--primary)',
                         color: '#ffffff',
-                        textDecoration: 'none',
+                        border: 'none',
                         fontSize: '0.85rem',
                         fontWeight: 700,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        cursor: 'pointer',
                       }}
                     >
                       <span>Pay Now</span>
                       <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Payment Settlement Modal */}
+        {settleModalOrder && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}>
+            <div style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'var(--primary-light, #eff6ff)',
+                    color: 'var(--primary, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <CreditCardIcon className="w-5 h-5" />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                    Settle Order Payment
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted, #64748b)',
+                    padding: '4px'
+                  }}
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div style={{
+                background: 'var(--bg-muted, #f8fafc)',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order ID:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>#{settleModalOrder.order_id}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order Status:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>{settleModalOrder.order_status || 'PENDING'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', paddingTop: '8px', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>Amount Payable:</span>
+                  <span style={{ fontWeight: 800, color: 'var(--primary, #2563eb)', fontSize: '1.2rem' }}>
+                    ${Number(settleModalOrder.total_amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', marginBottom: '6px' }}>
+                    Payment Method
+                  </label>
+                  <select
+                    value={settlePaymentMethod}
+                    onChange={(e) => setSettlePaymentMethod(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-main, #0f172a)',
+                      fontSize: '0.9rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    <option value="Credit Card">Credit Card (Instant Online Settlement)</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Visa">Visa Direct</option>
+                    <option value="Mastercard">Mastercard SecureCode</option>
+                    <option value="Bank Transfer">Bank Wire Transfer</option>
+                  </select>
+                </div>
+
+                {settleMessage && (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    background: settleMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                    color: settleMessage.type === 'success' ? '#065f46' : '#991b1b',
+                    border: `1px solid ${settleMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {settleMessage.type === 'success' ? (
+                      <CheckCircleIcon className="w-4 h-4" />
+                    ) : (
+                      <XIcon className="w-4 h-4" />
+                    )}
+                    <span>{settleMessage.text}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-secondary, #475569)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 20px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'var(--primary, #2563eb)',
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
+                      cursor: settlingPayment ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: settlingPayment ? 0.7 : 1
+                    }}
+                  >
+                    {settlingPayment ? (
+                      <>
+                        <ZapIcon className="w-4 h-4" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirm &amp; Settle</span>
+                        <ArrowRightIcon className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -629,76 +890,176 @@ export default function AnalyticsPage() {
     }
   };
 
-  const buildReportHtml = (targetType = 'all') => {
+  const buildReportHtml = (targetType = 'all', overrideBranch = adminStoreBranch) => {
     const durationText = getDurationLabel(reportDuration, customStartDate, customEndDate);
     const dateStamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const timeStamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    const grandTotalRow = categoryData.find(c => c.category_name?.includes('GRAND TOTAL')) || {};
-    const totalVolume = grandTotalRow.total_category_revenue || categoryData.reduce((a, b) => a + Number(b.total_category_revenue || 0), 0);
-    const totalUnits = grandTotalRow.total_units_sold || categoryData.reduce((a, b) => a + Number(b.total_units_sold || 0), 0);
+    const branchPerformanceMap = {
+      dallas: {
+        id: 'TX-DAL-204',
+        name: 'Dallas Branch #204 (Central Distribution Hub)',
+        city: 'Dallas',
+        revenue: 172400.0,
+        orders: 28,
+        units: 390,
+        settlement: '96.2%',
+        pending: 8,
+        confirmed: 5,
+        shipped: 5,
+        delivered: 10,
+        status: 'Operational Leader',
+        ratio: 0.406
+      },
+      austin: {
+        id: 'TX-AUS-101',
+        name: 'Austin Branch #101 (Tech Corridor Hub)',
+        city: 'Austin',
+        revenue: 112850.0,
+        orders: 22,
+        units: 215,
+        settlement: '94.8%',
+        pending: 6,
+        confirmed: 3,
+        shipped: 3,
+        delivered: 10,
+        status: 'High Velocity',
+        ratio: 0.266
+      },
+      houston: {
+        id: 'TX-HOU-305',
+        name: 'Houston Branch #305 (Gulf Coast Terminal)',
+        city: 'Houston',
+        revenue: 78600.0,
+        orders: 16,
+        units: 134,
+        settlement: '92.4%',
+        pending: 4,
+        confirmed: 2,
+        shipped: 2,
+        delivered: 8,
+        status: 'Standard Fulfilled',
+        ratio: 0.185
+      },
+      san_antonio: {
+        id: 'TX-SAT-402',
+        name: 'San Antonio Branch #402 (Regional Facility)',
+        city: 'San Antonio',
+        revenue: 42150.0,
+        orders: 12,
+        units: 72,
+        settlement: '91.0%',
+        pending: 3,
+        confirmed: 1,
+        shipped: 1,
+        delivered: 7,
+        status: 'Steady Fulfillment',
+        ratio: 0.099
+      },
+      fort_worth: {
+        id: 'TX-FTW-508',
+        name: 'Fort Worth Branch #508 (North Texas Hub)',
+        city: 'Fort Worth',
+        revenue: 18350.0,
+        orders: 8,
+        units: 38,
+        settlement: '95.0%',
+        pending: 3,
+        confirmed: 1,
+        shipped: 1,
+        delivered: 3,
+        status: 'Consistent SLA',
+        ratio: 0.044
+      }
+    };
 
-    const orderBreakdown = (executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
-      ? executiveOverview.order_breakdown
-      : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 };
-
-    const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0) || 48;
-    const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
+    const isAdmin = roleId === 3 || roleId === 4;
+    const isSingleBranch = isAdmin && overrideBranch && overrideBranch !== 'all_stores' && branchPerformanceMap[overrideBranch];
+    const branchSpec = isSingleBranch ? branchPerformanceMap[overrideBranch] : null;
 
     let branchLabel = managerBranch;
     let branchId = 'TX-DAL-204';
     let docClassification = 'Privileged Branch Operations';
 
-    if (roleId === 3) {
-      docClassification = 'Enterprise Multi-Store Executive Operations';
-      if (adminStoreBranch === 'all_stores') {
+    if (isAdmin) {
+      if (isSingleBranch) {
+        branchLabel = branchSpec.name;
+        branchId = branchSpec.id;
+        docClassification = `Single Branch Operations Audit (${branchSpec.city} Hub)`;
+      } else {
         branchLabel = 'All Stores (Enterprise Consolidated • 5 Texas Branches)';
         branchId = 'ENT-TX-ALL';
-      } else if (adminStoreBranch === 'dallas') {
-        branchLabel = 'Dallas Branch #204 (Central Distribution Hub)';
-        branchId = 'TX-DAL-204';
-      } else if (adminStoreBranch === 'austin') {
-        branchLabel = 'Austin Branch #101 (Tech Corridor Hub)';
-        branchId = 'TX-AUS-101';
-      } else if (adminStoreBranch === 'houston') {
-        branchLabel = 'Houston Branch #305 (Gulf Coast Terminal)';
-        branchId = 'TX-HOU-305';
-      } else if (adminStoreBranch === 'san_antonio') {
-        branchLabel = 'San Antonio Branch #402 (Regional Facility)';
-        branchId = 'TX-SAT-402';
-      } else if (adminStoreBranch === 'fort_worth') {
-        branchLabel = 'Fort Worth Branch #508 (North Texas Hub)';
-        branchId = 'TX-FTW-508';
+        docClassification = 'Enterprise Multi-Store Executive Operations';
       }
     }
 
-    let docTitle = roleId === 3 ? 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER' : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
-    let docSubtitle = roleId === 3 ? 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger' : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
+    const grandTotalRow = categoryData.find(c => c.category_name?.includes('GRAND TOTAL')) || {};
+    const totalVolume = isSingleBranch
+      ? branchSpec.revenue
+      : (grandTotalRow.total_category_revenue || categoryData.reduce((a, b) => a + Number(b.total_category_revenue || 0), 0));
+
+    const totalUnits = isSingleBranch
+      ? branchSpec.units
+      : (grandTotalRow.total_units_sold || categoryData.reduce((a, b) => a + Number(b.total_units_sold || 0), 0));
+
+    const orderBreakdown = isSingleBranch
+      ? { pending: branchSpec.pending, confirmed: branchSpec.confirmed, shipped: branchSpec.shipped, delivered: branchSpec.delivered, cancelled: 2 }
+      : ((executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
+        ? executiveOverview.order_breakdown
+        : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 });
+
+    const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0);
+    const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
+
+    let docTitle = isAdmin
+      ? (isSingleBranch ? `${branchSpec.name.toUpperCase()} EXECUTIVE AUDIT & PERFORMANCE DOSSIER` : 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER')
+      : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
+
+    let docSubtitle = isAdmin
+      ? (isSingleBranch ? `Dedicated Branch Operations, Local Velocity, Fulfillment Pipeline & Regional Accounts Ledger` : 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger')
+      : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
 
     if (targetType === 'selling_products') {
-      docTitle = roleId === 3 ? 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD' : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
-      docSubtitle = roleId === 3 ? 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis' : 'Product SKU Rankings, Units Sold, and Revenue Contribution Analysis';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD` : 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD')
+        : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
+      docSubtitle = isSingleBranch
+        ? `Local SKU Velocity & Revenue Contribution for ${branchSpec.name}`
+        : 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis';
     } else if (targetType === 'revenue_category') {
-      docTitle = roleId === 3 ? 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT' : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
-      docSubtitle = roleId === 3 ? 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation' : 'Gross Sales Aggregation, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} STORE TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT` : 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT')
+        : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
+      docSubtitle = isSingleBranch
+        ? `Branch Gross Sales Aggregation, Category Subtotals, and Hierarchical Reconciliation for ${branchSpec.name}`
+        : 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
     } else if (targetType === 'customer_history') {
-      docTitle = roleId === 3 ? 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST' : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
-      docSubtitle = roleId === 3 ? 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances' : 'Account Purchasing Activity, Paid Settlement Values, and Outstanding Balances';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST` : 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST')
+        : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
+      docSubtitle = isSingleBranch
+        ? `Customer Accounts Ledger & Settlement Values registered to ${branchSpec.city} Hub`
+        : 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances';
     } else if (targetType === 'branch_essential' || targetType === 'admin_essential') {
-      docTitle = roleId === 3 ? 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT' : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
-      docSubtitle = roleId === 3 ? 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification' : 'Official Store Branch Operating Record, Fulfillment Pipeline & Verification';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `ESSENTIAL ${branchSpec.city.toUpperCase()} BRANCH AUDIT DOSSIER` : 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT')
+        : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
+      docSubtitle = isSingleBranch
+        ? `Official Operating Record, Branch Benchmarks & Verification for ${branchSpec.name}`
+        : 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification';
     }
 
-    const includeComparison = roleId === 3 && (targetType === 'all' || targetType === 'admin_essential');
+    const includeComparison = isAdmin && (targetType === 'all' || targetType === 'admin_essential');
     const includeProducts = targetType === 'all' || targetType === 'selling_products' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeRevenue = targetType === 'all' || targetType === 'revenue_category' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeCustomers = targetType === 'all' || targetType === 'customer_history' || targetType === 'branch_essential' || targetType === 'admin_essential';
-    const includeLogistics = (roleId !== 3) && (targetType === 'all' || targetType === 'branch_essential');
+    const includeLogistics = (!isAdmin) && (targetType === 'all' || targetType === 'branch_essential');
 
-    // Products table rows
-    // Products table rows
+    // Products table rows (calculated specifically for selected branch)
     const productRowsHtml = topSellingData.map((p, idx) => {
-      const share = totalVolume > 0 ? ((Number(p.total_revenue || 0) / Number(totalVolume)) * 100).toFixed(1) : '0.0';
+      const units = isSingleBranch ? Math.max(1, Math.round(Number(p.total_units_sold || 0) * branchSpec.ratio)) : Number(p.total_units_sold || 0);
+      const revenue = isSingleBranch ? (Number(p.total_revenue || 0) * branchSpec.ratio) : Number(p.total_revenue || 0);
+      const share = totalVolume > 0 ? ((Number(revenue) / Number(totalVolume)) * 100).toFixed(1) : '0.0';
       return `
         <tr>
           <td style="text-align: center; font-weight: 500; color: #64748b;">#${p.revenue_rank || idx + 1}</td>
@@ -707,28 +1068,46 @@ export default function AnalyticsPage() {
             <div style="font-size: 10px; color: #64748b; margin-top: 2px;">SKU: BB-PRD-00${p.product_id || idx + 1}</div>
           </td>
           <td>${p.category_name}</td>
-          <td style="text-align: right; font-weight: 500;">${Number(p.total_units_sold || 0).toLocaleString()}</td>
-          <td style="text-align: right; font-weight: 600; color: #0f172a;">$${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right; font-weight: 500;">${units.toLocaleString()}</td>
+          <td style="text-align: right; font-weight: 600; color: #0f172a;">$${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td style="text-align: right; color: #475569; font-weight: 500;">${share}%</td>
         </tr>
       `;
     }).join('');
 
-    // Category table rows
+    // Category table rows (calculated specifically for selected branch)
     const categoryRowsHtml = categoryData.map((c) => {
       const isGrand = c.category_name?.includes('GRAND TOTAL');
+      const catOrders = isSingleBranch ? Math.max(1, Math.round(Number(c.total_orders || 0) * branchSpec.ratio)) : Number(c.total_orders || 0);
+      const catUnits = isSingleBranch ? Math.max(1, Math.round(Number(c.total_units_sold || 0) * branchSpec.ratio)) : Number(c.total_units_sold || 0);
+      const catRev = isSingleBranch ? (Number(c.total_category_revenue || 0) * branchSpec.ratio) : Number(c.total_category_revenue || 0);
+
+      const label = isGrand
+        ? (isSingleBranch ? `⭐ BRANCH TOTAL (${branchSpec.city.toUpperCase()} HUB)` : 'ALL CATEGORIES (GRAND TOTAL)')
+        : c.category_name;
+
+      const finalRev = isGrand && isSingleBranch ? branchSpec.revenue : catRev;
+      const finalOrders = isGrand && isSingleBranch ? branchSpec.orders : catOrders;
+      const finalUnits = isGrand && isSingleBranch ? branchSpec.units : catUnits;
+
       return `
         <tr class="${isGrand ? 'row-rollup' : ''}">
-          <td>${isGrand ? '<span style="font-weight: 600;">' + c.category_name + '</span>' : c.category_name}</td>
-          <td style="text-align: right;">${Number(c.total_orders || 0).toLocaleString()}</td>
-          <td style="text-align: right;">${Number(c.total_units_sold || 0).toLocaleString()}</td>
-          <td style="text-align: right; font-weight: 600;">$${Number(c.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${isGrand ? '<span style="font-weight: 600;">' + label + '</span>' : label}</td>
+          <td style="text-align: right;">${Number(finalOrders).toLocaleString()}</td>
+          <td style="text-align: right;">${Number(finalUnits).toLocaleString()}</td>
+          <td style="text-align: right; font-weight: 600;">$${Number(finalRev).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       `;
     }).join('');
 
-    // Customer table rows
-    const customerRowsHtml = customerData.map((cust) => {
+    // Customer table rows (scoped strictly to selected branch hub)
+    let targetCustomers = customerData;
+    if (isSingleBranch) {
+      const matches = customerData.filter((c) => c.primary_city?.toLowerCase().includes(branchSpec.city.toLowerCase()));
+      if (matches.length > 0) targetCustomers = matches;
+    }
+
+    const customerRowsHtml = targetCustomers.map((cust) => {
       return `
         <tr>
           <td style="font-weight: 500; color: #64748b;">#${cust.customer_id}</td>
@@ -979,7 +1358,7 @@ export default function AnalyticsPage() {
       <div class="brand-sub">${branchLabel} • ID: ${branchId}</div>
     </div>
     <div style="text-align: right;">
-      <div class="doc-badge">${roleId === 3 ? 'Administrator Report' : 'Branch Manager Report'}</div>
+      <div class="doc-badge">${isAdmin ? 'Administrator Report' : 'Branch Manager Report'}</div>
       <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Classification: ${docClassification}</div>
     </div>
   </div>
@@ -997,8 +1376,8 @@ export default function AnalyticsPage() {
       <div class="meta-val">${durationText}</div>
     </div>
     <div>
-      <div class="meta-label">${roleId === 3 ? 'System Administrator' : 'Branch Manager'}</div>
-      <div class="meta-val">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
+      <div class="meta-label">${isAdmin ? 'System Administrator' : 'Branch Manager'}</div>
+      <div class="meta-val">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
     </div>
     <div>
       <div class="meta-label">Store Scope</div>
@@ -1013,9 +1392,9 @@ export default function AnalyticsPage() {
   <!-- Executive Operational KPI Snapshot -->
   <div class="kpi-grid">
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Gross Enterprise Revenue' : 'Gross Category Revenue'}</div>
+      <div class="kpi-label">${isSingleBranch ? `Gross Revenue (${branchSpec.city} Hub)` : (isAdmin ? 'Gross Enterprise Revenue' : 'Gross Category Revenue')}</div>
       <div class="kpi-val">$${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across all catalog items and stores' : 'Total catalog sales volume'}</div>
+      <div class="kpi-sub">${isSingleBranch ? `Branch contribution: ${(branchSpec.ratio * 100).toFixed(1)}% of enterprise` : (isAdmin ? 'Across all catalog items and stores' : 'Total catalog sales volume')}</div>
     </div>
     <div class="kpi-box">
       <div class="kpi-label">Pending / Undelivered</div>
@@ -1028,9 +1407,9 @@ export default function AnalyticsPage() {
       <div class="kpi-sub">Successfully fulfilled to customers</div>
     </div>
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Total Units Dispatched' : 'Units Shipped'}</div>
+      <div class="kpi-label">${isSingleBranch ? `Units Dispatched (${branchSpec.city})` : (isAdmin ? 'Total Units Dispatched' : 'Units Shipped')}</div>
       <div class="kpi-val">${Number(totalUnits).toLocaleString()} Units</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch'}</div>
+      <div class="kpi-sub">${isSingleBranch ? `Dispatched via ${branchSpec.name}` : (isAdmin ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch')}</div>
     </div>
   </div>
 
@@ -1038,7 +1417,7 @@ export default function AnalyticsPage() {
   <!-- SECTION: MULTI-STORE BRANCH COMPARISON BENCHMARK -->
   <div class="section-title">
     <span>Enterprise Store Branches Comparison &amp; Operating Performance</span>
-    <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">All 5 Texas Branches Benchmark</span>
+    <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">${isSingleBranch ? `Focused Branch Audit: ${branchSpec.name}` : 'All 5 Texas Branches Benchmark'}</span>
   </div>
   <table>
     <thead>
@@ -1052,47 +1431,22 @@ export default function AnalyticsPage() {
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Dallas Branch #204 (Central Distribution Hub)</td>
-        <td style="text-align: right; font-weight: 500;">28</td>
-        <td style="text-align: right; font-weight: 500;">390</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$172,400.00</td>
-        <td style="text-align: right; color: #475569;">96.2%</td>
-        <td><span style="color: #475569; font-weight: 500;">Operational Leader</span></td>
-      </tr>
-      <tr>
-        <td>Austin Branch #101 (Tech Corridor Hub)</td>
-        <td style="text-align: right; font-weight: 500;">22</td>
-        <td style="text-align: right; font-weight: 500;">215</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$112,850.00</td>
-        <td style="text-align: right; color: #475569;">94.8%</td>
-        <td><span style="color: #475569; font-weight: 500;">High Velocity</span></td>
-      </tr>
-      <tr>
-        <td>Houston Branch #305 (Gulf Coast Terminal)</td>
-        <td style="text-align: right; font-weight: 500;">16</td>
-        <td style="text-align: right; font-weight: 500;">134</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$78,600.00</td>
-        <td style="text-align: right; color: #475569;">92.4%</td>
-        <td><span style="color: #475569; font-weight: 500;">Standard Fulfilled</span></td>
-      </tr>
-      <tr>
-        <td>San Antonio Branch #402 (Regional Facility)</td>
-        <td style="text-align: right; font-weight: 500;">12</td>
-        <td style="text-align: right; font-weight: 500;">72</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$42,150.00</td>
-        <td style="text-align: right; color: #475569;">91.0%</td>
-        <td><span style="color: #475569; font-weight: 500;">Steady Fulfillment</span></td>
-      </tr>
-      <tr>
-        <td>Fort Worth Branch #508 (North Texas Hub)</td>
-        <td style="text-align: right; font-weight: 500;">8</td>
-        <td style="text-align: right; font-weight: 500;">38</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$18,350.00</td>
-        <td style="text-align: right; color: #475569;">95.0%</td>
-        <td><span style="color: #475569; font-weight: 500;">Consistent SLA</span></td>
-      </tr>
-      <tr class="row-rollup">
+      ${Object.entries(branchPerformanceMap).map(([key, b]) => {
+      const isCurrentBranch = isSingleBranch && overrideBranch === key;
+      return `
+          <tr style="${isCurrentBranch ? 'background: #eff6ff; font-weight: 600;' : ''}">
+            <td>
+              ${isCurrentBranch ? '▶ <strong>' + b.name + '</strong> <span style="font-size: 10px; background: #2563eb; color: #ffffff; padding: 1px 6px; border-radius: 3px; margin-left: 6px;">Active Scope</span>' : b.name}
+            </td>
+            <td style="text-align: right; font-weight: 500;">${b.orders}</td>
+            <td style="text-align: right; font-weight: 500;">${b.units}</td>
+            <td style="text-align: right; font-weight: 600; color: #0f172a;">$${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="text-align: right; color: #475569;">${b.settlement}</td>
+            <td><span style="color: ${isCurrentBranch ? '#1d4ed8' : '#475569'}; font-weight: 500;">${b.status}</span></td>
+          </tr>
+        `;
+    }).join('')}
+      <tr class="row-rollup" style="${!isSingleBranch ? 'background: #f8fafc;' : ''}">
         <td><span style="font-weight: 600;">⭐ ALL STORES CONSOLIDATED (5 BRANCHES)</span></td>
         <td style="text-align: right; font-weight: 600;">86</td>
         <td style="text-align: right; font-weight: 600;">849</td>
@@ -1220,24 +1574,24 @@ export default function AnalyticsPage() {
   <div class="sign-block">
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'System Administrator' : 'Store Branch Manager'}</div>
-      <div class="sign-sub">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
+      <div class="sign-title">${isAdmin ? 'System Administrator' : 'Store Branch Manager'}</div>
+      <div class="sign-sub">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
     </div>
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
-      <div class="sign-sub">${roleId === 3 ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
+      <div class="sign-title">${isAdmin ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
+      <div class="sign-sub">${isAdmin ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
     </div>
     <div>
       <div class="stamp-box">
-        ${roleId === 3 ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
+        ${isAdmin ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
       </div>
     </div>
   </div>
 
   <!-- Document Footer -->
   <div class="footer-note">
-    <span>${roleId === 3 ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
+    <span>${isAdmin ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
     <span>Doc ID: SF-RPT-TX-${Math.floor(Math.random() * 89999 + 10000)} • Page 1 of 1</span>
   </div>
 
@@ -1276,7 +1630,6 @@ export default function AnalyticsPage() {
     link.download = `BrightBuy_Branch_Report_${targetType}_${reportDuration}.html`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
@@ -1293,36 +1646,30 @@ export default function AnalyticsPage() {
     const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
 
     return (
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Manager Header */}
-        <div style={{ padding: '20px 24px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Compact Manager Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-4px' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontSize: '0.72rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '6px' }}>
-              <span>Store Operations</span>
-            </div>
-            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.45rem', fontWeight: 600, color: '#2c2523', letterSpacing: '-0.01em', margin: 0 }}>
-              Store Operations &amp; Inventory Analytics Hub
+            <h1 style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
+              Store Operations &amp; Inventory Analytics
             </h1>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '4px', margin: 0, fontWeight: 400 }}>
-              Welcome, {user.username || user.full_name}! Catalog rankings, category volume aggregations, and Texas regional distribution.
-            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Link
               to="/catalog"
               style={{
-                padding: '8px 16px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                background: '#2a9d8f',
-                color: '#ffffff',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
                 textDecoration: 'none',
                 fontWeight: 500,
-                fontSize: '0.85rem',
-                border: '1px solid #2a9d8f',
+                fontSize: '0.82rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                boxShadow: '0 1px 2px rgba(42, 157, 143, 0.15)'
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
               Manage Catalog
@@ -1332,152 +1679,128 @@ export default function AnalyticsPage() {
               onClick={() => fetchReports(selectedYear, 2, user)}
               disabled={loading}
               style={{
-                padding: '8px 14px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                border: '1px solid #e7d7c1',
-                background: '#faf7f2',
-                color: '#4b5563',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
                 fontWeight: 500,
-                fontSize: '0.85rem',
+                fontSize: '0.82rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <ZapIcon className="w-3.5 h-3.5" style={{ color: '#2a9d8f' }} />
-              <span>{loading ? 'Refreshing...' : 'Refresh DB Views'}</span>
+              <ZapIcon className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} />
+              <span>{loading ? 'Refreshing...' : 'Refresh Analytics'}</span>
             </button>
           </div>
         </div>
 
         {/* Manager Operational KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
           {/* Card 1: Gross Category Revenue */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
-              Gross Category Revenue
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Gross Catalog Revenue
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#1f2937', margin: '6px 0 2px', lineHeight: 1.1, minHeight: '34px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)', margin: '6px 0 2px' }}>
               ${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Total catalog sales volume
             </div>
           </div>
 
-          {/* Card 2: Total Pending / Undelivered Orders */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
-              Pending &amp; Undelivered Orders
+          {/* Card 2: Pending / Undelivered */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Pending &amp; Undelivered
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#b45309', margin: '6px 0 2px', lineHeight: 1.1, minHeight: '34px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--warning-text, #b45309)', margin: '6px 0 2px' }}>
               {undeliveredOrders}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {orderBreakdown.pending || 0} pending · {(Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0)} in-transit
             </div>
           </div>
 
-          {/* Card 3: Divided Box (Completed Orders | Total Units Shipped) */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            {/* Header Titles Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', minHeight: '20px', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', paddingRight: '12px', whiteSpace: 'nowrap' }}>
-                Completed
-              </div>
-              <div />
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', paddingLeft: '12px', whiteSpace: 'nowrap' }}>
-                Units Shipped
-              </div>
+          {/* Card 3: Completed & Units */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Completed &amp; Units Shipped
             </div>
-
-            {/* Values Row with Centered Divider */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', alignItems: 'center', margin: '6px 0 2px', minHeight: '34px' }}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#0f766e', paddingRight: '12px', lineHeight: 1.1, display: 'flex', alignItems: 'center' }}>
-                {completedOrders}
-              </div>
-              <div style={{ width: '1px', background: '#e7d7c1', height: '24px', justifySelf: 'center' }} />
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#475569', paddingLeft: '12px', lineHeight: 1.1, display: 'flex', alignItems: 'center' }}>
-                {Number(totalUnits).toLocaleString('en-US')}
-              </div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--primary)', margin: '6px 0 2px' }}>
+              {completedOrders} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-muted)' }}>orders</span> · {Number(totalUnits).toLocaleString('en-US')} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-muted)' }}>units</span>
             </div>
-
-            {/* Subtitles Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', minHeight: '18px', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', paddingRight: '12px', fontWeight: 400 }}>
-                Delivered
-              </div>
-              <div />
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', paddingLeft: '12px', fontWeight: 400 }}>
-                Texas DCs
-              </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Delivered across Texas DCs
             </div>
           </div>
 
           {/* Card 4: Top Selling Product */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               Top Selling Product
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', margin: '6px 0 2px', lineHeight: 1.25, minHeight: '34px', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', margin: '6px 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={topSellingData[0]?.product_name}>
               {topSellingData[0]?.product_name || 'Apex Pro Terminal Ultra'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
-              <span style={{ color: '#0f766e', fontWeight: 500 }}>${Number(topSellingData[0]?.total_revenue || 114312).toLocaleString()}</span>&nbsp;revenue · {topSellingData[0]?.total_units_sold || 88} units
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              ${Number(topSellingData[0]?.total_revenue || 114312).toLocaleString()} revenue · {topSellingData[0]?.total_units_sold || 88} units
             </div>
           </div>
         </div>
 
         {/* Manager Tables Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '16px' }}>
           {/* Top Selling Products */}
-          <div style={{ padding: '20px 22px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.05rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
-                  Top-Selling Products Leaderboard
-                </h2>
-              </div>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontWeight: 500 }}>
-                Top 10
+          <div className="card" style={{ padding: '18px 20px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
+                Top-Selling Products Leaderboard
+              </h2>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-subtle)', color: 'var(--text-muted)', fontWeight: 500 }}>
+                Top 7
               </span>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: '#faf7f2', borderBottom: '1px solid #e7d7c1', textAlign: 'left', color: '#6b7280' }}>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Rank</th>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Product</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Units Sold</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
+                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Rank</th>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Product</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Units</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topSellingData.slice(0, 7).map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f4ede4' }}>
-                      <td style={{ padding: '8px' }}>
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '8px 10px' }}>
                         <span style={{
                           fontWeight: 500,
                           fontSize: '0.75rem',
                           padding: '2px 6px',
                           borderRadius: '2px',
-                          background: p.revenue_rank === 1 ? '#fef3c7' : '#f9fafb',
-                          color: p.revenue_rank === 1 ? '#92400e' : '#4b5563',
-                          border: '1px solid #e5e7eb'
+                          background: p.revenue_rank === 1 ? 'var(--warning-bg)' : 'var(--bg-subtle)',
+                          color: p.revenue_rank === 1 ? 'var(--warning-text)' : 'var(--text-secondary)',
+                          border: '1px solid var(--border-light)'
                         }}>
                           #{p.revenue_rank}
                         </span>
                       </td>
-                      <td style={{ padding: '8px' }}>
-                        <div style={{ fontWeight: 500, color: '#1f2937' }}>{p.product_name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400 }}>{p.category_name}</div>
+                      <td style={{ padding: '8px 10px' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>{p.product_name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{p.category_name}</div>
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 400, color: '#4b5563' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 400, color: 'var(--text-secondary)' }}>
                         {p.total_units_sold}
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                         ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -1487,26 +1810,24 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Category Revenue with ROLLUP */}
-          <div style={{ padding: '20px 22px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.05rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
-                  Category Revenue &amp; Rollup Totals
-                </h2>
-              </div>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontWeight: 500 }}>
-                WITH ROLLUP
+          {/* Category Revenue Totals */}
+          <div className="card" style={{ padding: '18px 20px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
+                Category Revenue Summary
+              </h2>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-subtle)', color: 'var(--text-muted)', fontWeight: 500 }}>
+                Grand Totals
               </span>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: '#faf7f2', borderBottom: '1px solid #e7d7c1', textAlign: 'left', color: '#6b7280' }}>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category Name</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Orders</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
+                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category Name</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Orders</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1516,17 +1837,17 @@ export default function AnalyticsPage() {
                       <tr
                         key={idx}
                         style={{
-                          borderBottom: '1px solid #f4ede4',
-                          background: isGrand ? '#faf7f2' : 'transparent'
+                          borderBottom: '1px solid var(--border-light)',
+                          background: isGrand ? 'var(--bg-subtle)' : 'transparent'
                         }}
                       >
-                        <td style={{ padding: '8px', color: isGrand ? '#1f2937' : '#374151', fontWeight: isGrand ? 600 : 400 }}>
+                        <td style={{ padding: '8px 10px', color: isGrand ? 'var(--primary)' : 'var(--text-main)', fontWeight: isGrand ? 600 : 400 }}>
                           {c.category_name}
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 400, color: '#4b5563' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 400, color: 'var(--text-secondary)' }}>
                           {c.total_orders || 0}
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: isGrand ? 600 : 500, color: '#1f2937' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: isGrand ? 600 : 500, color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
                           ${Number(c.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
@@ -1538,120 +1859,140 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* PAGE BOTTOM: STORE BRANCH MANAGER PDF MAKER & EXPORT SUITE                */}
-        {/* Features: Time Duration Select, Selling Products, Revenue, Customers, & All */}
-        {/* ========================================================================= */}
+        {/* Streamlined Branch Reports & PDF Export Suite */}
         <div
+          className="card"
           style={{
-            padding: '24px',
+            padding: '20px 22px',
             borderRadius: '2px',
-            background: '#ffffff',
-            border: '1px solid #e7d7c1',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px'
+            gap: '14px'
           }}
         >
           {/* Header & Master Actions */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b' }}>
-                  <FileTextIcon className="w-4 h-4" />
-                </div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937', letterSpacing: '-0.01em' }}>
-                  Branch Manager PDF Report Generator &amp; Export Suite
-                </h2>
-                <span style={{ fontSize: '0.72rem', fontWeight: 500, padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0f766e' }} />
-                  Ready to Export
-                </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '2px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                <FileTextIcon className="w-4 h-4" />
               </div>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280', fontWeight: 400 }}>
-                Select a reporting duration to compile and download official shop branch audit documents: selling products velocity, total revenue received, customer history list, or the comprehensive branch manager dossier.
-              </p>
+              <div>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+                  Branch Reports &amp; PDF Export
+                </h2>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Dallas Branch #204 · Compile and export official branch audit documents
+                </div>
+              </div>
             </div>
 
-            {/* Quick Actions */}
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => handlePreviewReport(selectedReportType)}
                 style={{
-                  padding: '8px 14px',
+                  padding: '7px 12px',
                   borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  color: '#4b5563',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <EyeIcon className="w-4 h-4" style={{ color: '#0f766e' }} />
-                <span>Preview Document</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDownloadPDF(selectedReportType)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '2px',
-                  border: '1px solid #2a9d8f',
-                  background: '#2a9d8f',
-                  color: '#ffffff',
-                  fontSize: '0.85rem',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
                   fontWeight: 500,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: '0 1px 2px rgba(42, 157, 143, 0.15)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
               >
-                <DownloadIcon className="w-4 h-4" />
-                <span>Download PDF Report</span>
+                <EyeIcon className="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadPDF(selectedReportType)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '2px',
+                  border: '1px solid var(--primary)',
+                  background: 'var(--primary)',
+                  color: '#ffffff',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <DownloadIcon className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
               </button>
             </div>
           </div>
 
-          {/* Time Duration & Scope Filters Bar */}
+          {/* Controls Bar */}
           <div
             style={{
-              padding: '16px 18px',
+              padding: '12px 14px',
               borderRadius: '2px',
-              background: '#faf7f2',
-              border: '1px solid #e7d7c1',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-              alignItems: 'flex-end'
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-light)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center'
             }}
           >
-            {/* 1. Time Duration Dropdown */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                <CalendarIcon className="w-3.5 h-3.5" style={{ color: '#0f766e' }} />
-                <span>Select Time Duration</span>
+            {/* Scope / Report Package */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 260px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                Scope:
+              </label>
+              <select
+                value={selectedReportType}
+                onChange={(e) => setSelectedReportType(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: '2px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">Comprehensive Branch Executive Audit (All-in-One)</option>
+                <option value="selling_products">Top-Selling Products Leaderboard</option>
+                <option value="revenue_category">Total Revenue Received &amp; Category Sales</option>
+                <option value="customer_history">Customer Purchase History &amp; Accounts</option>
+                <option value="branch_essential">Essential Shop Branch Manager Audit</option>
+              </select>
+            </div>
+
+            {/* Time Duration Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                Period:
               </label>
               <select
                 value={reportDuration}
                 onChange={(e) => setReportDuration(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '6px 10px',
                   borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 400,
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
                   cursor: 'pointer'
                 }}
               >
@@ -1668,406 +2009,98 @@ export default function AnalyticsPage() {
 
             {/* Custom Dates (if selected) */}
             {reportDuration === 'custom' && (
-              <>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#374151',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#374151',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* 2. Assigned Store Branch (Fixed for Store Manager) */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                Store Branch
-              </label>
-              <div
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0f766e', flexShrink: 0 }} />
-                <span>Dallas Branch #204</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '2px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-main)'
+                  }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>to</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '2px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-main)'
+                  }}
+                />
               </div>
-            </div>
-
-            {/* 3. Primary Report Package */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                Master Document Scope
-              </label>
-              <select
-                value={selectedReportType}
-                onChange={(e) => setSelectedReportType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 400,
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">Comprehensive Branch Executive Audit (All-in-One)</option>
-                <option value="selling_products">Top-Selling Products Leaderboard</option>
-                <option value="revenue_category">Total Revenue Received &amp; Category Sales</option>
-                <option value="customer_history">Customer Purchase History &amp; Accounts</option>
-                <option value="branch_essential">Essential Shop Branch Manager Audit</option>
-              </select>
-            </div>
+            )}
           </div>
 
-          {/* 4 Essential Downloadable Reports for Branch Manager */}
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.03em' }}>
-              Essential Branch Manager Audit Documents:
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-              {/* Report 1: Selling Products */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Selling Products Report
+          {/* Quick Package Selector Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+            {[
+              {
+                id: 'branch_essential',
+                title: 'Branch Manager Audit',
+                badge: 'Dossier',
+                desc: 'KPIs, order pipeline, SLAs, category totals, and manager sign-off.'
+              },
+              {
+                id: 'selling_products',
+                title: 'Selling Products Report',
+                badge: 'Leaderboard',
+                desc: 'Top revenue items, rankings, units sold, and catalog share.'
+              },
+              {
+                id: 'revenue_category',
+                title: 'Total Revenue Received',
+                badge: 'Financial',
+                desc: 'Gross catalog volume, grand totals, and settlement rates.'
+              },
+              {
+                id: 'customer_history',
+                title: 'Customer History List',
+                badge: 'Accounts',
+                desc: 'Customer accounts ledger, frequency, and order settlements.'
+              }
+            ].map((pkg) => {
+              const isSelected = selectedReportType === pkg.id;
+              return (
+                <div
+                  key={pkg.id}
+                  onClick={() => setSelectedReportType(pkg.id)}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '2px',
+                    border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                    background: isSelected ? 'var(--primary-light, #f0fdfa)' : 'var(--bg-card)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.84rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
+                      {pkg.title}
                     </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
+                    <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '2px', background: isSelected ? 'var(--primary)' : 'var(--bg-subtle)', color: isSelected ? '#ffffff' : 'var(--text-muted)' }}>
+                      {pkg.badge}
                     </span>
                   </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Top revenue generating items, product rankings, units sold, and catalog contribution share.
+                  <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.35 }}>
+                    {pkg.desc}
                   </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Leader: {topSellingData[0]?.product_name ? `${topSellingData[0].product_name.slice(0, 20)}...` : 'Apex Pro Terminal'}
-                  </div>
                 </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('selling_products')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('selling_products')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 2: Total Revenue Received */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Total Revenue Received
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Gross catalog revenue, hierarchical ROLLUP grand totals, category order counts, and settlement rates.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Gross: ${Number(totalVolume).toLocaleString('en-US', { maximumFractionDigits: 0 })} Total
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('revenue_category')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('revenue_category')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 3: Customer History List */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Customer History List
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Accounts ledger, order frequency, settled vs outstanding balances, and Texas fulfillment destinations.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Active Accounts: {customerData.length || 5} Logged
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('customer_history')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('customer_history')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 4: Essential Shop Branch Manager Audit (All-in-One) */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Branch Manager Audit
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#f4ede4', border: '1px solid #e7d7c1', color: '#5c4b4b' }}>
-                      All-In-One
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Essential store operations dossier: KPIs, order pipeline, SLAs, category totals, and manager sign-off.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Scope: Complete Branch Operations Dossier
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('branch_essential')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('branch_essential')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
@@ -2206,34 +2239,32 @@ export default function AnalyticsPage() {
   // ==========================================================================
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Admin Header */}
-      <div className="card" style={{ padding: '20px 24px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* 1. COMPACT EXECUTIVE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-6px' }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
-            Enterprise Financial Intelligence &amp; DCL Security Suite
+          <h1 style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
+            Enterprise Financial Intelligence
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Executive OLAP Analytics, Windowing Moving Averages, and DCL Role Authorization Management.
-          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => fetchReports(selectedYear, 3, user)}
+            onClick={() => fetchReports(selectedYear, roleId || 4, user)}
             disabled={loading}
             style={{
-              padding: '8px 14px',
+              padding: '6px 14px',
               borderRadius: '2px',
-              fontSize: '0.8rem',
+              fontSize: '0.8125rem',
               fontWeight: 500,
               cursor: 'pointer',
-              border: '1px solid var(--primary-border)',
-              background: 'var(--primary)',
+              border: '1px solid #e7d7c1',
+              background: '#2a9d8f',
               color: '#ffffff',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
             <ZapIcon className="w-3.5 h-3.5" />
@@ -2282,12 +2313,12 @@ export default function AnalyticsPage() {
       {/* Admin Tab Navigation Across All Views & Security Console */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         {[
-          { id: 'quarterly', label: 'Quarterly Sales & Moving Averages' },
-          { id: 'top-selling', label: 'Top 10 Selling Products' },
-          { id: 'categories', label: 'Category Revenue & ROLLUP' },
-          { id: 'customers', label: 'Customer Lifetime Spending' },
-          { id: 'ledger', label: 'Payment ACID Ledger' },
-          { id: 'dcl', label: 'DCL Security & Roles Matrix' },
+          { id: 'quarterly', label: 'Quarterly Sales' },
+          { id: 'top-selling', label: 'Top Products' },
+          { id: 'categories', label: 'Categories' },
+          { id: 'customers', label: 'Customer Spending' },
+          { id: 'ledger', label: 'Payment Ledger' },
+
         ].map((tab) => {
           const isActive = adminTab === tab.id;
           return (
@@ -2296,17 +2327,18 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => setAdminTab(tab.id)}
               style={{
-                padding: '8px 14px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                background: isActive ? 'var(--primary)' : 'var(--bg-subtle)',
+                border: isActive ? '1px solid #2a9d8f' : '1px solid var(--border-color)',
+                background: isActive ? '#2a9d8f' : 'var(--bg-subtle)',
                 color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                fontSize: '0.84rem',
+                fontSize: '0.825rem',
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -2324,9 +2356,6 @@ export default function AnalyticsPage() {
               <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Quarterly Sales &amp; Moving Average Performance
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                View: <code>v_quarterly_sales_report</code> • Window Function: <code>AVG(...) OVER (ORDER BY sales_year, sales_quarter ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)</code>
-              </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2387,9 +2416,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Top 10 Selling Products Leaderboard
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              View: <code>v_top_selling_products</code> • Ranking: <code>DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code>
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -2488,20 +2514,32 @@ export default function AnalyticsPage() {
               <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Customer Lifetime Spending &amp; Settlement Leaderboard
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                View: <code>v_customer_order_summary</code> • Multi-Table Outer Joins with orders, shipments, and Texas hubs
-              </p>
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Search by customer or hub..."
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                style={{ padding: '6px 12px 6px 30px', borderRadius: '2px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
-              />
-              <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {adminStoreBranch !== 'all_stores' && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '2px', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <span>Branch: {adminStoreBranch.toUpperCase()}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdminStoreBranch('all_stores')}
+                    title="Clear branch filter and view all hubs"
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '0 2px', fontWeight: 700 }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search by customer or hub..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  style={{ padding: '6px 12px 6px 30px', borderRadius: '2px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
+                />
+                <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+              </div>
             </div>
           </div>
 
@@ -2544,9 +2582,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Payment Transaction ACID Settlement Ledger
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Table: <code>PAYMENT_TRANSACTION</code> • Prepared Statements &amp; Pessimistic Row Locking (FOR UPDATE)
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -2566,7 +2601,7 @@ export default function AnalyticsPage() {
                 {transactionsData.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No payment settlements executed yet. Run a settlement at <Link to="/payment" style={{ color: 'var(--primary)' }}>Payment Page</Link>.
+                      No payment settlements executed yet. Run a settlement via <Link to="/orders" style={{ color: 'var(--primary)' }}>Orders &amp; Checkout</Link>.
                     </td>
                   </tr>
                 ) : (
@@ -2603,9 +2638,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Data Control Language (DCL) Role &amp; Grant Matrix
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Reference: Lecture Note 8 (<code>CREATE ROLE</code>, <code>GRANT</code>, <code>REVOKE</code>) and Lecture Note 5 (Database Triggers)
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -2639,7 +2671,7 @@ export default function AnalyticsPage() {
           {dclData.recent_audit_logs?.length > 0 && (
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
-                Recent Security &amp; Payment Audit Trail (Lecture Note 5 Triggers):
+                Recent Security &amp; Payment Audit Trail:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {dclData.recent_audit_logs.slice(0, 4).map((log, idx) => (
@@ -2765,7 +2797,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={reportDuration}
-              onChange={(e) => setReportDuration(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setReportDuration(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(selectedReportType, adminStoreBranch)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -2840,7 +2878,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={adminStoreBranch}
-              onChange={(e) => setAdminStoreBranch(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAdminStoreBranch(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(selectedReportType, val)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -2869,7 +2913,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={selectedReportType}
-              onChange={(e) => setSelectedReportType(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedReportType(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(val, adminStoreBranch)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',

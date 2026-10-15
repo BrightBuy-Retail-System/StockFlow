@@ -170,10 +170,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
   const [billingOption, setBillingOption] = useState(() => savedDraft?.billingOption || 'SAME');
   const [billingAddress, setBillingAddress] = useState(() => savedDraft?.billingAddress || '');
 
-  // Discount & Fees Breakdown
-  const [discountCode, setDiscountCode] = useState(() => savedDraft?.discountCode || '');
-  const [appliedDiscount, setAppliedDiscount] = useState(null);
-  const [discountError, setDiscountError] = useState('');
+  // Fees Breakdown
   const [serviceFeeExpanded, setServiceFeeExpanded] = useState(true);
 
   // Automatically sync checkout draft to sessionStorage so user never loses their place
@@ -203,7 +200,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         cardCvc,
         cardName,
         payhereTenure,
-        discountCode,
         selectedVariantIds: Array.from(selectedVariantIds),
       };
       sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
@@ -232,7 +228,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
     cardCvc,
     cardName,
     payhereTenure,
-    discountCode,
     selectedVariantIds,
   ]);
 
@@ -270,7 +265,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             setCityName(res.data.data[0].city_name);
             setPricing((prev) => ({
               ...prev,
-              shipping_fee: parseFloat(res.data.data[0].shipping_fee) || 499.00,
+              shipping_fee: Number.isFinite(parseFloat(res.data.data[0].shipping_fee)) ? parseFloat(res.data.data[0].shipping_fee) : 0,
             }));
           }
         }
@@ -400,12 +395,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         const res = await api.post('/orders/checkout', estimatePayload);
         if (isMounted && res.data && res.data.calculation) {
           const calc = res.data.calculation;
-          const discountAmt = appliedDiscount ? (calc.subtotal * appliedDiscount.pct) / 100 : 0;
           setPricing({
-            subtotal: calc.subtotal,
-            service_fee: calc.service_fee || 217.47,
-            shipping_fee: deliveryType === 'PICKUP' ? 0.00 : (calc.shipping_fee || 499.00),
-            total: Math.max(0, calc.total_amount - discountAmt),
+            subtotal: Number(calc.subtotal) || 0,
+            service_fee: calc.service_fee !== undefined && calc.service_fee !== null ? Number(calc.service_fee) : 217.47,
+            shipping_fee: deliveryType === 'PICKUP' ? 0.00 : (calc.shipping_fee ?? 0.00),
+            total: Number(calc.total_amount) || 0,
           });
           setStockConflictMessage(null);
         }
@@ -416,15 +410,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           setStockConflictMessage(resData?.message || 'Stock conflict: An item exceeds available warehouse inventory.');
         } else {
           // Local fallback computation
-          const calculatedSubtotal = activeCheckoutItems.reduce((acc, it) => acc + (parseFloat(it.total_price) || parseFloat(it.unit_price) * it.quantity || 7249.00), 0);
-          const shipFee = deliveryType === 'PICKUP' ? 0.00 : 499.00;
+          const calculatedSubtotal = activeCheckoutItems.reduce((acc, it) => acc + (parseFloat(it.total_price) || (parseFloat(it.unit_price) || 0) * (it.quantity || 1)), 0);
+          const shipFee = deliveryType === 'PICKUP' ? 0.00 : 0.00;
           const sFee = 217.47;
-          const discountAmt = appliedDiscount ? (calculatedSubtotal * appliedDiscount.pct) / 100 : 0;
           setPricing({
             subtotal: calculatedSubtotal,
             service_fee: sFee,
             shipping_fee: shipFee,
-            total: Math.max(0, calculatedSubtotal + sFee + shipFee - discountAmt),
+            total: calculatedSubtotal + sFee + shipFee,
           });
         }
       } finally {
@@ -436,7 +429,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
     return () => {
       isMounted = false;
     };
-  }, [deliveryType, selectedCityId, itemsDependencyKey, appliedDiscount, activeUserId, firstName, lastName, phone, address, apartment, cityName, postalCode, billingOption, billingAddress, paymentMethod]);
+  }, [deliveryType, selectedCityId, itemsDependencyKey, activeUserId, firstName, lastName, phone, address, apartment, cityName, postalCode, billingOption, billingAddress, paymentMethod]);
 
   // Handle City Change
   const handleCityChange = (e) => {
@@ -448,28 +441,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
       if (deliveryType === 'SHIP') {
         setPricing((prev) => ({
           ...prev,
-          shipping_fee: parseFloat(matchedCity.shipping_fee) || 499.00,
+          shipping_fee: Number.isFinite(parseFloat(matchedCity.shipping_fee)) ? parseFloat(matchedCity.shipping_fee) : 0,
         }));
       }
-    }
-  };
-
-  // Discount Code Application
-  const handleApplyDiscount = (e) => {
-    e.preventDefault();
-    setDiscountError('');
-    const code = discountCode.trim().toUpperCase();
-    if (!code) return;
-
-    if (code === 'BRIGHT10' || code === 'WELCOME10') {
-      setAppliedDiscount({ code, pct: 10, label: '10% Store Discount' });
-      setDiscountCode('');
-    } else if (code === 'FREESHIP') {
-      setAppliedDiscount({ code, pct: 0, freeShipping: true, label: 'Free Delivery Voucher' });
-      setPricing((prev) => ({ ...prev, shipping_fee: 0, total: prev.subtotal + prev.service_fee }));
-      setDiscountCode('');
-    } else {
-      setDiscountError('Enter a valid discount code or gift card.');
     }
   };
 
@@ -600,6 +574,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         });
         setCurrentStep(4);
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
+        if (activeUserId) {
+          try {
+            localStorage.removeItem(`cart_${activeUserId}`);
+          } catch (_) {}
+        }
+        try {
+          localStorage.removeItem('cart');
+        } catch (_) {}
+        window.dispatchEvent(new Event('cartUpdated'));
+
         if (typeof onOrderPlaced === 'function') {
           onOrderPlaced(orderData);
         }
@@ -677,7 +661,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               id="btn-go-to-cart"
               onClick={() => {
                 navigate('/auth-cart');
-                window.location.href = '/auth-cart';
               }}
               style={{
                 padding: '12px 24px',
@@ -703,7 +686,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               id="btn-browse-catalog"
               onClick={() => {
                 navigate('/catalog');
-                window.location.href = '/catalog';
               }}
               style={{
                 padding: '12px 24px',
@@ -1365,8 +1347,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Ship to Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Ship to</span>
-                    <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>{deliveryType === 'PICKUP' ? 'Pickup at' : 'Ship to'}</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>
+                      {deliveryType === 'PICKUP'
+                        ? 'BrightBuy Texas Flagship Hub, 100 Congress Ave, Suite 200, Austin, TX 78701'
+                        : formattedFormattedAddress}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1489,8 +1475,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Ship to Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Ship to</span>
-                    <span style={{ color: '#0f172a', fontWeight: 500, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
+                    <span style={{ color: '#64748b', minWidth: '70px' }}>{deliveryType === 'PICKUP' ? 'Pickup at' : 'Ship to'}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 500, lineHeight: 1.4 }}>
+                      {deliveryType === 'PICKUP'
+                        ? 'BrightBuy Texas Flagship Hub, 100 Congress Ave, Suite 200, Austin, TX 78701'
+                        : formattedFormattedAddress}
+                    </span>
                   </div>
                   <button type="button" style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setCurrentStep(1)}>
                     Change
@@ -2294,59 +2284,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       </div>
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? '#3b2f2f' : '#826e6e', textAlign: 'right' }}>
-                      Rs {((parseFloat(item.unit_price) || 7249.00) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      Rs {(((parseFloat(item.unit_price) || 0) * (item.quantity || 1))).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            {/* Discount Code Input Box */}
-            <form onSubmit={handleApplyDiscount} style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="Discount code or gift card"
-                  value={discountCode}
-                  onChange={(e) => setDiscountCode(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 14px',
-                    borderRadius: '2px',
-                    border: '1.5px solid #e7d7c1',
-                    background: '#ffffff',
-                    color: '#3b2f2f',
-                    fontSize: '0.875rem',
-                  }}
-                />
-                <button
-                  type="submit"
-                  style={{
-                    padding: '12px 20px',
-                    borderRadius: '2px',
-                    background: '#2a9d8f',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(42, 157, 143, 0.25)',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Apply
-                </button>
-              </div>
-              {discountError && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '6px' }}>{discountError}</div>}
-              {appliedDiscount && (
-                <div style={{ fontSize: '0.75rem', color: '#2a9d8f', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
-                  <span>✓ {appliedDiscount.label} applied</span>
-                  <button type="button" onClick={() => setAppliedDiscount(null)} style={{ background: 'none', border: 'none', color: '#826e6e', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}>
-                    Remove
-                  </button>
-                </div>
-              )}
-            </form>
 
             {/* Price Calculations */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1.5px solid #e7d7c1', paddingTop: '20px', marginBottom: '20px' }}>
@@ -2366,12 +2309,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 </span>
               </div>
 
-              {appliedDiscount && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#2a9d8f', fontWeight: 600 }}>
-                  <span>Discount ({appliedDiscount.code})</span>
-                  <span>- Rs {((pricing.subtotal * (appliedDiscount.pct || 0)) / 100).toFixed(2)}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#826e6e' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Service Fee <span title="Standard processing and handling fee">ℹ️</span>
+                </span>
+                <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
+                  Rs {pricing.service_fee.toFixed(2)}
+                </span>
+              </div>
             </div>
 
             {/* Grand Total */}

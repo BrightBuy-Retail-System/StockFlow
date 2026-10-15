@@ -597,7 +597,7 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
                     orderData.items.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <img src={headsetImg} alt="Thumb" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
+                          <img src={item.image_url || headsetImg} alt="Thumb" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
                           <div>
                             <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.product_title || `Product Variant #${item.variant_id}`}</div>
                             {item.attribute_value && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{item.attribute_value}</div>}
