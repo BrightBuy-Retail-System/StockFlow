@@ -130,8 +130,14 @@ export default function DashboardLayout() {
   }, [location.pathname]);
 
   function handleLogout() {
+    const uid = user?.id || user?.user_id;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    if (uid) {
+      localStorage.removeItem(`cart_${uid}`);
+    }
+    window.dispatchEvent(new Event('cartUpdated'));
     setUser(null);
     navigate('/login');
   }
@@ -141,21 +147,21 @@ export default function DashboardLayout() {
   const getDashboardRoute = () => {
     if (!user) return '/login';
     if (roleId === 2) return '/manager-dashboard';
-    if (roleId === 3) return '/system-administrator';
+    if (roleId === 3 || roleId === 4) return '/system-administrator';
     return '/customer-dashboard';
   };
 
   const getDashboardName = () => {
     if (!user) return 'My Dashboard';
-    if (user.role_id === 2) return 'Manager Operations Hub';
-    if (user.role_id === 3) return 'Administrator Console';
+    if (roleId === 2) return 'Manager Operations Hub';
+    if (roleId === 3 || roleId === 4) return 'Administrator Console';
     return 'Customer Dashboard';
   };
 
   const getRoleLabel = () => {
     if (!user) return '';
     if (roleId === 2) return 'Store Executive & Manager';
-    if (roleId === 3) return 'System Administrator';
+    if (roleId === 3 || roleId === 4) return 'System Administrator';
     return 'Customer Account';
   };
 
@@ -246,9 +252,9 @@ export default function DashboardLayout() {
       ) : (
         <div className="simplytek-announcement-bar">
           <div className="announcement-inner">
-            <span className="announcement-pill">🚚 Islandwide Delivery</span>
+            <span className="announcement-pill">🚚 Texas Delivery</span>
             <span className="announcement-text">
-              Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
+              Free Delivery on orders over $50 | 100% Genuine Guaranteed | Split into 4 with Klarna &amp; Afterpay 0% Interest
             </span>
             <Link to="/catalog" className="announcement-link">
               Shop Tech Deals &rarr;
