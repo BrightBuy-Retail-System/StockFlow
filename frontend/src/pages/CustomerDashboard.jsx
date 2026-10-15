@@ -140,8 +140,14 @@ export default function CustomerDashboard() {
 
   // Logout handler
   const handleLogout = () => {
+    const uid = currentUser?.id || currentUser?.user_id;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    if (uid) {
+      localStorage.removeItem(`cart_${uid}`);
+    }
+    window.dispatchEvent(new Event('cartUpdated'));
     navigate('/login');
   };
 
@@ -409,7 +415,7 @@ export default function CustomerDashboard() {
             ${totalSpent.toFixed(2)}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#5c4b4b', fontWeight: 600 }}>
-            ≈ Rs. {Math.round(totalSpent * 315).toLocaleString()} LKR
+            Lifetime Purchases
           </div>
         </div>
 
@@ -1036,9 +1042,6 @@ export default function CustomerDashboard() {
                             <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.45rem', fontWeight: 800, color: '#3b2f2f' }}>
                               ${Number(order.total_amount).toFixed(2)}
                             </span>
-                            <span style={{ fontSize: '0.78rem', color: '#826e6e' }}>
-                              (≈ Rs. {Math.round(Number(order.total_amount) * 315).toLocaleString()} LKR)
-                            </span>
                           </div>
                         </div>
 
@@ -1245,7 +1248,7 @@ export default function CustomerDashboard() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Estimated Shipping:</span>
-                    <span style={{ color: '#2a9d8f', fontWeight: 700 }}>FREE (Over Rs. 15,000)</span>
+                    <span style={{ color: '#2a9d8f', fontWeight: 700 }}>FREE (Over $50)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Local Tax / Duties:</span>
