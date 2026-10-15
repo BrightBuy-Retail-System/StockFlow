@@ -235,6 +235,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  position: relative;
 }
 
 /* Left: Brand */
@@ -285,6 +286,14 @@ body {
   align-items: center;
   gap: 6px;
   list-style: none;
+  flex-wrap: nowrap;
+}
+
+.navbar-nav.auth-nav-centered {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  justify-content: center;
 }
 
 .nav-link {
@@ -297,6 +306,7 @@ body {
   transition: all 0.18s ease;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .nav-link:hover {

@@ -137,6 +137,7 @@ export default function DashboardLayout() {
   }
 
   const roleId = Number(user?.role_id) || 0;
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   const getDashboardRoute = () => {
     if (!user) return '/login';
@@ -161,8 +162,8 @@ export default function DashboardLayout() {
 
   // Role-specific navigation links
   const getNavLinks = () => {
-    // 1. Guest (Not Logged In)
-    if (!user) {
+    // 1. Auth pages or Guest (Not Logged In)
+    if (isAuthPage || !user) {
       return [
         { label: 'Home', to: '/', end: true },
         { label: 'Products', to: '/catalog' },
@@ -174,7 +175,7 @@ export default function DashboardLayout() {
       return [
         { label: 'Home', to: '/', end: true },
         { label: 'Products', to: '/catalog' },
-        { label: 'My Orders', to: '/orders' },
+        { label: 'Orders', to: '/orders' },
         { label: 'Logistics', to: '/logistics' },
         { label: 'Dashboard', to: '/customer-dashboard' },
       ];
@@ -184,24 +185,24 @@ export default function DashboardLayout() {
     if (roleId === 2) {
       return [
         { label: 'Dashboard', to: '/manager-dashboard' },
-        { label: 'Orders & Fulfillment', to: '/orders' },
-        { label: 'Inventory Stock', to: '/catalog' },
-        { label: 'Logistics Hubs', to: '/logistics' },
+        { label: 'Orders', to: '/orders' },
+        { label: 'Inventory', to: '/catalog' },
+        { label: 'Logistics', to: '/logistics' },
         { label: 'Analytics', to: '/analytics' },
-        { label: 'Storefront', to: '/', end: true },
+        { label: 'Store', to: '/', end: true },
       ];
     }
 
     // 4. System Administrator (Roles 3 & 4)
     if (roleId === 3 || roleId === 4) {
       return [
-        { label: 'Admin Console', to: '/system-administrator' },
-        { label: 'Orders & Fulfillment', to: '/orders' },
-        { label: 'Manager Pipeline', to: '/manager-dashboard' },
-        { label: 'Inventory Stock', to: '/catalog' },
+        { label: 'Admin', to: '/system-administrator' },
+        { label: 'Orders', to: '/orders' },
+        { label: 'Manager', to: '/manager-dashboard' },
+        { label: 'Inventory', to: '/catalog' },
         { label: 'Logistics', to: '/logistics' },
         { label: 'Analytics', to: '/analytics' },
-        { label: 'Storefront', to: '/', end: true },
+        { label: 'Store', to: '/', end: true },
       ];
     }
 
@@ -218,45 +219,6 @@ export default function DashboardLayout() {
 
   return (
     <div className="storefront-app">
-      {/* Dynamic Announcement Bar */}
-      {roleId === 2 ? (
-        <div className="simplytek-announcement-bar" style={{ background: '#78350f', color: '#fef3c7' }}>
-          <div className="announcement-inner">
-            <span className="announcement-pill" style={{ background: '#f59e0b', color: '#78350f' }}>👔 Store Management</span>
-            <span className="announcement-text">
-              Store Executive &amp; Manager Console — Orders Fulfillment Pipeline, Inventory, and Texas Logistics
-            </span>
-            <Link to="/manager-dashboard" className="announcement-link">
-              Management Dashboard &rarr;
-            </Link>
-          </div>
-        </div>
-      ) : roleId === 3 ? (
-        <div className="simplytek-announcement-bar" style={{ background: '#14532d', color: '#dcfce7' }}>
-          <div className="announcement-inner">
-            <span className="announcement-pill" style={{ background: '#22c55e', color: '#14532d' }}>⚡ System Administrator</span>
-            <span className="announcement-text">
-              System Admin Console — Database Inventory, Security Grants, and Analytics Operations
-            </span>
-            <Link to="/system-administrator" className="announcement-link">
-              Admin Console &rarr;
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="simplytek-announcement-bar">
-          <div className="announcement-inner">
-            <span className="announcement-pill">🚚 Islandwide Delivery</span>
-            <span className="announcement-text">
-              Free Delivery on orders over Rs. 15,000 | 100% Genuine Guaranteed | Pay in 3 with Koko &amp; Mintpay 0% Interest
-            </span>
-            <Link to="/catalog" className="announcement-link">
-              Shop Tech Deals &rarr;
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* Top Horizontal Navigation Bar */}
       <header className="storefront-navbar">
         <div className="navbar-inner">
@@ -270,7 +232,15 @@ export default function DashboardLayout() {
           </Link>
 
           {/* Center: Dynamic Role-Based Navigation Links (Desktop) */}
-          <nav className="navbar-nav desktop-nav">
+          <nav
+            className={`navbar-nav desktop-nav ${isAuthPage ? 'auth-nav-centered' : ''}`}
+            style={isAuthPage ? {
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              justifyContent: 'center',
+            } : undefined}
+          >
             {getNavLinks().map((link) => (
               <NavLink
                 key={link.to}
@@ -283,73 +253,36 @@ export default function DashboardLayout() {
             ))}
           </nav>
 
-          {/* Right: Actions & Connectivity Status */}
+          {/* Right: Actions */}
           <div className="navbar-actions">
-            {/* Discrete Connectivity Badge (Desktop) */}
-            <div
-              className={`connection-badge desktop-only ${isOnline ? 'online' : 'offline'}`}
-              title={isOnline ? 'Backend Connected (Port 5000)' : 'Backend Offline'}
-              style={{
-                height: '38px',
-                minHeight: '38px',
-                maxHeight: '38px',
-                boxSizing: 'border-box',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '0 14px',
-                border: '1.5px solid #e7d7c1',
-                borderRadius: 'var(--radius-btn, 2px)',
-                background: '#ffffff',
-                color: '#3b2f2f',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                lineHeight: 1,
-              }}
-            >
-              <span
+            {/* Shopping Cart Button with Real-time Count Badge (Hidden for Manager, Admin & Auth Pages) */}
+            {roleId !== 2 && roleId !== 3 && roleId !== 4 && location.pathname !== '/system-administrator' && location.pathname !== '/manager-dashboard' && !isAuthPage && (
+              <Link
+                to="/auth-cart"
+                className="navbar-cart-btn"
+                title="Shopping Cart"
+                aria-label={`Shopping Cart with ${cartCount} items`}
                 style={{
-                  width: '8px',
-                  height: '8px',
-                  minWidth: '8px',
-                  minHeight: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: isOnline ? '#16a34a' : '#dc2626',
-                  display: 'inline-block',
+                  width: '38px',
+                  height: '38px',
+                  minHeight: '38px',
+                  maxHeight: '38px',
+                  boxSizing: 'border-box',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1.5px solid #e7d7c1',
+                  borderRadius: 'var(--radius-btn, 2px)',
+                  background: '#ffffff',
+                  color: '#3b2f2f',
+                  position: 'relative',
                   flexShrink: 0,
-                  boxShadow: 'none',
-                  animation: 'none',
                 }}
-              />
-              <span className="badge-text" style={{ lineHeight: 1 }}>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
-            </div>
-
-            {/* Shopping Cart Button with Real-time Count Badge (Always Available) */}
-            <Link
-              to="/auth-cart"
-              className="navbar-cart-btn"
-              title="Shopping Cart"
-              aria-label={`Shopping Cart with ${cartCount} items`}
-              style={{
-                width: '38px',
-                height: '38px',
-                minHeight: '38px',
-                maxHeight: '38px',
-                boxSizing: 'border-box',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1.5px solid #e7d7c1',
-                borderRadius: 'var(--radius-btn, 2px)',
-                background: '#ffffff',
-                color: '#3b2f2f',
-                position: 'relative',
-                flexShrink: 0,
-              }}
-            >
-              <AuthCartIcon className="navbar-cart-icon" style={{ width: '18px', height: '18px' }} />
-              {cartCount > 0 && <span className="navbar-cart-badge">{cartCount}</span>}
-            </Link>
+              >
+                <AuthCartIcon className="navbar-cart-icon" style={{ width: '18px', height: '18px' }} />
+                {cartCount > 0 && <span className="navbar-cart-badge">{cartCount}</span>}
+              </Link>
+            )}
 
             {/* Retail Action Buttons */}
             {user ? (
@@ -361,17 +294,40 @@ export default function DashboardLayout() {
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: dropdownOpen ? 'rgba(255, 255, 255, 0.08)' : 'transparent' }}
                 >
                   <UserIcon className="btn-icon" />
-                  <span>{user.username || user.full_name}</span>
-                  <span style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    padding: '2px 6px',
-                    borderRadius: '2px',
-                    background: user.role_id === 1 ? 'var(--primary-light)' : user.role_id === 2 ? 'var(--accent-light)' : 'var(--success-bg)',
-                    color: user.role_id === 1 ? 'var(--primary)' : user.role_id === 2 ? 'var(--accent)' : 'var(--success-text)'
-                  }}>
-                    {user.role_id === 1 ? 'Customer' : user.role_id === 2 ? 'Manager' : 'Admin'}
-                  </span>
+                  {roleId === 3 || roleId === 4 ? (
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      background: 'var(--success-bg)',
+                      color: 'var(--success-text)'
+                    }}>
+                      Admin
+                    </span>
+                  ) : roleId === 2 ? (
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      background: 'var(--accent-light, #fef3c7)',
+                      color: 'var(--accent, #92400e)'
+                    }}>
+                      Manager
+                    </span>
+                  ) : (
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      background: 'var(--primary-light)',
+                      color: 'var(--primary)'
+                    }}>
+                      Customer
+                    </span>
+                  )}
                   <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{dropdownOpen ? '▲' : '▼'}</span>
                 </button>
 
@@ -394,7 +350,9 @@ export default function DashboardLayout() {
                     }}
                   >
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.username || user.full_name}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                        {roleId === 3 || roleId === 4 ? 'Admin' : (user.username || user.full_name)}
+                      </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{getRoleLabel()}</div>
                     </div>
 
@@ -663,7 +621,7 @@ export default function DashboardLayout() {
                 </div>
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                    {user.username || user.full_name}
+                    {roleId === 3 || roleId === 4 ? 'Admin' : (user.username || user.full_name)}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                     {getRoleLabel()}
@@ -722,12 +680,8 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        {/* Footer / System status in Drawer */}
+        {/* Footer / User actions in Drawer */}
         <div className="mobile-drawer-footer">
-          <div className="mobile-cluster-indicator">
-            <span className={`pulse-dot ${isOnline ? 'dot-online' : 'dot-offline'}`}></span>
-            <span>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
-          </div>
           {user && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '8px' }}>
               <button

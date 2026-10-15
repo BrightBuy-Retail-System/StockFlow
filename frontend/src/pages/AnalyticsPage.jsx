@@ -503,7 +503,7 @@ export default function AnalyticsPage() {
               ${Number(summary.lifetime_spending || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Aggregated from view <code>v_customer_order_summary</code>
+              Customer lifetime total spend
             </div>
           </div>
 
@@ -513,7 +513,7 @@ export default function AnalyticsPage() {
               {summary.total_orders || 0}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Total records in <code>orders</code>
+              Total orders recorded
             </div>
           </div>
 
@@ -523,7 +523,7 @@ export default function AnalyticsPage() {
               {summary.paid_orders || 0}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              Recorded in <code>PAYMENT_TRANSACTION</code>
+              Confirmed settled payments
             </div>
           </div>
 
@@ -1005,8 +1005,8 @@ export default function AnalyticsPage() {
     const orderBreakdown = isSingleBranch
       ? { pending: branchSpec.pending, confirmed: branchSpec.confirmed, shipped: branchSpec.shipped, delivered: branchSpec.delivered, cancelled: 2 }
       : ((executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
-          ? executiveOverview.order_breakdown
-          : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 });
+        ? executiveOverview.order_breakdown
+        : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 });
 
     const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0);
     const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
@@ -1432,8 +1432,8 @@ export default function AnalyticsPage() {
     </thead>
     <tbody>
       ${Object.entries(branchPerformanceMap).map(([key, b]) => {
-        const isCurrentBranch = isSingleBranch && overrideBranch === key;
-        return `
+      const isCurrentBranch = isSingleBranch && overrideBranch === key;
+      return `
           <tr style="${isCurrentBranch ? 'background: #eff6ff; font-weight: 600;' : ''}">
             <td>
               ${isCurrentBranch ? '▶ <strong>' + b.name + '</strong> <span style="font-size: 10px; background: #2563eb; color: #ffffff; padding: 1px 6px; border-radius: 3px; margin-left: 6px;">Active Scope</span>' : b.name}
@@ -1445,7 +1445,7 @@ export default function AnalyticsPage() {
             <td><span style="color: ${isCurrentBranch ? '#1d4ed8' : '#475569'}; font-weight: 500;">${b.status}</span></td>
           </tr>
         `;
-      }).join('')}
+    }).join('')}
       <tr class="row-rollup" style="${!isSingleBranch ? 'background: #f8fafc;' : ''}">
         <td><span style="font-weight: 600;">⭐ ALL STORES CONSOLIDATED (5 BRANCHES)</span></td>
         <td style="text-align: right; font-weight: 600;">86</td>
@@ -1646,36 +1646,30 @@ export default function AnalyticsPage() {
     const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
 
     return (
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Manager Header */}
-        <div style={{ padding: '20px 24px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Compact Manager Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-4px' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontSize: '0.72rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '6px' }}>
-              <span>Store Operations</span>
-            </div>
-            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.45rem', fontWeight: 600, color: '#2c2523', letterSpacing: '-0.01em', margin: 0 }}>
-              Store Operations &amp; Inventory Analytics Hub
+            <h1 style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
+              Store Operations &amp; Inventory Analytics
             </h1>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '4px', margin: 0, fontWeight: 400 }}>
-              Welcome, {user.username || user.full_name}! Catalog rankings, category volume aggregations, and Texas regional distribution.
-            </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Link
               to="/catalog"
               style={{
-                padding: '8px 16px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                background: '#2a9d8f',
-                color: '#ffffff',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
                 textDecoration: 'none',
                 fontWeight: 500,
-                fontSize: '0.85rem',
-                border: '1px solid #2a9d8f',
+                fontSize: '0.82rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                boxShadow: '0 1px 2px rgba(42, 157, 143, 0.15)'
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
               Manage Catalog
@@ -1685,152 +1679,128 @@ export default function AnalyticsPage() {
               onClick={() => fetchReports(selectedYear, 2, user)}
               disabled={loading}
               style={{
-                padding: '8px 14px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                border: '1px solid #e7d7c1',
-                background: '#faf7f2',
-                color: '#4b5563',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
                 fontWeight: 500,
-                fontSize: '0.85rem',
+                fontSize: '0.82rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
-              <ZapIcon className="w-3.5 h-3.5" style={{ color: '#2a9d8f' }} />
-              <span>{loading ? 'Refreshing...' : 'Refresh DB Views'}</span>
+              <ZapIcon className="w-3.5 h-3.5" style={{ color: 'var(--primary)' }} />
+              <span>{loading ? 'Refreshing...' : 'Refresh Analytics'}</span>
             </button>
           </div>
         </div>
 
         {/* Manager Operational KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
           {/* Card 1: Gross Category Revenue */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
-              Gross Category Revenue
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Gross Catalog Revenue
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#1f2937', margin: '6px 0 2px', lineHeight: 1.1, minHeight: '34px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)', margin: '6px 0 2px' }}>
               ${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               Total catalog sales volume
             </div>
           </div>
 
-          {/* Card 2: Total Pending / Undelivered Orders */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
-              Pending &amp; Undelivered Orders
+          {/* Card 2: Pending / Undelivered */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Pending &amp; Undelivered
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#b45309', margin: '6px 0 2px', lineHeight: 1.1, minHeight: '34px', display: 'flex', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--warning-text, #b45309)', margin: '6px 0 2px' }}>
               {undeliveredOrders}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {orderBreakdown.pending || 0} pending · {(Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0)} in-transit
             </div>
           </div>
 
-          {/* Card 3: Divided Box (Completed Orders | Total Units Shipped) */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            {/* Header Titles Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', minHeight: '20px', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', paddingRight: '12px', whiteSpace: 'nowrap' }}>
-                Completed
-              </div>
-              <div />
-              <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', paddingLeft: '12px', whiteSpace: 'nowrap' }}>
-                Units Shipped
-              </div>
+          {/* Card 3: Completed & Units */}
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Completed &amp; Units Shipped
             </div>
-
-            {/* Values Row with Centered Divider */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', alignItems: 'center', margin: '6px 0 2px', minHeight: '34px' }}>
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#0f766e', paddingRight: '12px', lineHeight: 1.1, display: 'flex', alignItems: 'center' }}>
-                {completedOrders}
-              </div>
-              <div style={{ width: '1px', background: '#e7d7c1', height: '24px', justifySelf: 'center' }} />
-              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.5rem', fontWeight: 600, color: '#475569', paddingLeft: '12px', lineHeight: 1.1, display: 'flex', alignItems: 'center' }}>
-                {Number(totalUnits).toLocaleString('en-US')}
-              </div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--primary)', margin: '6px 0 2px' }}>
+              {completedOrders} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-muted)' }}>orders</span> · {Number(totalUnits).toLocaleString('en-US')} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-muted)' }}>units</span>
             </div>
-
-            {/* Subtitles Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', minHeight: '18px', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', paddingRight: '12px', fontWeight: 400 }}>
-                Delivered
-              </div>
-              <div />
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', paddingLeft: '12px', fontWeight: 400 }}>
-                Texas DCs
-              </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Delivered across Texas DCs
             </div>
           </div>
 
           {/* Card 4: Top Selling Product */}
-          <div style={{ padding: '18px 20px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em', minHeight: '20px', display: 'flex', alignItems: 'center' }}>
+          <div className="card" style={{ padding: '16px 20px', borderRadius: '2px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               Top Selling Product
             </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', margin: '6px 0 2px', lineHeight: 1.25, minHeight: '34px', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', margin: '6px 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={topSellingData[0]?.product_name}>
               {topSellingData[0]?.product_name || 'Apex Pro Terminal Ultra'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: 400 }}>
-              <span style={{ color: '#0f766e', fontWeight: 500 }}>${Number(topSellingData[0]?.total_revenue || 114312).toLocaleString()}</span>&nbsp;revenue · {topSellingData[0]?.total_units_sold || 88} units
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              ${Number(topSellingData[0]?.total_revenue || 114312).toLocaleString()} revenue · {topSellingData[0]?.total_units_sold || 88} units
             </div>
           </div>
         </div>
 
         {/* Manager Tables Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '16px' }}>
           {/* Top Selling Products */}
-          <div style={{ padding: '20px 22px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.05rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
-                  Top-Selling Products Leaderboard
-                </h2>
-              </div>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontWeight: 500 }}>
-                Top 10
+          <div className="card" style={{ padding: '18px 20px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
+                Top-Selling Products Leaderboard
+              </h2>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-subtle)', color: 'var(--text-muted)', fontWeight: 500 }}>
+                Top 7
               </span>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: '#faf7f2', borderBottom: '1px solid #e7d7c1', textAlign: 'left', color: '#6b7280' }}>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Rank</th>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Product</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Units Sold</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
+                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Rank</th>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Product</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Units</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topSellingData.slice(0, 7).map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f4ede4' }}>
-                      <td style={{ padding: '8px' }}>
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '8px 10px' }}>
                         <span style={{
                           fontWeight: 500,
                           fontSize: '0.75rem',
                           padding: '2px 6px',
                           borderRadius: '2px',
-                          background: p.revenue_rank === 1 ? '#fef3c7' : '#f9fafb',
-                          color: p.revenue_rank === 1 ? '#92400e' : '#4b5563',
-                          border: '1px solid #e5e7eb'
+                          background: p.revenue_rank === 1 ? 'var(--warning-bg)' : 'var(--bg-subtle)',
+                          color: p.revenue_rank === 1 ? 'var(--warning-text)' : 'var(--text-secondary)',
+                          border: '1px solid var(--border-light)'
                         }}>
                           #{p.revenue_rank}
                         </span>
                       </td>
-                      <td style={{ padding: '8px' }}>
-                        <div style={{ fontWeight: 500, color: '#1f2937' }}>{p.product_name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400 }}>{p.category_name}</div>
+                      <td style={{ padding: '8px 10px' }}>
+                        <div style={{ fontWeight: 500, color: 'var(--text-main)' }}>{p.product_name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{p.category_name}</div>
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 400, color: '#4b5563' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 400, color: 'var(--text-secondary)' }}>
                         {p.total_units_sold}
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 500, color: '#1f2937' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, color: 'var(--text-main)' }}>
                         ${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -1840,26 +1810,24 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Category Revenue with ROLLUP */}
-          <div style={{ padding: '20px 22px', background: '#ffffff', borderRadius: '2px', border: '1px solid #e7d7c1', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.05rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
-                  Category Revenue &amp; Rollup Totals
-                </h2>
-              </div>
-              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', fontWeight: 500 }}>
-                WITH ROLLUP
+          {/* Category Revenue Totals */}
+          <div className="card" style={{ padding: '18px 20px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
+                Category Revenue Summary
+              </h2>
+              <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '2px', background: 'var(--bg-subtle)', color: 'var(--text-muted)', fontWeight: 500 }}>
+                Grand Totals
               </span>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ background: '#faf7f2', borderBottom: '1px solid #e7d7c1', textAlign: 'left', color: '#6b7280' }}>
-                    <th style={{ padding: '8px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category Name</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Orders</th>
-                    <th style={{ padding: '8px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
+                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 10px', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Category Name</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Orders</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Total Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1869,17 +1837,17 @@ export default function AnalyticsPage() {
                       <tr
                         key={idx}
                         style={{
-                          borderBottom: '1px solid #f4ede4',
-                          background: isGrand ? '#faf7f2' : 'transparent'
+                          borderBottom: '1px solid var(--border-light)',
+                          background: isGrand ? 'var(--bg-subtle)' : 'transparent'
                         }}
                       >
-                        <td style={{ padding: '8px', color: isGrand ? '#1f2937' : '#374151', fontWeight: isGrand ? 600 : 400 }}>
+                        <td style={{ padding: '8px 10px', color: isGrand ? 'var(--primary)' : 'var(--text-main)', fontWeight: isGrand ? 600 : 400 }}>
                           {c.category_name}
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: 400, color: '#4b5563' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 400, color: 'var(--text-secondary)' }}>
                           {c.total_orders || 0}
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: isGrand ? 600 : 500, color: '#1f2937' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: isGrand ? 600 : 500, color: isGrand ? 'var(--primary)' : 'var(--text-main)' }}>
                           ${Number(c.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
@@ -1891,120 +1859,140 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* PAGE BOTTOM: STORE BRANCH MANAGER PDF MAKER & EXPORT SUITE                */}
-        {/* Features: Time Duration Select, Selling Products, Revenue, Customers, & All */}
-        {/* ========================================================================= */}
+        {/* Streamlined Branch Reports & PDF Export Suite */}
         <div
+          className="card"
           style={{
-            padding: '24px',
+            padding: '20px 22px',
             borderRadius: '2px',
-            background: '#ffffff',
-            border: '1px solid #e7d7c1',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px'
+            gap: '14px'
           }}
         >
           {/* Header & Master Actions */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b' }}>
-                  <FileTextIcon className="w-4 h-4" />
-                </div>
-                <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937', letterSpacing: '-0.01em' }}>
-                  Branch Manager PDF Report Generator &amp; Export Suite
-                </h2>
-                <span style={{ fontSize: '0.72rem', fontWeight: 500, padding: '2px 8px', borderRadius: '2px', background: '#f4ede4', color: '#5c4b4b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0f766e' }} />
-                  Ready to Export
-                </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '2px', background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                <FileTextIcon className="w-4 h-4" />
               </div>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#6b7280', fontWeight: 400 }}>
-                Select a reporting duration to compile and download official shop branch audit documents: selling products velocity, total revenue received, customer history list, or the comprehensive branch manager dossier.
-              </p>
+              <div>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+                  Branch Reports &amp; PDF Export
+                </h2>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Dallas Branch #204 · Compile and export official branch audit documents
+                </div>
+              </div>
             </div>
 
-            {/* Quick Actions */}
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => handlePreviewReport(selectedReportType)}
                 style={{
-                  padding: '8px 14px',
+                  padding: '7px 12px',
                   borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  color: '#4b5563',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <EyeIcon className="w-4 h-4" style={{ color: '#0f766e' }} />
-                <span>Preview Document</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDownloadPDF(selectedReportType)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '2px',
-                  border: '1px solid #2a9d8f',
-                  background: '#2a9d8f',
-                  color: '#ffffff',
-                  fontSize: '0.85rem',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
                   fontWeight: 500,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: '0 1px 2px rgba(42, 157, 143, 0.15)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
               >
-                <DownloadIcon className="w-4 h-4" />
-                <span>Download PDF Report</span>
+                <EyeIcon className="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadPDF(selectedReportType)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '2px',
+                  border: '1px solid var(--primary)',
+                  background: 'var(--primary)',
+                  color: '#ffffff',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <DownloadIcon className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
               </button>
             </div>
           </div>
 
-          {/* Time Duration & Scope Filters Bar */}
+          {/* Controls Bar */}
           <div
             style={{
-              padding: '16px 18px',
+              padding: '12px 14px',
               borderRadius: '2px',
-              background: '#faf7f2',
-              border: '1px solid #e7d7c1',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-              alignItems: 'flex-end'
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-light)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              alignItems: 'center'
             }}
           >
-            {/* 1. Time Duration Dropdown */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                <CalendarIcon className="w-3.5 h-3.5" style={{ color: '#0f766e' }} />
-                <span>Select Time Duration</span>
+            {/* Scope / Report Package */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 260px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                Scope:
+              </label>
+              <select
+                value={selectedReportType}
+                onChange={(e) => setSelectedReportType(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: '2px',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">Comprehensive Branch Executive Audit (All-in-One)</option>
+                <option value="selling_products">Top-Selling Products Leaderboard</option>
+                <option value="revenue_category">Total Revenue Received &amp; Category Sales</option>
+                <option value="customer_history">Customer Purchase History &amp; Accounts</option>
+                <option value="branch_essential">Essential Shop Branch Manager Audit</option>
+              </select>
+            </div>
+
+            {/* Time Duration Dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                Period:
               </label>
               <select
                 value={reportDuration}
                 onChange={(e) => setReportDuration(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '8px 12px',
+                  padding: '6px 10px',
                   borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 400,
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
                   cursor: 'pointer'
                 }}
               >
@@ -2021,406 +2009,98 @@ export default function AnalyticsPage() {
 
             {/* Custom Dates (if selected) */}
             {reportDuration === 'custom' && (
-              <>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#374151',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#374151',
-                      fontSize: '0.85rem'
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* 2. Assigned Store Branch (Fixed for Store Manager) */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                Store Branch
-              </label>
-              <div
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#0f766e', flexShrink: 0 }} />
-                <span>Dallas Branch #204</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '2px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-main)'
+                  }}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>to</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '2px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    fontSize: '0.8rem',
+                    color: 'var(--text-main)'
+                  }}
+                />
               </div>
-            </div>
-
-            {/* 3. Primary Report Package */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.03em' }}>
-                Master Document Scope
-              </label>
-              <select
-                value={selectedReportType}
-                onChange={(e) => setSelectedReportType(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#ffffff',
-                  color: '#374151',
-                  fontSize: '0.85rem',
-                  fontWeight: 400,
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">Comprehensive Branch Executive Audit (All-in-One)</option>
-                <option value="selling_products">Top-Selling Products Leaderboard</option>
-                <option value="revenue_category">Total Revenue Received &amp; Category Sales</option>
-                <option value="customer_history">Customer Purchase History &amp; Accounts</option>
-                <option value="branch_essential">Essential Shop Branch Manager Audit</option>
-              </select>
-            </div>
+            )}
           </div>
 
-          {/* 4 Essential Downloadable Reports for Branch Manager */}
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.03em' }}>
-              Essential Branch Manager Audit Documents:
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-              {/* Report 1: Selling Products */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Selling Products Report
+          {/* Quick Package Selector Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+            {[
+              {
+                id: 'branch_essential',
+                title: 'Branch Manager Audit',
+                badge: 'Dossier',
+                desc: 'KPIs, order pipeline, SLAs, category totals, and manager sign-off.'
+              },
+              {
+                id: 'selling_products',
+                title: 'Selling Products Report',
+                badge: 'Leaderboard',
+                desc: 'Top revenue items, rankings, units sold, and catalog share.'
+              },
+              {
+                id: 'revenue_category',
+                title: 'Total Revenue Received',
+                badge: 'Financial',
+                desc: 'Gross catalog volume, grand totals, and settlement rates.'
+              },
+              {
+                id: 'customer_history',
+                title: 'Customer History List',
+                badge: 'Accounts',
+                desc: 'Customer accounts ledger, frequency, and order settlements.'
+              }
+            ].map((pkg) => {
+              const isSelected = selectedReportType === pkg.id;
+              return (
+                <div
+                  key={pkg.id}
+                  onClick={() => setSelectedReportType(pkg.id)}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '2px',
+                    border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                    background: isSelected ? 'var(--primary-light, #f0fdfa)' : 'var(--bg-card)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.84rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
+                      {pkg.title}
                     </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
+                    <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '2px', background: isSelected ? 'var(--primary)' : 'var(--bg-subtle)', color: isSelected ? '#ffffff' : 'var(--text-muted)' }}>
+                      {pkg.badge}
                     </span>
                   </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Top revenue generating items, product rankings, units sold, and catalog contribution share.
+                  <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.35 }}>
+                    {pkg.desc}
                   </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Leader: {topSellingData[0]?.product_name ? `${topSellingData[0].product_name.slice(0, 20)}...` : 'Apex Pro Terminal'}
-                  </div>
                 </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('selling_products')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('selling_products')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 2: Total Revenue Received */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Total Revenue Received
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Gross catalog revenue, hierarchical ROLLUP grand totals, category order counts, and settlement rates.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Gross: ${Number(totalVolume).toLocaleString('en-US', { maximumFractionDigits: 0 })} Total
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('revenue_category')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('revenue_category')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 3: Customer History List */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Customer History List
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#ffffff', border: '1px solid #e7d7c1', color: '#6b7280' }}>
-                      PDF
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Accounts ledger, order frequency, settled vs outstanding balances, and Texas fulfillment destinations.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Active Accounts: {customerData.length || 5} Logged
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('customer_history')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('customer_history')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Report 4: Essential Shop Branch Manager Audit (All-in-One) */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '2px',
-                  border: '1px solid #e7d7c1',
-                  background: '#faf7f2',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.02)'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.92rem', color: '#1f2937', fontFamily: "'Outfit', sans-serif" }}>
-                      Branch Manager Audit
-                    </span>
-                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '2px 6px', borderRadius: '2px', background: '#f4ede4', border: '1px solid #e7d7c1', color: '#5c4b4b' }}>
-                      All-In-One
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0 0 10px', lineHeight: 1.4 }}>
-                    Essential store operations dossier: KPIs, order pipeline, SLAs, category totals, and manager sign-off.
-                  </p>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#4b5563', background: '#ffffff', border: '1px solid #e7d7c1', padding: '6px 10px', borderRadius: '2px' }}>
-                    Scope: Complete Branch Operations Dossier
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewReport('branch_essential')}
-                    style={{
-                      flex: 1,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #e7d7c1',
-                      background: '#ffffff',
-                      color: '#4b5563',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadPDF('branch_essential')}
-                    style={{
-                      flex: 1.4,
-                      padding: '7px',
-                      borderRadius: '2px',
-                      border: '1px solid #2a9d8f',
-                      background: '#2a9d8f',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <DownloadIcon className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
@@ -2559,15 +2239,12 @@ export default function AnalyticsPage() {
   // ==========================================================================
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Admin Header */}
-      <div className="card" style={{ padding: '20px 24px', background: 'var(--bg-card)', borderRadius: '2px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      {/* 1. COMPACT EXECUTIVE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-6px' }}>
         <div>
-          <h1 style={{ fontSize: '1.45rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
-            Enterprise Financial Intelligence &amp; DCL Security Suite
+          <h1 style={{ fontSize: '1.35rem', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em', margin: 0 }}>
+            Enterprise Financial Intelligence
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Executive OLAP Analytics, Windowing Moving Averages, and DCL Role Authorization Management.
-          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2576,17 +2253,18 @@ export default function AnalyticsPage() {
             onClick={() => fetchReports(selectedYear, roleId || 4, user)}
             disabled={loading}
             style={{
-              padding: '8px 14px',
+              padding: '6px 14px',
               borderRadius: '2px',
-              fontSize: '0.8rem',
+              fontSize: '0.8125rem',
               fontWeight: 500,
               cursor: 'pointer',
-              border: '1px solid var(--primary-border)',
-              background: 'var(--primary)',
+              border: '1px solid #e7d7c1',
+              background: '#2a9d8f',
               color: '#ffffff',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
             <ZapIcon className="w-3.5 h-3.5" />
@@ -2635,12 +2313,12 @@ export default function AnalyticsPage() {
       {/* Admin Tab Navigation Across All Views & Security Console */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         {[
-          { id: 'quarterly', label: 'Quarterly Sales & Moving Averages' },
-          { id: 'top-selling', label: 'Top 10 Selling Products' },
-          { id: 'categories', label: 'Category Revenue & ROLLUP' },
-          { id: 'customers', label: 'Customer Lifetime Spending' },
-          { id: 'ledger', label: 'Payment ACID Ledger' },
-          { id: 'dcl', label: 'DCL Security & Roles Matrix' },
+          { id: 'quarterly', label: 'Quarterly Sales' },
+          { id: 'top-selling', label: 'Top Products' },
+          { id: 'categories', label: 'Categories' },
+          { id: 'customers', label: 'Customer Spending' },
+          { id: 'ledger', label: 'Payment Ledger' },
+
         ].map((tab) => {
           const isActive = adminTab === tab.id;
           return (
@@ -2649,17 +2327,18 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => setAdminTab(tab.id)}
               style={{
-                padding: '8px 14px',
+                padding: '7px 14px',
                 borderRadius: '2px',
-                border: isActive ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                background: isActive ? 'var(--primary)' : 'var(--bg-subtle)',
+                border: isActive ? '1px solid #2a9d8f' : '1px solid var(--border-color)',
+                background: isActive ? '#2a9d8f' : 'var(--bg-subtle)',
                 color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                fontSize: '0.84rem',
+                fontSize: '0.825rem',
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -2677,9 +2356,6 @@ export default function AnalyticsPage() {
               <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Quarterly Sales &amp; Moving Average Performance
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                View: <code>v_quarterly_sales_report</code> • Window Function: <code>AVG(...) OVER (ORDER BY sales_year, sales_quarter ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)</code>
-              </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2740,9 +2416,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Top 10 Selling Products Leaderboard
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              View: <code>v_top_selling_products</code> • Ranking: <code>DENSE_RANK() OVER (ORDER BY total_revenue DESC)</code>
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -2841,9 +2514,6 @@ export default function AnalyticsPage() {
               <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
                 Customer Lifetime Spending &amp; Settlement Leaderboard
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                View: <code>v_customer_order_summary</code> • Multi-Table Outer Joins with orders, shipments, and Texas hubs
-              </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2912,9 +2582,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Payment Transaction ACID Settlement Ledger
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Table: <code>PAYMENT_TRANSACTION</code> • Prepared Statements &amp; Pessimistic Row Locking (FOR UPDATE)
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -2971,9 +2638,6 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>
               Data Control Language (DCL) Role &amp; Grant Matrix
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Reference: Lecture Note 8 (<code>CREATE ROLE</code>, <code>GRANT</code>, <code>REVOKE</code>) and Lecture Note 5 (Database Triggers)
-            </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -3007,7 +2671,7 @@ export default function AnalyticsPage() {
           {dclData.recent_audit_logs?.length > 0 && (
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
-                Recent Security &amp; Payment Audit Trail (Lecture Note 5 Triggers):
+                Recent Security &amp; Payment Audit Trail:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {dclData.recent_audit_logs.slice(0, 4).map((log, idx) => (
@@ -3274,87 +2938,6 @@ export default function AnalyticsPage() {
               <option value="customer_history">Global Customer Purchase History &amp; Accounts Ledger</option>
               <option value="admin_essential">Essential Shop Administrator Multi-Store Audit</option>
             </select>
-          </div>
-
-          {/* Active Configuration Feedback Banner */}
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              padding: '10px 14px',
-              borderRadius: '2px',
-              background: 'var(--primary-light, #eff6ff)',
-              border: '1px solid var(--primary-border, #bfdbfe)',
-              color: 'var(--primary, #1d4ed8)',
-              fontSize: '0.82rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '10px',
-              marginTop: '4px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <CheckCircleIcon className="w-4 h-4 text-primary" />
-                Active Document Export Scope:
-              </span>
-              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                {adminStoreBranch === 'all_stores'
-                  ? 'All Stores (Enterprise Consolidated)'
-                  : adminStoreBranch === 'dallas'
-                  ? 'Dallas Branch #204'
-                  : adminStoreBranch === 'austin'
-                  ? 'Austin Branch #101'
-                  : adminStoreBranch === 'houston'
-                  ? 'Houston Branch #305'
-                  : adminStoreBranch === 'san_antonio'
-                  ? 'San Antonio Branch #402'
-                  : 'Fort Worth Branch #508'}
-              </span>
-              <span>•</span>
-              <span style={{ color: 'var(--text-secondary)' }}>
-                {getDurationLabel(reportDuration, customStartDate, customEndDate)}
-              </span>
-              <span>•</span>
-              <span style={{ color: 'var(--text-muted)' }}>
-                {selectedReportType === 'all'
-                  ? 'Comprehensive Executive Audit'
-                  : selectedReportType === 'selling_products'
-                  ? 'Top-Selling Leaderboard'
-                  : selectedReportType === 'revenue_category'
-                  ? 'Category Revenue'
-                  : selectedReportType === 'customer_history'
-                  ? 'Customer Accounts Ledger'
-                  : 'Essential Multi-Store Audit'}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                Configures PDF and printable dossier
-              </span>
-              <button
-                type="button"
-                onClick={() => handlePreviewReport(selectedReportType)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '2px',
-                  background: 'var(--primary)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <EyeIcon className="w-3.5 h-3.5" />
-                <span>Preview Document →</span>
-              </button>
-            </div>
           </div>
         </div>
 

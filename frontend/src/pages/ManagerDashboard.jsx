@@ -30,6 +30,7 @@ export default function ManagerDashboard() {
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState('ALL');
   const [confirmingOrderId, setConfirmingOrderId] = useState(null);
+  const [pipelinePage, setPipelinePage] = useState(1);
 
   // Staff Management State
   const [staffList, setStaffList] = useState([]);
@@ -180,6 +181,19 @@ export default function ManagerDashboard() {
     });
   }, [pipelineData, pipelineSearch, selectedStage]);
 
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setPipelinePage(1);
+  }, [selectedStage, pipelineSearch]);
+
+  const PIPELINE_PAGE_SIZE = 10;
+  const totalPipelinePages = Math.max(1, Math.ceil(filteredPipeline.length / PIPELINE_PAGE_SIZE));
+  const safePipelinePage = Math.min(Math.max(1, pipelinePage), totalPipelinePages);
+  const paginatedPipeline = useMemo(() => {
+    const start = (safePipelinePage - 1) * PIPELINE_PAGE_SIZE;
+    return filteredPipeline.slice(start, start + PIPELINE_PAGE_SIZE);
+  }, [filteredPipeline, safePipelinePage]);
+
   if (!user) return null;
 
   const summary = executiveOverview || {};
@@ -211,54 +225,22 @@ export default function ManagerDashboard() {
       )}
 
       {/* ==================================================================== */}
-      {/* 1. CLEAN EXECUTIVE HEADER                                            */}
+      {/* 1. COMPACT EXECUTIVE HEADER                                          */}
       {/* ==================================================================== */}
-      <div className="st-admin-header">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-8px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-            <span className="st-badge-admin-role">Warehouse Manager</span>
-
-            {/* Assigned Warehouse Hub Badge */}
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#e6f6f4',
-              color: '#0f766e',
-              border: '1px solid #a8ded8',
-              padding: '3px 10px',
-              borderRadius: '3px',
-              fontSize: '0.8rem',
-              fontWeight: 600
-            }}>
-              <TruckIcon style={{ width: '0.9rem', height: '0.9rem' }} />
-              Assigned Hub: {warehouse?.city_name || user.city_name || 'Texas Regional Warehouse'} {warehouse?.hub_name ? `(${warehouse.hub_name})` : ''}
-            </span>
-
-            <span className="st-badge-cluster-status">
-              <span className="st-pulse-dot" />
-              Railway DB Connected
-            </span>
-
-            <span style={{ fontSize: '0.8rem', color: '#826e6e' }}>
-              Signed in as <strong>{user.username || user.full_name || user.email}</strong>
-            </span>
-          </div>
-
-          <h1 className="st-admin-title">Warehouse Management &amp; Order Confirmation</h1>
-          <p className="st-admin-subtitle">
-            Authorize incoming customer orders, manage regional fulfillment, and monitor Texas warehouse logistics.
-          </p>
+          <h1 className="st-admin-title" style={{ fontSize: '1.35rem', fontWeight: 600 }}>Manager Pipeline &amp; Fulfillment</h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
             onClick={fetchExecutiveData}
             disabled={refreshing}
             className="st-btn-header-sync"
+            style={{ padding: '6px 14px', fontSize: '0.8125rem' }}
           >
-            <RefreshCwIcon style={{ width: '0.875rem', height: '0.875rem', animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCwIcon style={{ width: '0.8rem', height: '0.8rem', animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             <span>{refreshing ? 'Syncing...' : 'Refresh'}</span>
           </button>
         </div>
@@ -279,9 +261,6 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-value">
             ${Number(summary.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="st-admin-kpi-foot">
-            Net settled: <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(summary.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-          </div>
         </div>
 
         {/* KPI 2: Total Orders */}
@@ -294,9 +273,6 @@ export default function ManagerDashboard() {
           </div>
           <div className="st-admin-kpi-value">
             {summary.total_orders || 0}
-          </div>
-          <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#0284c7', fontWeight: 600 }}>{ordersBreakdown.pending || 0}</strong> awaiting confirmation · <strong style={{ color: '#1f2937', fontWeight: 500 }}>{ordersBreakdown.confirmed || 0}</strong> confirmed
           </div>
         </div>
 
@@ -311,9 +287,6 @@ export default function ManagerDashboard() {
           <div className="st-admin-kpi-value">
             ${Number(summary.average_order_value || 0).toFixed(2)}
           </div>
-          <div className="st-admin-kpi-foot">
-            Across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{summary.active_customers || 0}</strong> regional customers
-          </div>
         </div>
 
         {/* KPI 4: Inventory Asset Valuation */}
@@ -326,9 +299,6 @@ export default function ManagerDashboard() {
           </div>
           <div className="st-admin-kpi-value">
             ${Number(invSummary.valuation || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.units_on_hand || 0}</strong> units across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{invSummary.total_skus || 0}</strong> SKUs
           </div>
         </div>
       </div>
@@ -370,94 +340,93 @@ export default function ManagerDashboard() {
       {/* TAB 1: ORDER FULFILLMENT & CONFIRMATION                              */}
       {/* ==================================================================== */}
       {activeTab === 'pipeline' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Incoming Orders Awaiting Confirmation Banner */}
-          {Number(ordersBreakdown.pending || 0) > 0 && (
-            <div style={{
-              padding: '14px 20px',
-              borderRadius: '4px',
-              background: '#fef3c7',
-              border: '1px solid #fde68a',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.4rem' }}>⚡</span>
-                <div>
-                  <div style={{ color: '#92400e', fontSize: '0.92rem', fontWeight: 600 }}>
-                    {ordersBreakdown.pending} Incoming Customer Order{ordersBreakdown.pending > 1 ? 's' : ''} Awaiting Warehouse Confirmation
-                  </div>
-                  <div style={{ color: '#b45309', fontSize: '0.78rem' }}>
-                    Click &quot;Confirm Order&quot; on pending orders below to verify inventory, authorize dispatch, and notify the customer.
-                  </div>
-                </div>
+          {/* Consolidated Filter & Search Toolbar */}
+          <div className="st-admin-card" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Top Row: Inline Filter Pills & Export CSV */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'ALL', label: 'All Orders', count: pipelineData.pipeline?.length || 0 },
+                  { id: 'PENDING', label: 'Pending Processing', count: ordersBreakdown.pending || 0 },
+                  { id: 'CONFIRMED', label: 'Confirmed & Packed', count: ordersBreakdown.confirmed || 0 },
+                  { id: 'SHIPPED', label: 'In Transit', count: ordersBreakdown.shipped || 0 },
+                  { id: 'CANCELLED', label: 'Cancelled', count: ordersBreakdown.cancelled || 0 },
+                ].map((stg) => {
+                  const isActive = selectedStage === stg.id;
+                  return (
+                    <button
+                      key={stg.id}
+                      type="button"
+                      onClick={() => setSelectedStage(stg.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        padding: '6px 13px',
+                        fontSize: '0.8125rem',
+                        fontWeight: isActive ? 600 : 500,
+                        borderRadius: '2px',
+                        border: `1.5px solid ${isActive ? '#2a9d8f' : '#e7d7c1'}`,
+                        background: isActive ? '#f0faf9' : '#ffffff',
+                        color: isActive ? '#2a9d8f' : '#4b5563',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{stg.label}</span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          background: isActive ? '#2a9d8f' : '#f1f5f9',
+                          color: isActive ? '#ffffff' : '#64748b',
+                        }}
+                      >
+                        {stg.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+
               <button
                 type="button"
-                onClick={() => setSelectedStage('PENDING')}
-                style={{
-                  background: '#d97706',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '3px',
-                  padding: '7px 16px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
+                onClick={() => exportToCSV(filteredPipeline, 'manager_pipeline_orders')}
+                className="st-btn-pill-export"
               >
-                View Pending Orders ({ordersBreakdown.pending})
+                Export CSV
               </button>
             </div>
-          )}
 
-          {/* Pipeline Stage Segments */}
-          <div className="st-pipeline-segment">
-            {[
-              { id: 'ALL', label: 'All Warehouse Orders', count: pipelineData.pipeline?.length || 0 },
-              { id: 'PENDING', label: 'Pending Confirmation', count: ordersBreakdown.pending || 0 },
-              { id: 'CONFIRMED', label: 'Confirmed & Packing', count: ordersBreakdown.confirmed || 0 },
-              { id: 'SHIPPED', label: 'In Transit', count: ordersBreakdown.shipped || 0 },
-              { id: 'CANCELLED', label: 'Cancelled', count: ordersBreakdown.cancelled || 0 },
-            ].map((stg) => (
-              <div
-                key={stg.id}
-                onClick={() => setSelectedStage(stg.id)}
-                className={`st-stage-pill ${selectedStage === stg.id ? 'active' : ''}`}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className="st-stage-label">{stg.label}</span>
-                <span className="st-stage-count">{stg.count}</span>
+            {/* Bottom Row: Search Box & Showing Count */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: '1px solid #f4ede4', paddingTop: '10px' }}>
+              <div className="st-admin-search-wrap" style={{ flex: '1 1 320px', maxWidth: '520px' }}>
+                <span className="st-admin-search-icon">
+                  <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search orders by customer, Order ID, city, or tracking number..."
+                  value={pipelineSearch}
+                  onChange={(e) => setPipelineSearch(e.target.value)}
+                  className="st-admin-search-input"
+                />
               </div>
-            ))}
-          </div>
 
-          {/* Search Bar */}
-          <div className="st-admin-card" style={{ padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-            <div className="st-admin-search-wrap">
-              <span className="st-admin-search-icon">
-                <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
+              <span style={{ fontSize: '0.835rem', color: '#64748b' }}>
+                {filteredPipeline.length > 0 ? (
+                  <>
+                    Showing <strong>{(safePipelinePage - 1) * PIPELINE_PAGE_SIZE + 1}–{Math.min(safePipelinePage * PIPELINE_PAGE_SIZE, filteredPipeline.length)}</strong> of <strong>{filteredPipeline.length}</strong> orders
+                  </>
+                ) : (
+                  <>Showing <strong>0</strong> orders</>
+                )}
               </span>
-              <input
-                type="text"
-                placeholder="Search orders by ID, recipient name, tracking #, or city..."
-                value={pipelineSearch}
-                onChange={(e) => setPipelineSearch(e.target.value)}
-                className="st-admin-search-input"
-              />
             </div>
-
-            <button
-              type="button"
-              onClick={() => exportToCSV(filteredPipeline, 'warehouse_orders_export')}
-              className="st-btn-pill-export"
-            >
-              Export CSV
-            </button>
           </div>
 
           {/* Warehouse Orders Table */}
@@ -483,14 +452,14 @@ export default function ManagerDashboard() {
                         Loading warehouse fulfillment pipeline...
                       </td>
                     </tr>
-                  ) : filteredPipeline.length === 0 ? (
+                  ) : paginatedPipeline.length === 0 ? (
                     <tr>
                       <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
                         No orders match the selected filters for your warehouse.
                       </td>
                     </tr>
                   ) : (
-                    filteredPipeline.map((order) => {
+                    paginatedPipeline.map((order) => {
                       const isPaid = (order.payment_status || '').toUpperCase() === 'PAID' || (order.payment_status || '').toUpperCase() === 'SUCCESS';
                       const isPending = order.order_status === 'PENDING';
                       const isConfirmed = order.order_status === 'CONFIRMED';
@@ -599,6 +568,119 @@ export default function ManagerDashboard() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPipelinePages > 1 && (
+              <div
+                style={{
+                  padding: '12px 18px',
+                  borderTop: '1.5px solid #e7d7c1',
+                  background: '#faf7f2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  fontSize: '0.8125rem',
+                }}
+              >
+                <div style={{ color: '#826e6e' }}>
+                  Showing page <strong style={{ color: '#3b2f2f' }}>{safePipelinePage}</strong> of{' '}
+                  <strong style={{ color: '#3b2f2f' }}>{totalPipelinePages}</strong> ({filteredPipeline.length} orders total)
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {/* Previous Button */}
+                  <button
+                    type="button"
+                    disabled={safePipelinePage <= 1}
+                    onClick={() => setPipelinePage((p) => Math.max(1, p - 1))}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '2px',
+                      border: '1px solid #e7d7c1',
+                      background: safePipelinePage <= 1 ? '#f4ede4' : '#ffffff',
+                      color: safePipelinePage <= 1 ? '#a89696' : '#3b2f2f',
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      cursor: safePipelinePage <= 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    &larr; Previous
+                  </button>
+
+                  {/* Page Number Buttons */}
+                  {Array.from({ length: totalPipelinePages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPipelinePages || Math.abs(p - safePipelinePage) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) {
+                        acc.push('...');
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) => {
+                      if (item === '...') {
+                        return (
+                          <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#826e6e' }}>
+                            …
+                          </span>
+                        );
+                      }
+                      const isCurrent = item === safePipelinePage;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setPipelinePage(item)}
+                          style={{
+                            minWidth: '32px',
+                            height: '32px',
+                            padding: '0 8px',
+                            borderRadius: '2px',
+                            border: isCurrent ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                            background: isCurrent ? '#2a9d8f' : '#ffffff',
+                            color: isCurrent ? '#ffffff' : '#3b2f2f',
+                            fontWeight: isCurrent ? 700 : 500,
+                            fontSize: '0.8125rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    disabled={safePipelinePage >= totalPipelinePages}
+                    onClick={() => setPipelinePage((p) => Math.min(totalPipelinePages, p + 1))}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '2px',
+                      border: '1px solid #e7d7c1',
+                      background: safePipelinePage >= totalPipelinePages ? '#f4ede4' : '#ffffff',
+                      color: safePipelinePage >= totalPipelinePages ? '#a89696' : '#3b2f2f',
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      cursor: safePipelinePage >= totalPipelinePages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

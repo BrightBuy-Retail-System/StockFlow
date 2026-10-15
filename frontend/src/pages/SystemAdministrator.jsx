@@ -38,6 +38,7 @@ export default function SystemAdministrator() {
   const [fulfillmentPipeline, setFulfillmentPipeline] = useState([]);
   const [pipelineFilter, setPipelineFilter] = useState('ALL');
   const [pipelineSearch, setPipelineSearch] = useState('');
+  const [pipelinePage, setPipelinePage] = useState(1);
 
   // 2. The 5 Mandatory Reports Data
   const [quarterlySales, setQuarterlySales] = useState([]);
@@ -558,6 +559,19 @@ export default function SystemAdministrator() {
     });
   }, [fulfillmentPipeline, pipelineFilter, pipelineSearch]);
 
+  // Reset pagination when filter or search changes
+  useEffect(() => {
+    setPipelinePage(1);
+  }, [pipelineFilter, pipelineSearch]);
+
+  const PIPELINE_PAGE_SIZE = 10;
+  const totalPipelinePages = Math.max(1, Math.ceil(filteredPipeline.length / PIPELINE_PAGE_SIZE));
+  const safePipelinePage = Math.min(Math.max(1, pipelinePage), totalPipelinePages);
+  const paginatedPipeline = useMemo(() => {
+    const start = (safePipelinePage - 1) * PIPELINE_PAGE_SIZE;
+    return filteredPipeline.slice(start, start + PIPELINE_PAGE_SIZE);
+  }, [filteredPipeline, safePipelinePage]);
+
   const filteredQuarterly = useMemo(() => {
     if (quarterlyYearFilter === 'ALL') return quarterlySales;
     return quarterlySales.filter((r) => String(r.sales_year) === quarterlyYearFilter);
@@ -700,42 +714,24 @@ export default function SystemAdministrator() {
       {/* ==================================================================== */}
       {/* 1. CLEAN EXECUTIVE HEADER                                            */}
       {/* ==================================================================== */}
-      <div className="st-admin-header">
+      {/* 1. COMPACT EXECUTIVE HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '-8px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-            <span className="st-badge-admin-role">
-              System Administrator
-            </span>
-            <span className="st-badge-cluster-status">
-              <span className="st-pulse-dot" />
-              TiDB Cluster Operational
-            </span>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Signed in as <strong>{user?.email || 'admin@brightbuy.com'}</strong>
-            </span>
-          </div>
-
-          <h1 className="st-admin-title">Store Administration</h1>
-          <p className="st-admin-subtitle">
-            Overview financial performance, active fulfillment pipelines, management reports, and catalog operations.
-          </p>
+          <h1 className="st-admin-title" style={{ fontSize: '1.35rem', fontWeight: 600 }}>Store Administration</h1>
         </div>
 
         {/* Quick Header Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
             onClick={fetchAllData}
             disabled={refreshing}
             className="st-btn-header-sync"
+            style={{ padding: '6px 14px', fontSize: '0.8125rem' }}
           >
-            <RefreshCwIcon style={{ width: '0.875rem', height: '0.875rem', animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCwIcon style={{ width: '0.8rem', height: '0.8rem', animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             <span>{refreshing ? 'Syncing...' : 'Refresh'}</span>
           </button>
-
-          <Link to="/manager-dashboard" className="st-btn-header-manager">
-            <span>Manager Console &rarr;</span>
-          </Link>
         </div>
       </div>
 
@@ -755,9 +751,6 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-value">
             ${Number(executiveOverview?.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="st-admin-kpi-foot">
-            Net settled: <strong style={{ color: '#1f2937', fontWeight: 500 }}>${Number(executiveOverview?.settled_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-          </div>
         </div>
 
         {/* KPI 2: Total Orders */}
@@ -770,9 +763,6 @@ export default function SystemAdministrator() {
           </div>
           <div className="st-admin-kpi-value">
             {executiveOverview?.total_orders || 0}
-          </div>
-          <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{executiveOverview?.active_customers || 0}</strong> active registered customers
           </div>
         </div>
 
@@ -787,9 +777,6 @@ export default function SystemAdministrator() {
           <div className="st-admin-kpi-value">
             ${Number(inventoryMetrics.valuation || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="st-admin-kpi-foot">
-            <strong style={{ color: '#1f2937', fontWeight: 500 }}>{inventoryMetrics.totalUnits}</strong> units across <strong style={{ color: '#1f2937', fontWeight: 500 }}>{inventoryMetrics.totalSkus}</strong> SKUs
-          </div>
         </div>
 
         {/* KPI 4: Fulfillment Pipeline */}
@@ -802,9 +789,6 @@ export default function SystemAdministrator() {
           </div>
           <div className="st-admin-kpi-value">
             {(executiveOverview?.order_breakdown?.pending || 0) + (executiveOverview?.order_breakdown?.confirmed || 0)}
-          </div>
-          <div className="st-admin-kpi-foot">
-            {executiveOverview?.order_breakdown?.pending || 0} pending processing · {executiveOverview?.order_breakdown?.shipped || 0} in transit
           </div>
         </div>
 
@@ -869,47 +853,59 @@ export default function SystemAdministrator() {
       {/* TAB CONTENT 1: OVERVIEW & FULFILLMENT PIPELINE                       */}
       {/* ==================================================================== */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Order Stages Filter Segment */}
-          <div className="st-pipeline-segment">
-            {[
-              { id: 'ALL', label: 'All Orders', count: fulfillmentPipeline.length },
-              { id: 'PENDING', label: 'Pending Processing', count: executiveOverview?.order_breakdown?.pending || 0 },
-              { id: 'CONFIRMED', label: 'Confirmed & Packed', count: executiveOverview?.order_breakdown?.confirmed || 0 },
-              { id: 'SHIPPED', label: 'In Transit', count: executiveOverview?.order_breakdown?.shipped || 0 },
-              { id: 'CANCELLED', label: 'Cancelled', count: executiveOverview?.order_breakdown?.cancelled || 0 }
-            ].map((stg) => (
-              <div
-                key={stg.id}
-                onClick={() => setPipelineFilter(stg.id)}
-                className={`st-pipeline-chip ${pipelineFilter === stg.id ? 'active' : ''}`}
-              >
-                <div className="st-pipeline-chip-label">{stg.label}</div>
-                <div className="st-pipeline-chip-val">{stg.count}</div>
+          {/* Consolidated Filter & Search Toolbar */}
+          <div className="st-admin-card" style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Top Row: Inline Filter Pills & Export CSV */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'ALL', label: 'All Orders', count: fulfillmentPipeline.length },
+                  { id: 'PENDING', label: 'Pending Processing', count: executiveOverview?.order_breakdown?.pending || 0 },
+                  { id: 'CONFIRMED', label: 'Confirmed & Packed', count: executiveOverview?.order_breakdown?.confirmed || 0 },
+                  { id: 'SHIPPED', label: 'In Transit', count: executiveOverview?.order_breakdown?.shipped || 0 },
+                  { id: 'CANCELLED', label: 'Cancelled', count: executiveOverview?.order_breakdown?.cancelled || 0 }
+                ].map((stg) => {
+                  const isActive = pipelineFilter === stg.id;
+                  return (
+                    <button
+                      key={stg.id}
+                      type="button"
+                      onClick={() => setPipelineFilter(stg.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        padding: '6px 13px',
+                        fontSize: '0.8125rem',
+                        fontWeight: isActive ? 600 : 500,
+                        borderRadius: '2px',
+                        border: `1.5px solid ${isActive ? '#2a9d8f' : '#e7d7c1'}`,
+                        background: isActive ? '#f0faf9' : '#ffffff',
+                        color: isActive ? '#2a9d8f' : '#4b5563',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{stg.label}</span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          background: isActive ? '#2a9d8f' : '#f1f5f9',
+                          color: isActive ? '#ffffff' : '#64748b',
+                        }}
+                      >
+                        {stg.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
-          </div>
 
-          {/* Search & Export Toolbar */}
-          <div className="st-admin-card" style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div className="st-admin-search-wrap">
-              <span className="st-admin-search-icon">
-                <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
-              </span>
-              <input
-                type="text"
-                placeholder="Search orders by customer, Order ID, city, or tracking number..."
-                value={pipelineSearch}
-                onChange={(e) => setPipelineSearch(e.target.value)}
-                className="st-admin-search-input"
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '0.835rem', color: '#64748b' }}>
-                Showing <strong>{filteredPipeline.length}</strong> orders
-              </span>
               <button
                 type="button"
                 onClick={() => exportToCSV(filteredPipeline, 'orders_pipeline_export')}
@@ -917,6 +913,32 @@ export default function SystemAdministrator() {
               >
                 Export CSV
               </button>
+            </div>
+
+            {/* Bottom Row: Search Box & Showing Count */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: '1px solid #f4ede4', paddingTop: '10px' }}>
+              <div className="st-admin-search-wrap" style={{ flex: '1 1 320px', maxWidth: '520px' }}>
+                <span className="st-admin-search-icon">
+                  <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search orders by customer, Order ID, city, or tracking number..."
+                  value={pipelineSearch}
+                  onChange={(e) => setPipelineSearch(e.target.value)}
+                  className="st-admin-search-input"
+                />
+              </div>
+
+              <span style={{ fontSize: '0.835rem', color: '#64748b' }}>
+                {filteredPipeline.length > 0 ? (
+                  <>
+                    Showing <strong>{(safePipelinePage - 1) * PIPELINE_PAGE_SIZE + 1}–{Math.min(safePipelinePage * PIPELINE_PAGE_SIZE, filteredPipeline.length)}</strong> of <strong>{filteredPipeline.length}</strong> orders
+                  </>
+                ) : (
+                  <>Showing <strong>0</strong> orders</>
+                )}
+              </span>
             </div>
           </div>
 
@@ -936,14 +958,14 @@ export default function SystemAdministrator() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPipeline.length === 0 ? (
+                  {paginatedPipeline.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: '#94a3b8' }}>
                         No orders match the selected filters.
                       </td>
                     </tr>
                   ) : (
-                    filteredPipeline.map((ord) => {
+                    paginatedPipeline.map((ord) => {
                       const isPaid = (ord.payment_status || '').toLowerCase() === 'paid' || (ord.payment_status || '').toLowerCase() === 'success';
                       return (
                         <tr key={ord.order_id}>
@@ -999,6 +1021,119 @@ export default function SystemAdministrator() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPipelinePages > 1 && (
+              <div
+                style={{
+                  padding: '12px 18px',
+                  borderTop: '1.5px solid #e7d7c1',
+                  background: '#faf7f2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  fontSize: '0.8125rem',
+                }}
+              >
+                <div style={{ color: '#826e6e' }}>
+                  Showing page <strong style={{ color: '#3b2f2f' }}>{safePipelinePage}</strong> of{' '}
+                  <strong style={{ color: '#3b2f2f' }}>{totalPipelinePages}</strong> ({filteredPipeline.length} orders total)
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {/* Previous Button */}
+                  <button
+                    type="button"
+                    disabled={safePipelinePage <= 1}
+                    onClick={() => setPipelinePage((p) => Math.max(1, p - 1))}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '2px',
+                      border: '1px solid #e7d7c1',
+                      background: safePipelinePage <= 1 ? '#f4ede4' : '#ffffff',
+                      color: safePipelinePage <= 1 ? '#a89696' : '#3b2f2f',
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      cursor: safePipelinePage <= 1 ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    &larr; Previous
+                  </button>
+
+                  {/* Page Number Buttons */}
+                  {Array.from({ length: totalPipelinePages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPipelinePages || Math.abs(p - safePipelinePage) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) {
+                        acc.push('...');
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((item, idx) => {
+                      if (item === '...') {
+                        return (
+                          <span key={`ellipsis-${idx}`} style={{ padding: '0 4px', color: '#826e6e' }}>
+                            …
+                          </span>
+                        );
+                      }
+                      const isCurrent = item === safePipelinePage;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setPipelinePage(item)}
+                          style={{
+                            minWidth: '32px',
+                            height: '32px',
+                            padding: '0 8px',
+                            borderRadius: '2px',
+                            border: isCurrent ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                            background: isCurrent ? '#2a9d8f' : '#ffffff',
+                            color: isCurrent ? '#ffffff' : '#3b2f2f',
+                            fontWeight: isCurrent ? 700 : 500,
+                            fontSize: '0.8125rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+
+                  {/* Next Button */}
+                  <button
+                    type="button"
+                    disabled={safePipelinePage >= totalPipelinePages}
+                    onClick={() => setPipelinePage((p) => Math.min(totalPipelinePages, p + 1))}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '2px',
+                      border: '1px solid #e7d7c1',
+                      background: safePipelinePage >= totalPipelinePages ? '#f4ede4' : '#ffffff',
+                      color: safePipelinePage >= totalPipelinePages ? '#a89696' : '#3b2f2f',
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      cursor: safePipelinePage >= totalPipelinePages ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
