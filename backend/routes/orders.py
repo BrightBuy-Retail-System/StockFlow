@@ -980,7 +980,7 @@ def update_order_status(order_id):
             if new_status == 'CONFIRMED':
                 cursor.execute("""
                     UPDATE shipments 
-                    SET shipping_status = 'CONFIRMED' 
+                    SET shipping_status = 'PENDING' 
                     WHERE shipment_id = %s
                 """, (shipment_id,))
             elif new_status == 'SHIPPED':
