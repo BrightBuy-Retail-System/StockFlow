@@ -1,12 +1,3 @@
--- ============================================================================
--- StockFlow (BrightBuy) - Member 4: Texas Regional Logistics & Warehouses
--- Course: CS3043 - Database Systems
--- Reference: Lecture Notes 1 - 9 (DDL, Constraints, Foreign Keys, Indexes, Views)
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- SECTION 1: DATA DEFINITION LANGUAGE (DDL) - Core Logistics Relations
--- ----------------------------------------------------------------------------
 
 -- Table 1: Texas Regional Distribution Hubs & Municipalities
 CREATE TABLE IF NOT EXISTS texas_cities (
@@ -34,10 +25,9 @@ CREATE TABLE IF NOT EXISTS shipments (
         ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
+
 -- SECTION 2: INDEX OPTIMIZATION (DDL)
 -- Speed up destination routing, dispatch status filtering, and ETA ordering
--- ----------------------------------------------------------------------------
 CREATE INDEX idx_shipments_destination 
     ON shipments (destination_city_id);
 
