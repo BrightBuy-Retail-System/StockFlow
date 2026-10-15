@@ -118,7 +118,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
   const [cardCvc, setCardCvc] = useState(() => savedDraft?.cardCvc || '321');
   const [cardName, setCardName] = useState(() => savedDraft?.cardName || userName);
   const [cardErrors, setCardErrors] = useState({});
-  const [payhereTenure, setPayhereTenure] = useState(() => savedDraft?.payhereTenure || '3_MONTHS'); // '3_MONTHS' | '6_MONTHS' | '12_MONTHS'
   const [paymentSimulationMessage, setPaymentSimulationMessage] = useState(null);
 
   // Card formatting & validation helpers
@@ -199,7 +198,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         cardExpiry,
         cardCvc,
         cardName,
-        payhereTenure,
         selectedVariantIds: Array.from(selectedVariantIds),
       };
       sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
@@ -227,7 +225,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
     cardExpiry,
     cardCvc,
     cardName,
-    payhereTenure,
     selectedVariantIds,
   ]);
 
@@ -574,13 +571,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         });
         setCurrentStep(4);
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
+        const remainingItems = cartItems.filter((it) => !selectedVariantIds.has(it.variant_id));
         if (activeUserId) {
           try {
-            localStorage.removeItem(`cart_${activeUserId}`);
+            if (remainingItems.length > 0) {
+              localStorage.setItem(`cart_${activeUserId}`, JSON.stringify(remainingItems));
+            } else {
+              localStorage.removeItem(`cart_${activeUserId}`);
+            }
           } catch (_) {}
         }
         try {
-          localStorage.removeItem('cart');
+          if (remainingItems.length > 0 && !activeUserId) {
+            localStorage.setItem('cart', JSON.stringify(remainingItems));
+          } else {
+            localStorage.removeItem('cart');
+          }
         } catch (_) {}
         window.dispatchEvent(new Event('cartUpdated'));
 
@@ -977,7 +983,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
                           <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, fontSize: '0.925rem', color: isSelected ? '#3b2f2f' : '#826e6e' }}>
-                            Rs {((parseFloat(item.unit_price) || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            ${((parseFloat(item.unit_price) || 0) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: isSelected ? '#2a9d8f' : '#826e6e', fontWeight: 700, marginTop: '2px' }}>
                             {isSelected ? '✓ In order' : 'Remains in cart'}
@@ -1198,7 +1204,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         >
                           {cities.map((c) => (
                             <option key={c.city_id} value={c.city_id}>
-                              {c.city_name} (Rs {parseFloat(c.shipping_fee).toFixed(2)})
+                              {c.city_name} (${parseFloat(c.shipping_fee).toFixed(2)})
                             </option>
                           ))}
                         </select>
@@ -1390,7 +1396,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     </div>
                   </label>
                   <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 800, color: '#3b2f2f', fontSize: '0.9375rem', whiteSpace: 'nowrap' }}>
-                    {deliveryType === 'PICKUP' ? 'Free' : `Rs ${pricing.shipping_fee.toFixed(2)}`}
+                    {deliveryType === 'PICKUP' ? 'Free' : `$${pricing.shipping_fee.toFixed(2)}`}
                   </div>
                 </div>
               </div>
@@ -1491,7 +1497,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   <div style={{ display: 'flex', gap: '24px' }}>
                     <span style={{ color: '#826e6e', minWidth: '70px' }}>Shipping</span>
                     <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
-                      {deliveryType === 'PICKUP' ? 'Store Pickup • Free' : `Standard Delivery • Rs ${pricing.shipping_fee.toFixed(2)}`}
+                      {deliveryType === 'PICKUP' ? 'Store Pickup • Free' : `Standard Delivery • $${pricing.shipping_fee.toFixed(2)}`}
                     </span>
                   </div>
                   <button type="button" style={{ background: 'none', border: 'none', color: '#2a9d8f', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }} onClick={() => setCurrentStep(2)}>
@@ -1702,7 +1708,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     {paymentMethod === 'KLARNA' && (
                       <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
                         <div style={{ background: '#faf7f2', border: '1px solid #e7d7c1', borderRadius: '2px', padding: '12px 14px', color: '#3b2f2f', fontSize: '0.84rem', lineHeight: 1.5 }}>
-                          <strong style={{ color: '#c08457' }}>Pay in 4 interest-free bi-weekly payments of Rs {(pricing.total / 4).toFixed(2)} with Klarna.</strong> No hidden fees or impact on your credit score.
+                          <strong style={{ color: '#c08457' }}>Pay in 4 interest-free bi-weekly payments of ${(pricing.total / 4).toFixed(2)} with Klarna.</strong> No hidden fees or impact on your credit score.
                         </div>
 
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#c08457', background: '#f7eee6', padding: '4px 10px', borderRadius: '2px', fontWeight: 600, border: '1px solid #e7d7c1', width: 'fit-content' }}>
@@ -1714,22 +1720,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>1. Today</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Due upon order</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>2. 2 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Automated debit</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>3. 4 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Automated debit</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#c08457', fontWeight: 700, textTransform: 'uppercase' }}>4. 6 Weeks</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Final payment</div>
                           </div>
                         </div>
@@ -1788,29 +1794,29 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     {paymentMethod === 'AFTERPAY' && (
                       <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
                         <div style={{ background: '#f4faf9', border: '1px solid #cce8e4', borderRadius: '2px', padding: '12px 14px', color: '#2a9d8f', fontSize: '0.84rem', lineHeight: 1.5 }}>
-                          <strong>Split into 4 interest-free installments of Rs {(pricing.total / 4).toFixed(2)} every 2 weeks via Afterpay.</strong>
+                          <strong>Split into 4 interest-free installments of ${(pricing.total / 4).toFixed(2)} every 2 weeks via Afterpay.</strong>
                         </div>
 
                         {/* 4 Installments Timeline Breakdown */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>1st Pay (Now)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>Due today</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>2nd (Week 2)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 14 days</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>3rd (Week 4)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 28 days</div>
                           </div>
                           <div style={{ background: '#ffffff', border: '1.5px solid #e7d7c1', borderRadius: '2px', padding: '10px', textAlign: 'center' }}>
                             <div style={{ fontSize: '0.68rem', color: '#2a9d8f', fontWeight: 700, textTransform: 'uppercase' }}>4th (Week 6)</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>Rs {(pricing.total / 4).toFixed(2)}</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#3b2f2f', margin: '2px 0' }}>${(pricing.total / 4).toFixed(2)}</div>
                             <div style={{ fontSize: '0.65rem', color: '#826e6e' }}>In 42 days</div>
                           </div>
                         </div>
@@ -1863,7 +1869,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     {paymentMethod === 'COD' && (
                       <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e7d7c1', paddingTop: '16px' }}>
                         <div style={{ background: '#faf7f2', border: '1px solid #e7d7c1', borderRadius: '2px', padding: '12px 14px', color: '#5c4b4b', fontSize: '0.84rem', lineHeight: 1.5 }}>
-                          <strong style={{ color: '#3b2f2f' }}>Please have the exact amount of Rs {pricing.total.toFixed(2)} ready upon doorstep delivery.</strong> Payment will be collected in cash by our authorized delivery partner.
+                          <strong style={{ color: '#3b2f2f' }}>Please have the exact amount of ${pricing.total.toFixed(2)} ready upon doorstep delivery.</strong> Payment will be collected in cash by our authorized delivery partner.
                         </div>
 
                         <div style={{ fontSize: '0.75rem', color: '#826e6e', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2043,7 +2049,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   </div>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Total Paid</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>Rs {parseFloat(placedOrder.total_amount).toFixed(2)}</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>${parseFloat(placedOrder.total_amount).toFixed(2)}</div>
                   </div>
                 </div>
 
@@ -2166,13 +2172,13 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     </div>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: '0.875rem', color: '#3b2f2f' }}>
-                    Rs {pricing.service_fee.toFixed(2)}
+                    ${pricing.service_fee.toFixed(2)}
                   </div>
                 </div>
 
                 {serviceFeeExpanded && (
                   <div style={{ marginTop: '10px', paddingLeft: '70px', fontSize: '0.75rem', color: '#826e6e' }}>
-                    1 × Online Platform & Payment Verification Fee: Rs 217.47 LKR
+                    1 × Online Platform & Payment Verification Fee: $0.50 USD
                   </div>
                 )}
               </div>
@@ -2284,7 +2290,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       </div>
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? '#3b2f2f' : '#826e6e', textAlign: 'right' }}>
-                      Rs {(((parseFloat(item.unit_price) || 0) * (item.quantity || 1))).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${(((parseFloat(item.unit_price) || 0) * (item.quantity || 1))).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
                 );
@@ -2296,7 +2302,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#826e6e' }}>
                 <span>Subtotal · {activeCheckoutItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} items</span>
                 <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
-                  Rs {pricing.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  ${pricing.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
@@ -2305,7 +2311,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   Shipping <span title="Carrier logistics rate based on selected destination">ℹ️</span>
                 </span>
                 <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
-                  {pricing.shipping_fee === 0 ? 'Free' : `Rs ${pricing.shipping_fee.toFixed(2)}`}
+                  {pricing.shipping_fee === 0 ? 'Free' : `$${pricing.shipping_fee.toFixed(2)}`}
                 </span>
               </div>
 
@@ -2314,7 +2320,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   Service Fee <span title="Standard processing and handling fee">ℹ️</span>
                 </span>
                 <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
-                  Rs {pricing.service_fee.toFixed(2)}
+                  ${pricing.service_fee.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -2323,9 +2329,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1.5px solid #e7d7c1', paddingTop: '20px' }}>
               <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>Total</span>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.75rem', color: '#826e6e', marginRight: '6px' }}>LKR</span>
+                <span style={{ fontSize: '0.75rem', color: '#826e6e', marginRight: '6px' }}>USD</span>
                 <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3b2f2f', fontFamily: 'Outfit, sans-serif' }}>
-                  Rs {pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  ${pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
@@ -2476,7 +2482,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
             >
               <span style={{ fontSize: '0.8rem', color: '#826e6e', fontWeight: 600 }}>Simulated Amount:</span>
               <span style={{ fontSize: '1rem', color: '#3b2f2f', fontWeight: 800, fontFamily: 'Outfit, sans-serif' }}>
-                Rs {pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                ${pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
 
