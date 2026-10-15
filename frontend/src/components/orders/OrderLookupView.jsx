@@ -372,7 +372,7 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Total Settled</div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0264d6' }}>
-                  Rs {parseFloat(orderData.total_amount).toFixed(2)}
+                  ${parseFloat(orderData.total_amount).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -605,9 +605,9 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
                         </td>
                         <td style={{ padding: '14px 12px', fontFamily: 'monospace', color: '#475569' }}>{item.sku || 'N/A'}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'center', fontWeight: 600 }}>{item.quantity}</td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right' }}>Rs {parseFloat(item.unit_price).toFixed(2)}</td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right' }}>${parseFloat(item.unit_price).toFixed(2)}</td>
                         <td style={{ padding: '14px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                          Rs {(item.quantity * parseFloat(item.unit_price)).toFixed(2)}
+                          ${(item.quantity * parseFloat(item.unit_price)).toFixed(2)}
                         </td>
                       </tr>
                     ))
@@ -627,14 +627,14 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
               <div style={{ display: 'flex', gap: '48px', color: '#64748b' }}>
                 <span>Subtotal:</span>
                 <span style={{ fontWeight: 600, color: '#0f172a', minWidth: '90px', textAlign: 'right' }}>
-                  Rs {parseFloat(orderData.subtotal || orderData.total_amount).toFixed(2)}
+                  ${parseFloat(orderData.subtotal || orderData.total_amount).toFixed(2)}
                 </span>
               </div>
               {orderData.service_fee !== undefined && (
                 <div style={{ display: 'flex', gap: '48px', color: '#64748b' }}>
                   <span>Online Service Fee:</span>
                   <span style={{ fontWeight: 600, color: '#0f172a', minWidth: '90px', textAlign: 'right' }}>
-                    Rs {parseFloat(orderData.service_fee).toFixed(2)}
+                    ${parseFloat(orderData.service_fee).toFixed(2)}
                   </span>
                 </div>
               )}
@@ -642,13 +642,13 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
                 <div style={{ display: 'flex', gap: '48px', color: '#64748b' }}>
                   <span>Shipping Fee:</span>
                   <span style={{ fontWeight: 600, color: '#0f172a', minWidth: '90px', textAlign: 'right' }}>
-                    Rs {parseFloat(orderData.shipping_fee).toFixed(2)}
+                    ${parseFloat(orderData.shipping_fee).toFixed(2)}
                   </span>
                 </div>
               )}
               <div style={{ display: 'flex', gap: '48px', fontSize: '1.1rem', fontWeight: 800, color: '#0264d6', borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '4px' }}>
                 <span>Grand Total:</span>
-                <span style={{ minWidth: '90px', textAlign: 'right' }}>Rs {parseFloat(orderData.total_amount).toFixed(2)}</span>
+                <span style={{ minWidth: '90px', textAlign: 'right' }}>${parseFloat(orderData.total_amount).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -688,7 +688,7 @@ export default function OrderLookupView({ initialOrderId = 1, onBackToHistory, i
                 </div>
                 <div>
                   <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Amount Processed</div>
-                  <div style={{ fontWeight: 700, color: '#0f172a' }}>Rs {parseFloat(orderData.payment.amount).toFixed(2)}</div>
+                  <div style={{ fontWeight: 700, color: '#0f172a' }}>${parseFloat(orderData.payment.amount).toFixed(2)}</div>
                 </div>
               </div>
             </div>
