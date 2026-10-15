@@ -9,22 +9,26 @@ def query(sql, params=None):
     #Run a SELECT and return all rows as a list of dicts.
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute(sql, params or ())
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return rows
+    try:
+        cursor.execute(sql, params or ())
+        rows = cursor.fetchall()
+        return rows
+    finally:
+        cursor.close()
+        conn.close()
 
 def execute(sql, params=None):
     #Run an INSERT/UPDATE/DELETE,commit,and return lastrowid + rowcount.
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(sql, params or ())
-    conn.commit()
-    result = {'lastrowid': cursor.lastrowid, 'rowcount': cursor.rowcount}
-    cursor.close()
-    conn.close()
-    return result
+    try:
+        cursor.execute(sql, params or ())
+        conn.commit()
+        result = {'lastrowid': cursor.lastrowid, 'rowcount': cursor.rowcount}
+        return result
+    finally:
+        cursor.close()
+        conn.close()
 
 
 #get the role of the current requester (0 = guest) 
@@ -68,8 +72,8 @@ def get_products():
     sql = """
         SELECT p.product_id, p.title, p.title AS name, p.description, p.image_url, p.base_price,
                p.is_active, c.category_id, c.name AS category_name,
-               COALESCE(SUM(i.stock_quantity), 0) AS total_stock,
-               COALESCE(SUM(i.stock_quantity), 0) AS stock_quantity,
+               CAST(COALESCE(SUM(i.stock_quantity), 0) AS SIGNED) AS total_stock,
+               CAST(COALESCE(SUM(i.stock_quantity), 0) AS SIGNED) AS stock_quantity,
                MIN(pv.variant_id) AS default_variant_id,
                GROUP_CONCAT(DISTINCT pv.attribute_value SEPARATOR ', ') AS variant_attributes
         FROM   products p
@@ -185,6 +189,7 @@ def get_variant_stock(variant_id):
     """
     Return the live available stock and order limit for a specific variant.
     """
+    role = get_role()
     rows = query(
         """
         SELECT pv.variant_id, pv.sku, p.title AS product_name,
@@ -201,7 +206,7 @@ def get_variant_stock(variant_id):
         return jsonify({"error": "Variant not found"}), 404
     
     info = rows[0]
-    available = int(info['available_stock']) if info['is_active'] else 0
+    available = int(info['available_stock']) if (info['is_active'] or role in (2, 3, 4)) else 0
     return jsonify({
         "variant_id": variant_id,
         "sku": info['sku'],
@@ -340,6 +345,10 @@ def update_product(product_id):
     if not fields:
         return jsonify({"error": "No valid fields provided"}), 400
 
+    existing = query("SELECT product_id FROM products WHERE product_id = %s", (product_id,))
+    if not existing:
+        return jsonify({"error": "Product not found"}), 404
+
     try:
         set_clause = ", ".join(f"{k} = %s" for k in fields)
         execute(f"UPDATE products SET {set_clause} WHERE product_id = %s", (*fields.values(), product_id))
@@ -355,6 +364,10 @@ def update_product(product_id):
 def delete_product(product_id):
     err = manager_required()
     if err: return err
+
+    existing = query("SELECT product_id FROM products WHERE product_id = %s", (product_id,))
+    if not existing:
+        return jsonify({"error": "Product not found"}), 404
 
     execute("UPDATE products SET is_active = 0 WHERE product_id = %s", (product_id,))
     return jsonify({"deleted": product_id})
@@ -453,6 +466,10 @@ def update_variant(variant_id):
             return jsonify({"error": "SKU cannot be empty"}), 400
         fields['sku'] = fields['sku'].strip()
 
+    existing = query("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
+    if not existing:
+        return jsonify({"error": "Variant not found"}), 404
+
     try:
         set_clause = ", ".join(f"{k} = %s" for k in fields)
         execute(
@@ -529,6 +546,11 @@ def update_inventory(variant_id):
     Allows updating both stock quantity/adjust and low_stock_threshold together.
     """
     data = request.get_json() or {}
+
+    # Verify that the variant actually exists before attempting any inventory updates/inserts
+    var_check = query("SELECT variant_id FROM product_variants WHERE variant_id = %s", (variant_id,))
+    if not var_check:
+        return jsonify({"error": "Variant not found"}), 404
 
     # Ensure an inventory record exists for this variant
     inv_check = query("SELECT variant_id FROM inventory WHERE variant_id = %s", (variant_id,))
@@ -702,6 +724,22 @@ def add_to_cart():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        # Check that variant exists and product is active
+        cursor.execute(
+            """
+            SELECT pv.variant_id, p.is_active 
+            FROM product_variants pv 
+            JOIN products p ON p.product_id = pv.product_id 
+            WHERE pv.variant_id = %s
+            """,
+            (variant_id,)
+        )
+        var_row = cursor.fetchone()
+        if not var_row:
+            return jsonify({"error": "Variant not found"}), 404
+        if not var_row['is_active']:
+            return jsonify({"error": "Product is no longer active"}), 400
+
         # 1. Get or create a cart for this user
         cursor.execute("SELECT cart_id FROM carts WHERE user_id = %s", (user_id,))
         cart = cursor.fetchone()
@@ -793,6 +831,10 @@ def update_category(category_id):
     if not fields:
         return jsonify({"error": "Provide 'name' or 'slug' to update"}), 400
 
+    existing = query("SELECT category_id FROM categories WHERE category_id = %s", (category_id,))
+    if not existing:
+        return jsonify({"error": "Category not found"}), 404
+
     try:
         set_clause = ", ".join(f"{k} = %s" for k in fields)
         execute(
@@ -801,9 +843,7 @@ def update_category(category_id):
         )
         
         rows = query("SELECT category_id, name, slug FROM categories WHERE category_id = %s", (category_id,))
-        if not rows:
-            return jsonify({"error": "Category not found"}), 404
-        return jsonify({"updated": category_id, "category": rows[0]})
+        return jsonify({"updated": category_id, "category": rows[0] if rows else {}})
     except mysql.connector.IntegrityError:
         return jsonify({"error": "Category name or slug already in use"}), 409
     except Exception as e:
