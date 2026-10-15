@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 
 from db import get_db_connection
+from email_service import send_order_status_update_email
 
 logistics_bp = Blueprint('logistics', __name__)
 
@@ -37,8 +38,9 @@ def _customer_lookup_is_forbidden(current_user_id, shipment_user_id):
 def _is_valid_transition(old_status, new_status):
     """Validate shipment lifecycle transitions across the dispatch pipeline."""
     allowed = {
-        'PENDING': {'DISPATCHED'},
-        'DISPATCHED': {'IN_TRANSIT'},
+        # Allow direct PENDING -> IN_TRANSIT (fast handoffs) as well as PENDING -> DISPATCHED
+        'PENDING': {'DISPATCHED', 'IN_TRANSIT'},
+        'DISPATCHED': {'IN_TRANSIT', 'DELIVERED'},
         'IN_TRANSIT': {'DELIVERED'},
         'DELIVERED': set(),
     }
@@ -68,19 +70,59 @@ def get_cities():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT 
-                city_id, 
-                city_name, 
-                hub_name, 
-                base_lead_time_days, 
-                shipping_fee
-            FROM texas_cities
-            ORDER BY city_name ASC
-            """
-        )
-        cities = cursor.fetchall()
+        # Prefer the materialized/aggregated hub stats view when available
+        try:
+            cursor.execute(
+                """
+                SELECT 
+                    t.city_id,
+                    t.city_name,
+                    t.hub_name,
+                    t.base_lead_time_days,
+                    t.shipping_fee,
+                    COALESCE(v.total_shipments, 0) AS total_shipments,
+                    COALESCE(v.pending_count, 0) AS pending_count,
+                    COALESCE(v.dispatched_count, 0) AS dispatched_count,
+                    COALESCE(v.in_transit_count, 0) AS in_transit_count,
+                    COALESCE(v.delivered_count, 0) AS delivered_count
+                FROM texas_cities t
+                LEFT JOIN v_texas_hub_shipment_stats v ON v.city_id = t.city_id
+                ORDER BY t.city_name ASC
+                """
+            )
+            cities = cursor.fetchall()
+        except Exception:
+            # View may not exist in some environments; fallback to aggregating from shipments
+            cursor.execute(
+                """
+                SELECT 
+                    t.city_id,
+                    t.city_name,
+                    t.hub_name,
+                    t.base_lead_time_days,
+                    t.shipping_fee,
+                    COALESCE(s_stats.total_shipments, 0) AS total_shipments,
+                    COALESCE(s_stats.pending_count, 0) AS pending_count,
+                    COALESCE(s_stats.dispatched_count, 0) AS dispatched_count,
+                    COALESCE(s_stats.in_transit_count, 0) AS in_transit_count,
+                    COALESCE(s_stats.delivered_count, 0) AS delivered_count
+                FROM texas_cities t
+                LEFT JOIN (
+                    SELECT destination_city_id AS city_id,
+                        COUNT(*) AS total_shipments,
+                        SUM(CASE WHEN shipping_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
+                        SUM(CASE WHEN shipping_status = 'DISPATCHED' THEN 1 ELSE 0 END) AS dispatched_count,
+                        SUM(CASE WHEN shipping_status = 'IN_TRANSIT' THEN 1 ELSE 0 END) AS in_transit_count,
+                        SUM(CASE WHEN shipping_status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_count
+                    FROM shipments s
+                    LEFT JOIN orders o ON o.shipment_id = s.shipment_id
+                    WHERE o.status IS NULL OR o.status != 'CANCELLED'
+                    GROUP BY destination_city_id
+                ) s_stats ON s_stats.city_id = t.city_id
+                ORDER BY t.city_name ASC
+                """
+            )
+            cities = cursor.fetchall()
         cursor.close()
 
         result = []
@@ -112,11 +154,13 @@ def get_logistics_stats():
             """
             SELECT 
                 COUNT(*) AS total_shipments,
-                SUM(CASE WHEN shipping_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
-                SUM(CASE WHEN shipping_status = 'DISPATCHED' THEN 1 ELSE 0 END) AS dispatched_count,
-                SUM(CASE WHEN shipping_status = 'IN_TRANSIT' THEN 1 ELSE 0 END) AS in_transit_count,
-                SUM(CASE WHEN shipping_status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_count
-            FROM shipments
+                SUM(CASE WHEN s.shipping_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
+                SUM(CASE WHEN s.shipping_status = 'DISPATCHED' THEN 1 ELSE 0 END) AS dispatched_count,
+                SUM(CASE WHEN s.shipping_status = 'IN_TRANSIT' THEN 1 ELSE 0 END) AS in_transit_count,
+                SUM(CASE WHEN s.shipping_status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_count
+            FROM shipments s
+            LEFT JOIN orders o ON o.shipment_id = s.shipment_id
+            WHERE o.status IS NULL OR o.status != 'CANCELLED'
             """
         )
         shipment_stats = cursor.fetchone() or {}
@@ -179,8 +223,9 @@ def calculate_delivery():
     if not isinstance(items_raw, list) or len(items_raw) == 0:
         return jsonify({"error": "items list is required and cannot be empty"}), 400
 
-    # Parse and validate items structure
+    # Parse and validate items structure; aggregate duplicate variant_id quantities
     parsed_items = []
+    agg_items = {}
     for idx, itm in enumerate(items_raw):
         if not isinstance(itm, dict):
             return jsonify({"error": f"Item at index {idx} must be an object with variant_id and quantity"}), 400
@@ -189,9 +234,12 @@ def calculate_delivery():
         try:
             vid = int(vid)
             qty = max(1, int(qty))
-            parsed_items.append({"variant_id": vid, "quantity": qty})
+            agg_items[vid] = agg_items.get(vid, 0) + qty
         except (ValueError, TypeError):
             return jsonify({"error": f"Invalid variant_id or quantity in item at index {idx}"}), 400
+
+    for vid, qty in agg_items.items():
+        parsed_items.append({"variant_id": vid, "quantity": qty})
 
     conn = None
     try:
@@ -243,7 +291,8 @@ def calculate_delivery():
 
             inv_row = found_map[vid]
             curr_stock = int(inv_row['stock_quantity'])
-            is_delayed = (curr_stock <= 0)
+            # An item is delayed if requested quantity exceeds current stock
+            is_delayed = (curr_stock < qty)
 
             if is_delayed:
                 out_of_stock_variant_ids.append(vid)
@@ -362,12 +411,18 @@ def list_shipments():
     caller_role = _get_jwt_role()
     status_filter = request.args.get('status', 'ALL').strip().upper()
     query_search = request.args.get('q', '').strip()
-    limit = min(int(request.args.get('limit', 50)), 100)
+
 
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+
+        # Parse pagination/limit safely
+        try:
+            limit = min(int(request.args.get('limit', 50)), 100)
+        except (ValueError, TypeError):
+            limit = 50
 
         where_clauses = []
         params = []
@@ -375,6 +430,9 @@ def list_shipments():
         if caller_role == 1:
             where_clauses.append("o.user_id = %s")
             params.append(current_user_id)
+
+        # Exclude shipments whose linked orders were cancelled
+        where_clauses.append("(o.status IS NULL OR o.status != 'CANCELLED')")
 
         if status_filter and status_filter != 'ALL':
             where_clauses.append("s.shipping_status = %s")
@@ -461,7 +519,7 @@ def upcoming_shipments():
             FROM shipments s
             JOIN texas_cities c ON s.destination_city_id = c.city_id
             LEFT JOIN orders o ON o.shipment_id = s.shipment_id
-            WHERE s.shipping_status != 'DELIVERED'
+            WHERE s.shipping_status != 'DELIVERED' AND (o.status IS NULL OR o.status != 'CANCELLED')
             ORDER BY s.estimated_arrival ASC
             LIMIT 50
             """
@@ -507,6 +565,13 @@ def update_shipment_status(shipment_id):
             cursor.close()
             return jsonify({"error": f"Shipment #{shipment_id} not found"}), 404
 
+        # Load linked order (if any) and lock for update to avoid races
+        cursor.execute("SELECT order_id, status, user_id FROM orders WHERE shipment_id = %s FOR UPDATE", (shipment_id,))
+        linked_order = cursor.fetchone()
+        if linked_order and linked_order.get('status') == 'CANCELLED':
+            cursor.close()
+            return jsonify({"error": "Cannot advance shipment for a cancelled order."}), 400
+
         old_status = existing['shipping_status']
         if not _is_valid_transition(old_status, new_status):
             return jsonify({
@@ -533,11 +598,35 @@ def update_shipment_status(shipment_id):
         """
         cursor.execute(update_query, tuple(params))
 
-        # Synchronize linked order status if applicable
-        if new_status == 'DISPATCHED':
-            cursor.execute("UPDATE orders SET status = 'SHIPPED' WHERE shipment_id = %s AND status = 'PENDING'", (shipment_id,))
-        elif new_status == 'DELIVERED':
-            cursor.execute("UPDATE orders SET status = 'DELIVERED' WHERE shipment_id = %s", (shipment_id,))
+        # Synchronize linked order status if applicable (avoid touching cancelled orders)
+        if linked_order:
+            order_id = linked_order.get('order_id')
+            if new_status in ('DISPATCHED', 'IN_TRANSIT'):
+                # Move orders awaiting fulfillment to SHIPPED (covers CONFIRMED and PENDING)
+                cursor.execute(
+                    "UPDATE orders SET status = 'SHIPPED' WHERE shipment_id = %s AND status IN ('PENDING', 'CONFIRMED') AND status != 'CANCELLED'",
+                    (shipment_id,)
+                )
+            elif new_status == 'DELIVERED':
+                # Mark delivered (but do not overwrite CANCELLED)
+                cursor.execute(
+                    "UPDATE orders SET status = 'DELIVERED' WHERE shipment_id = %s AND (status IS NULL OR status != 'CANCELLED')",
+                    (shipment_id,)
+                )
+                # Settle Cash-on-Delivery payments and mark order paid
+                try:
+                    if order_id:
+                        cursor.execute(
+                            "UPDATE payments SET payment_status = 'SUCCESS' WHERE order_id = %s AND payment_status = 'INITIATED'",
+                            (order_id,)
+                        )
+                        cursor.execute(
+                            "UPDATE orders SET payment_status = 'Paid' WHERE order_id = %s",
+                            (order_id,)
+                        )
+                except Exception:
+                    # Payment settlement should not block a successful delivery update
+                    pass
 
         conn.commit()
 
@@ -553,6 +642,27 @@ def update_shipment_status(shipment_id):
             (shipment_id,),
         )
         updated = cursor.fetchone()
+        # Send order status update email on delivery
+        if linked_order and new_status == 'DELIVERED':
+            try:
+                order_id = linked_order.get('order_id')
+                if order_id:
+                    cursor.execute(
+                        "SELECT u.email, u.full_name FROM users u JOIN orders o ON o.user_id = u.user_id WHERE o.order_id = %s",
+                        (order_id,),
+                    )
+                    user_info = cursor.fetchone()
+                    if user_info and user_info.get('email'):
+                        send_order_status_update_email(
+                            to_email=user_info.get('email'),
+                            customer_name=user_info.get('full_name') or 'Valued Customer',
+                            order_id=order_id,
+                            new_status='DELIVERED',
+                            tracking_number=updated.get('tracking_number') if updated else '',
+                            estimated_arrival=str(updated.get('estimated_arrival') or '')
+                        )
+            except Exception:
+                pass
         cursor.close()
 
         return jsonify({
