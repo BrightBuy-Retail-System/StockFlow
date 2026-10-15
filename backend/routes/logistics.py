@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 
 from db import get_db_connection
+from email_service import send_order_status_update_email
 
 logistics_bp = Blueprint('logistics', __name__)
 
@@ -38,7 +39,7 @@ def _is_valid_transition(old_status, new_status):
     """Validate shipment lifecycle transitions across the dispatch pipeline."""
     allowed = {
         'PENDING': {'DISPATCHED'},
-        'DISPATCHED': {'IN_TRANSIT'},
+        'DISPATCHED': {'IN_TRANSIT', 'DELIVERED'},
         'IN_TRANSIT': {'DELIVERED'},
         'DELIVERED': set(),
     }
@@ -112,11 +113,13 @@ def get_logistics_stats():
             """
             SELECT 
                 COUNT(*) AS total_shipments,
-                SUM(CASE WHEN shipping_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
-                SUM(CASE WHEN shipping_status = 'DISPATCHED' THEN 1 ELSE 0 END) AS dispatched_count,
-                SUM(CASE WHEN shipping_status = 'IN_TRANSIT' THEN 1 ELSE 0 END) AS in_transit_count,
-                SUM(CASE WHEN shipping_status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_count
-            FROM shipments
+                SUM(CASE WHEN s.shipping_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count,
+                SUM(CASE WHEN s.shipping_status = 'DISPATCHED' THEN 1 ELSE 0 END) AS dispatched_count,
+                SUM(CASE WHEN s.shipping_status = 'IN_TRANSIT' THEN 1 ELSE 0 END) AS in_transit_count,
+                SUM(CASE WHEN s.shipping_status = 'DELIVERED' THEN 1 ELSE 0 END) AS delivered_count
+            FROM shipments s
+            LEFT JOIN orders o ON o.shipment_id = s.shipment_id
+            WHERE (o.status IS NULL OR o.status != 'CANCELLED')
             """
         )
         shipment_stats = cursor.fetchone() or {}
@@ -213,8 +216,14 @@ def calculate_delivery():
             cursor.close()
             return jsonify({"error": f"No Texas destination city found with city_id {city_id}"}), 404
 
+        # Aggregate duplicate variant_ids by summing quantities
+        aggregated_items = {}
+        for it in parsed_items:
+            vid = it['variant_id']
+            aggregated_items[vid] = aggregated_items.get(vid, 0) + it['quantity']
+
         # 2. Batch Fetch Inventory for all requested variants (eliminates N+1 query)
-        req_variant_ids = [it['variant_id'] for it in parsed_items]
+        req_variant_ids = list(aggregated_items.keys())
         format_strings = ','.join(['%s'] * len(req_variant_ids))
         cursor.execute(
             f"""
@@ -234,16 +243,15 @@ def calculate_delivery():
         out_of_stock_variant_ids = []
         item_breakdown = []
 
-        for it in parsed_items:
-            vid = it['variant_id']
-            qty = it['quantity']
+        for vid, qty in aggregated_items.items():
             if vid not in found_map:
                 invalid_variant_ids.append(vid)
                 continue
 
             inv_row = found_map[vid]
             curr_stock = int(inv_row['stock_quantity'])
-            is_delayed = (curr_stock <= 0)
+            # Any shortage (including 0 < curr_stock < qty) adds delivery delay
+            is_delayed = (curr_stock < qty)
 
             if is_delayed:
                 out_of_stock_variant_ids.append(vid)
@@ -362,7 +370,10 @@ def list_shipments():
     caller_role = _get_jwt_role()
     status_filter = request.args.get('status', 'ALL').strip().upper()
     query_search = request.args.get('q', '').strip()
-    limit = min(int(request.args.get('limit', 50)), 100)
+    try:
+        limit = min(int(request.args.get('limit', 50)), 100)
+    except (ValueError, TypeError):
+        limit = 50
 
     conn = None
     try:
@@ -510,9 +521,28 @@ def update_shipment_status(shipment_id):
 
         old_status = existing['shipping_status']
         if not _is_valid_transition(old_status, new_status):
+            cursor.close()
             return jsonify({
                 "error": f"Invalid shipment lifecycle transition from '{old_status}' to '{new_status}'. Only the allowed next state is permitted."
             }), 400
+
+        # Check linked order status; do not advance shipment if order is cancelled
+        cursor.execute(
+            """
+            SELECT o.order_id, o.user_id, o.status, o.payment_method, o.total_amount,
+                   u.email, u.full_name, s.tracking_number, s.estimated_arrival
+            FROM shipments s
+            LEFT JOIN orders o ON o.shipment_id = s.shipment_id
+            LEFT JOIN users u ON o.user_id = u.user_id
+            WHERE s.shipment_id = %s
+            """,
+            (shipment_id,)
+        )
+        linked_info = cursor.fetchall()
+        for row in linked_info:
+            if row.get('status') == 'CANCELLED':
+                cursor.close()
+                return jsonify({"error": "Cannot update shipment for a cancelled order."}), 400
 
         # Determine timestamp updates
         timestamp_clauses = []
@@ -535,12 +565,49 @@ def update_shipment_status(shipment_id):
         cursor.execute(update_query, tuple(params))
 
         # Synchronize linked order status if applicable
-        if new_status == 'DISPATCHED':
-            cursor.execute("UPDATE orders SET status = 'SHIPPED' WHERE shipment_id = %s AND status = 'PENDING'", (shipment_id,))
+        if new_status in ('DISPATCHED', 'IN_TRANSIT'):
+            cursor.execute(
+                "UPDATE orders SET status = 'SHIPPED' WHERE shipment_id = %s AND status IN ('PENDING', 'CONFIRMED')",
+                (shipment_id,)
+            )
         elif new_status == 'DELIVERED':
-            cursor.execute("UPDATE orders SET status = 'DELIVERED' WHERE shipment_id = %s", (shipment_id,))
+            cursor.execute(
+                """
+                UPDATE orders 
+                SET status = 'DELIVERED',
+                    payment_status = CASE WHEN payment_method = 'COD' THEN 'Paid' ELSE payment_status END
+                WHERE shipment_id = %s
+                """,
+                (shipment_id,)
+            )
+            for row in linked_info:
+                oid = row.get('order_id')
+                if oid and row.get('payment_method') == 'COD':
+                    try:
+                        cursor.execute("UPDATE payments SET payment_status = 'SUCCESS' WHERE order_id = %s", (oid,))
+                    except Exception:
+                        pass
+                    try:
+                        cursor.execute("UPDATE PAYMENT_TRANSACTION SET status = 'SUCCESS' WHERE order_id = %s", (oid,))
+                    except Exception:
+                        pass
 
         conn.commit()
+
+        # Send notification email if applicable
+        for row in linked_info:
+            if row.get('email') and row.get('order_id'):
+                try:
+                    send_order_status_update_email(
+                        to_email=row['email'],
+                        customer_name=row.get('full_name') or 'Valued Customer',
+                        order_id=row['order_id'],
+                        new_status='DELIVERED' if new_status == 'DELIVERED' else 'SHIPPED',
+                        tracking_number=row.get('tracking_number') or '',
+                        estimated_arrival=str(row.get('estimated_arrival') or '')
+                    )
+                except Exception:
+                    pass
 
         # Fetch updated record
         cursor.execute(
