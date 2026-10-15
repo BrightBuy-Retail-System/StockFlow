@@ -60,9 +60,12 @@ def login():
                 "message": "Login successful",
                 "access_token": access_token,
                 "user": {
-                    "id": user["user_id"], 
+                    "id": user["user_id"],
+                    "user_id": user["user_id"],
                     "username": user["full_name"],
-                    "role_id": role_id #role_id
+                    "full_name": user["full_name"],
+                    "email": user["email"],
+                    "role_id": role_id
                 }
             }), 200
         else:
@@ -79,9 +82,12 @@ def login():
 def get_current_user():
     user_id = get_jwt_identity()
     claims = get_jwt()
+    uid = int(user_id) if user_id and str(user_id).isdigit() else user_id
     return jsonify({
-        "user_id": int(user_id) if user_id and user_id.isdigit() else user_id,
+        "id": uid,
+        "user_id": uid,
         "username": claims.get("username"),
+        "full_name": claims.get("username"),
         "role_id": claims.get("role_id"),
         "email": claims.get("email")
     }), 200
@@ -188,7 +194,14 @@ def register():
         return jsonify({
             "message": "Registration successful",
             "access_token": access_token,
-            "user": {"id": new_user_id, "username": username, "role_id": role_id}
+            "user": {
+                "id": new_user_id,
+                "user_id": new_user_id,
+                "username": username,
+                "full_name": username,
+                "email": email,
+                "role_id": role_id
+            }
         }), 201
         
     except Exception as e:
@@ -311,7 +324,7 @@ def get_staff_members():
 @auth_cart_bp.route('/staff/register', methods=['POST'])
 @jwt_required()
 def register_staff_member():
-    """Allow Managers (role 2) and System Administrators (role 3) to onboard new staff."""
+    """Allow Managers (role 2) and System Administrators (role 3/4) to onboard new staff."""
     claims = get_jwt()
     caller_role = claims.get('role_id')
     if caller_role not in (2, 3, 4):
@@ -319,13 +332,15 @@ def register_staff_member():
 
     data = request.get_json() or {}
     username = (data.get('username') or '').strip()
-    email = (data.get('email') or '').strip()
-    # Default temporary password is password123; manager/staff can change it after logging in
-    password = 'password123'
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or 'password123'
     role_id = data.get('role_id')
 
     if not username or not email or not role_id:
         return jsonify({"message": "Full Name / Username, Corporate Email, and Role are required"}), 400
+
+    if len(password) < 6:
+        return jsonify({"message": "Password must be at least 6 characters"}), 400
 
     try:
         role_id = int(role_id)
@@ -334,6 +349,9 @@ def register_staff_member():
 
     if role_id not in (2, 3, 4):
         return jsonify({"message": "Staff role must be Store Manager (2) or System Administrator (3/4)"}), 400
+
+    if caller_role == 2 and role_id in (3, 4):
+        return jsonify({"message": "Store Managers cannot register Administrators. Admin role required."}), 403
 
     salt = bcrypt.gensalt()
     password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
@@ -360,7 +378,7 @@ def register_staff_member():
         new_user_id = cursor.lastrowid
 
         # Dispatch Welcome Email to newly onboarded staff member
-        role_label = 'System Administrator' if role_id == 3 else 'Store Executive & Manager'
+        role_label = 'System Administrator' if role_id in (3, 4) else 'Store Executive & Manager'
         email_sent = False
         email_note = ""
         try:
@@ -630,11 +648,14 @@ def get_user_cart():
                 p.product_id,
                 p.title AS product_name,
                 p.description,
+                p.image_url,
+                COALESCE(i.stock_quantity, 0) AS available_stock,
                 COALESCE(pv.price_override, p.base_price) AS unit_price,
                 (COALESCE(pv.price_override, p.base_price) * ci.quantity) AS total_price
             FROM cart_items ci
             JOIN product_variants pv ON ci.variant_id = pv.variant_id
             JOIN products p ON pv.product_id = p.product_id
+            LEFT JOIN inventory i ON pv.variant_id = i.variant_id
             WHERE ci.cart_id = %s
             ORDER BY ci.cart_item_id DESC
         """
@@ -665,7 +686,10 @@ def add_to_cart():
     data = request.get_json() or {}
     variant_id = data.get('variant_id')
     product_id = data.get('product_id')
-    quantity = int(data.get('quantity', 1))
+    try:
+        quantity = int(data.get('quantity', 1))
+    except (ValueError, TypeError):
+        return jsonify({"message": "Valid positive quantity is required"}), 400
 
     if quantity <= 0:
         return jsonify({"message": "Valid positive quantity is required"}), 400
@@ -714,6 +738,20 @@ def add_to_cart():
         else:
             return jsonify({"message": "Valid variant_id or product_id is required"}), 400
 
+        # Verify active product status and stock
+        cursor.execute("""
+            SELECT p.is_active, COALESCE(i.stock_quantity, 0) AS stock_quantity
+            FROM product_variants pv
+            JOIN products p ON pv.product_id = p.product_id
+            LEFT JOIN inventory i ON pv.variant_id = i.variant_id
+            WHERE pv.variant_id = %s
+        """, (variant_id,))
+        var_info = cursor.fetchone()
+        if not var_info:
+            return jsonify({"message": "Variant not found"}), 404
+        if var_info['is_active'] != 1:
+            return jsonify({"message": "Product is inactive and cannot be added to cart"}), 400
+
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
         # Check if this variant is already in the cart
@@ -722,9 +760,16 @@ def add_to_cart():
             (cart_id, variant_id)
         )
         existing_item = cursor.fetchone()
+        existing_qty = existing_item['quantity'] if existing_item else 0
+        new_qty = existing_qty + quantity
+
+        if new_qty > var_info['stock_quantity']:
+            return jsonify({
+                "message": f"Requested quantity ({new_qty}) exceeds available stock ({var_info['stock_quantity']})",
+                "available_stock": var_info['stock_quantity']
+            }), 400
 
         if existing_item:
-            new_qty = existing_item['quantity'] + quantity
             cursor.execute(
                 "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s",
                 (new_qty, existing_item['cart_item_id'])
@@ -755,7 +800,10 @@ def add_to_cart():
 def update_cart_item(cart_item_id):
     user_id = get_jwt_identity()
     data = request.get_json() or {}
-    quantity = int(data.get('quantity', 1))
+    try:
+        quantity = int(data.get('quantity', 1))
+    except (ValueError, TypeError):
+        return jsonify({"message": "Valid quantity is required"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -772,36 +820,31 @@ def update_cart_item(cart_item_id):
         if not existing:
             return jsonify({"message": "Cart item not found"}), 404
 
-        old_qty = int(existing['quantity'])
         variant_id = existing['variant_id']
-        diff = quantity - old_qty
 
         if quantity <= 0:
-            # Restore all stock to inventory and delete item
-            cursor.execute(
-                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
-                (old_qty, variant_id)
-            )
             cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
         else:
-            if diff > 0:
-                # Need more items: check stock
-                cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s FOR UPDATE", (variant_id,))
-                inv_row = cursor.fetchone()
-                curr_stock = int(inv_row['stock_quantity']) if inv_row else 0
-                if curr_stock < diff:
-                    return jsonify({"message": f"Insufficient stock. Only {curr_stock} additional unit(s) available."}), 400
+            # Check variant active and stock availability
+            cursor.execute("""
+                SELECT p.is_active, COALESCE(i.stock_quantity, 0) AS stock_quantity
+                FROM product_variants pv
+                JOIN products p ON pv.product_id = p.product_id
+                LEFT JOIN inventory i ON pv.variant_id = i.variant_id
+                WHERE pv.variant_id = %s
+            """, (variant_id,))
+            var_info = cursor.fetchone()
+            if not var_info:
+                return jsonify({"message": "Variant not found"}), 404
+            if var_info['is_active'] != 1:
+                return jsonify({"message": "Product is inactive"}), 400
 
-                cursor.execute(
-                    "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE variant_id = %s",
-                    (diff, variant_id)
-                )
-            elif diff < 0:
-                # Reduce items: restore surplus back to inventory
-                cursor.execute(
-                    "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
-                    (-diff, variant_id)
-                )
+            curr_stock = int(var_info['stock_quantity'])
+            if quantity > curr_stock:
+                return jsonify({
+                    "message": f"Requested quantity ({quantity}) exceeds available stock ({curr_stock})",
+                    "available_stock": curr_stock
+                }), 400
 
             cursor.execute(
                 "UPDATE cart_items SET quantity = %s WHERE cart_item_id = %s AND cart_id = %s",
@@ -829,24 +872,12 @@ def delete_cart_item(cart_item_id):
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
-        # Get existing cart item to restore inventory
-        cursor.execute(
-            "SELECT variant_id, quantity FROM cart_items WHERE cart_item_id = %s AND cart_id = %s",
-            (cart_item_id, cart_id)
-        )
-        item = cursor.fetchone()
-
-        if item:
-            # Restore stock to inventory table
-            cursor.execute(
-                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
-                (item['quantity'], item['variant_id'])
-            )
-            cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
-            conn.commit()
-            return jsonify({"message": "Item removed from cart and stock restored"}), 200
-        else:
+        cursor.execute("DELETE FROM cart_items WHERE cart_item_id = %s AND cart_id = %s", (cart_item_id, cart_id))
+        if cursor.rowcount == 0:
             return jsonify({"message": "Cart item not found"}), 404
+
+        conn.commit()
+        return jsonify({"message": "Item removed from cart"}), 200
 
     except Exception as e:
         conn.rollback()
@@ -866,18 +897,9 @@ def clear_cart():
     try:
         cart_id = _get_or_create_cart(cursor, conn, user_id)
 
-        # Fetch all items to restore stock to inventory table
-        cursor.execute("SELECT variant_id, quantity FROM cart_items WHERE cart_id = %s", (cart_id,))
-        items = cursor.fetchall()
-        for item in items:
-            cursor.execute(
-                "UPDATE inventory SET stock_quantity = stock_quantity + %s WHERE variant_id = %s",
-                (item['quantity'], item['variant_id'])
-            )
-
         cursor.execute("DELETE FROM cart_items WHERE cart_id = %s", (cart_id,))
         conn.commit()
-        return jsonify({"message": "Cart cleared and stock restored successfully"}), 200
+        return jsonify({"message": "Cart cleared successfully"}), 200
 
     except Exception as e:
         conn.rollback()
