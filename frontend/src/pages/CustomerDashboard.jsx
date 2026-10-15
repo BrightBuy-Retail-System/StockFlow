@@ -42,10 +42,49 @@ export default function CustomerDashboard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Profile Edit State (Telephone and Warehouse without OTP)
+  // Customer Password Change State
+  const [custPwdCurrent, setCustPwdCurrent] = useState('');
+  const [custPwdNew, setCustPwdNew] = useState('');
+  const [custPwdConfirm, setCustPwdConfirm] = useState('');
+  const [custPwdLoading, setCustPwdLoading] = useState(false);
+  const [custPwdError, setCustPwdError] = useState('');
+  const [custPwdSuccess, setCustPwdSuccess] = useState('');
+
+  // Profile Edit State (Direct Phone & Warehouse Hub Updating)
   const [editPhone, setEditPhone] = useState('');
   const [editCityId, setEditCityId] = useState(1);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  const handleCustomerChangePassword = async (e) => {
+    e.preventDefault();
+    setCustPwdError('');
+    setCustPwdSuccess('');
+    if (custPwdNew.length < 6) {
+      setCustPwdError('New password must be at least 6 characters.');
+      return;
+    }
+    if (custPwdNew !== custPwdConfirm) {
+      setCustPwdError('New password and confirmation do not match.');
+      return;
+    }
+    setCustPwdLoading(true);
+    try {
+      const res = await api.post('/auth_cart/change-password', {
+        current_password: custPwdCurrent,
+        new_password: custPwdNew,
+        confirm_password: custPwdConfirm,
+      });
+      setCustPwdSuccess(res.data?.message || 'Password changed successfully!');
+      showToast('Password Updated! 🔐', 'Your password was changed and confirmation email dispatched.');
+      setCustPwdCurrent('');
+      setCustPwdNew('');
+      setCustPwdConfirm('');
+    } catch (err) {
+      setCustPwdError(err.response?.data?.message || 'Failed to update password. Please check your current password.');
+    } finally {
+      setCustPwdLoading(false);
+    }
+  };
 
   // Authentication check
   useEffect(() => {
@@ -844,8 +883,8 @@ export default function CustomerDashboard() {
                                       border: isDone
                                         ? '1.5px solid #2a9d8f'
                                         : isCurrent
-                                        ? '2px solid #2a9d8f'
-                                        : '1.5px solid #e7d7c1',
+                                          ? '2px solid #2a9d8f'
+                                          : '1.5px solid #e7d7c1',
                                       color: isDone ? '#ffffff' : isCurrent ? '#2a9d8f' : '#826e6e',
                                       display: 'flex',
                                       alignItems: 'center',
@@ -1673,6 +1712,133 @@ export default function CustomerDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Password Management Card */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '2px',
+              border: '1.5px solid #e7d7c1',
+              padding: '28px',
+              boxShadow: '0 2px 10px rgba(59, 47, 47, 0.04)',
+              gridColumn: '1 / -1',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px', color: '#3b2f2f' }}>
+                  Account Security &amp; Password Update
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#5c4b4b', margin: 0 }}>
+                  Update your credentials to keep your BrightBuy orders and delivery address safe.
+                </p>
+              </div>
+              <span style={{ fontSize: '0.75rem', background: '#e6f6f4', color: '#2a9d8f', padding: '4px 10px', borderRadius: '2px', fontWeight: 700 }}>
+                🔐 SHA-256 / Bcrypt Hash
+              </span>
+            </div>
+
+            {custPwdError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '10px 14px', borderRadius: '4px', fontSize: '0.85rem', marginBottom: '14px' }}>
+                ⚠️ {custPwdError}
+              </div>
+            )}
+
+            {custPwdSuccess && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '10px 14px', borderRadius: '4px', fontSize: '0.85rem', marginBottom: '14px' }}>
+                ✓ {custPwdSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleCustomerChangePassword} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Current Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter current password"
+                  value={custPwdCurrent}
+                  onChange={(e) => setCustPwdCurrent(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '2px',
+                    border: '1.5px solid #e7d7c1',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#5c4b4b', marginBottom: '4px' }}>
+                  New Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="At least 6 characters"
+                  value={custPwdNew}
+                  onChange={(e) => setCustPwdNew(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '2px',
+                    border: '1.5px solid #e7d7c1',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Confirm New Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Confirm new password"
+                  value={custPwdConfirm}
+                  onChange={(e) => setCustPwdConfirm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '2px',
+                    border: '1.5px solid #e7d7c1',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={custPwdLoading}
+                  style={{
+                    background: '#2a9d8f',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '2px',
+                    padding: '10px 22px',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: custPwdLoading ? 'not-allowed' : 'pointer',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {custPwdLoading ? 'Updating Password...' : 'Save New Password'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

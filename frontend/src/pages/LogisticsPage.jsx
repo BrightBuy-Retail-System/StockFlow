@@ -275,17 +275,13 @@ export default function LogisticsPage() {
     }
   })();
   const currentUserRole = Number(storedUser?.role_id ?? 1);
-  const isManagerOrAdmin = [2, 3].includes(currentUserRole);
+  const isManagerOrAdmin = [2, 3, 4].includes(currentUserRole);
 
   return (
     <div>
       {/* Page Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <div className="tag-pill" style={{ marginBottom: '10px' }}>
-            <LogisticsIcon className="btn-icon" />
-            <span>MEMBER 4: TEXAS LOGISTICS &amp; WAREHOUSE HUBS</span>
-          </div>
           <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--text-main)', marginBottom: '6px' }}>
             Logistics &amp; Fulfillment Network
           </h1>

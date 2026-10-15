@@ -29,15 +29,24 @@ export default function ManagerDashboard() {
   const [activeTab, setActiveTab] = useState('pipeline');
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState('ALL');
-
-  // Confirmation Action State
   const [confirmingOrderId, setConfirmingOrderId] = useState(null);
-  const [notice, setNotice] = useState(null);
 
-  const showNotice = (msg, type = 'success') => {
-    setNotice({ msg, type });
-    setTimeout(() => setNotice(null), 4500);
-  };
+  // Staff Management State
+  const [staffList, setStaffList] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('ALL');
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [staffForm, setStaffForm] = useState({
+    username: '',
+    email: '',
+    password: 'password123',
+    role_id: 2,
+  });
+  const [staffFormSubmitting, setStaffFormSubmitting] = useState(false);
+  const [staffFormError, setStaffFormError] = useState('');
+  const [staffFormSuccess, setStaffFormSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Authentication check
   useEffect(() => {
@@ -100,10 +109,25 @@ export default function ManagerDashboard() {
   // Dispatch / Ship order
   const handleDispatchOrder = async (orderId) => {
     try {
-      setConfirmingOrderId(orderId);
-      const res = await api.patch(`/orders/${orderId}/status`, { status: 'SHIPPED' });
-      showNotice(res.data?.message || `Order #${orderId} marked as Dispatched & In Transit!`);
-      await fetchExecutiveData();
+      await api.post('/auth_cart/staff/register', {
+        username: staffForm.username.trim(),
+        email: staffForm.email.trim(),
+        password: staffForm.password,
+        role_id: Number(staffForm.role_id),
+      });
+
+      const roleTitle = Number(staffForm.role_id) === 3 ? 'System Administrator' : 'Store Executive & Manager';
+      setStaffFormSuccess(`Successfully registered ${staffForm.username} as ${roleTitle}!`);
+
+      await fetchStaffMembers();
+
+      setStaffForm({
+        username: '',
+        email: '',
+        password: 'password123',
+        role_id: 2,
+      });
+      setShowPassword(false);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to dispatch order.';
       showNotice(msg, 'error');
@@ -193,7 +217,7 @@ export default function ManagerDashboard() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
             <span className="st-badge-admin-role">Warehouse Manager</span>
-            
+
             {/* Assigned Warehouse Hub Badge */}
             <span style={{
               display: 'inline-flex',
@@ -347,7 +371,7 @@ export default function ManagerDashboard() {
       {/* ==================================================================== */}
       {activeTab === 'pipeline' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {/* Incoming Orders Awaiting Confirmation Banner */}
           {Number(ordersBreakdown.pending || 0) > 0 && (
             <div style={{
@@ -499,10 +523,10 @@ export default function ManagerDashboard() {
                                 isConfirmed
                                   ? 'st-chip-confirmed'
                                   : isShipped
-                                  ? 'st-chip-shipped'
-                                  : order.order_status === 'CANCELLED'
-                                  ? 'st-chip-danger'
-                                  : 'st-chip-pending'
+                                    ? 'st-chip-shipped'
+                                    : order.order_status === 'CANCELLED'
+                                      ? 'st-chip-danger'
+                                      : 'st-chip-pending'
                               }
                             >
                               {order.order_status || 'PENDING'}
@@ -585,7 +609,7 @@ export default function ManagerDashboard() {
       {/* ==================================================================== */}
       {activeTab === 'analytics' && (
         <div className="manager-bi-grid">
-          
+
           {/* Top Selling Products */}
           <div className="st-admin-card">
             <div className="st-admin-card-header">
@@ -719,7 +743,7 @@ export default function ManagerDashboard() {
       {/* ==================================================================== */}
       {activeTab === 'evaluation' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-          
+
           <div className="st-admin-card" style={{ padding: '24px' }}>
             <h3 className="st-admin-card-title" style={{ marginBottom: '6px' }}>
               Financial &amp; Revenue Evaluation
@@ -799,6 +823,260 @@ export default function ManagerDashboard() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB 4: STAFF DIRECTORY & ACCESS CONTROL                              */}
+      {/* ==================================================================== */}
+      {activeTab === 'staff' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          <div className="st-admin-card-header" style={{ borderRadius: '2px', border: '1.5px solid #e7d7c1' }}>
+            <div>
+              <h3 className="st-admin-card-title">Corporate Staff Accounts</h3>
+              <p className="st-admin-card-subtitle">
+                View internal directory of store managers and system administrators.
+              </p>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="st-admin-card" style={{ padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div className="st-admin-search-wrap">
+              <span className="st-admin-search-icon">
+                <SearchIcon style={{ width: '0.9rem', height: '0.9rem' }} />
+              </span>
+              <input
+                type="text"
+                placeholder="Search staff by full name, email, or ID..."
+                value={staffSearch}
+                onChange={(e) => setStaffSearch(e.target.value)}
+                className="st-admin-search-input"
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {[
+                { id: 'ALL', label: 'All Roles' },
+                { id: '2', label: 'Managers' },
+                { id: '3', label: 'System Admins' },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => setStaffRoleFilter(pill.id)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '2px',
+                    border: staffRoleFilter === pill.id ? '1px solid #2a9d8f' : '1px solid #e7d7c1',
+                    background: staffRoleFilter === pill.id ? '#e6f6f4' : '#ffffff',
+                    color: staffRoleFilter === pill.id ? '#2a9d8f' : '#5c4b4b',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {pill.label}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => exportToCSV(filteredStaff, 'staff_directory_export')}
+                className="st-btn-pill-export"
+              >
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Staff Table */}
+          <div className="st-admin-card">
+            <div className="st-admin-table-wrap">
+              <table className="st-admin-table">
+                <thead>
+                  <tr>
+                    <th>Staff ID</th>
+                    <th>Identity</th>
+                    <th>Corporate Email</th>
+                    <th>Role</th>
+                    <th>Privilege Scope</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#826e6e' }}>
+                        No staff accounts match your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStaff.map((st) => {
+                      const isAdmin = Number(st.role_id) === 3 || Number(st.role_id) === 4;
+                      const initials = (st.full_name || 'Staff')
+                        .split(' ')
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
+
+                      return (
+                        <tr key={st.user_id}>
+                          <td>#{st.user_id}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '2px',
+                                background: isAdmin ? '#f7eee6' : '#e6f6f4',
+                                border: isAdmin ? '1px solid #e7d7c1' : '1px solid #a8ded8',
+                                color: isAdmin ? '#c08457' : '#2a9d8f',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.75rem',
+                                fontWeight: 600
+                              }}>
+                                {initials}
+                              </div>
+                              <span style={{ fontWeight: 500, color: '#1f2937' }}>{st.full_name}</span>
+                            </div>
+                          </td>
+                          <td style={{ color: '#5c4b4b' }}>{st.email}</td>
+                          <td>
+                            <span className={isAdmin ? 'st-chip-role-admin' : 'st-chip-role-mgr'}>
+                              {isAdmin ? 'System Administrator' : 'Store Manager'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '0.8rem', color: '#826e6e' }}>
+                            {isAdmin
+                              ? 'Full administration, catalog edits, staff onboarding, report exports'
+                              : 'Order fulfillment dispatch, warehouse inventory monitoring'}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL: ONBOARD STAFF MEMBER                                          */}
+      {/* ==================================================================== */}
+      {isRegisterModalOpen && (
+        <div className="st-admin-modal-backdrop">
+          <div className="st-admin-modal-box">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#1f2937' }}>
+                Onboard Staff Member
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsRegisterModalOpen(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#826e6e' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {staffFormError && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#fdeeed', border: '1px solid #ffcdd2', color: '#c62828', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {staffFormError}
+              </div>
+            )}
+
+            {staffFormSuccess && (
+              <div style={{ padding: '8px 12px', borderRadius: '2px', background: '#e8f5e9', border: '1px solid #c8e6c9', color: '#2e7d32', fontSize: '0.825rem', marginBottom: '14px' }}>
+                {staffFormSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterStaff} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Jennifer Taylor"
+                  value={staffForm.username}
+                  onChange={(e) => setStaffForm({ ...staffForm, username: e.target.value })}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Corporate Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g., jennifer.t@brightbuy.com"
+                  value={staffForm.email}
+                  onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                  className="st-modal-form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Default Temporary Password
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  readOnly
+                  value="password123"
+                  className="st-modal-form-input"
+                  style={{ background: '#f5f0f0', color: '#5c4b4b', cursor: 'not-allowed', fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px' }}
+                />
+                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#826e6e' }}>
+                  Fixed default temporary password: <code>password123</code>. The staff member will receive this password in their welcome email and can change it once logged in.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#5c4b4b', marginBottom: '4px' }}>
+                  Assigned Role *
+                </label>
+                <select
+                  value={staffForm.role_id}
+                  onChange={(e) => setStaffForm({ ...staffForm, role_id: Number(e.target.value) })}
+                  className="st-modal-form-input"
+                >
+                  <option value={2}>Store Executive &amp; Manager (Role 2)</option>
+                  <option value={3}>System Administrator (Role 3)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterModalOpen(false)}
+                  className="st-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={staffFormSubmitting}
+                  className="st-btn-primary"
+                >
+                  {staffFormSubmitting ? 'Registering...' : 'Confirm Account'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

@@ -170,10 +170,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
   const [billingOption, setBillingOption] = useState(() => savedDraft?.billingOption || 'SAME');
   const [billingAddress, setBillingAddress] = useState(() => savedDraft?.billingAddress || '');
 
-  // Discount & Fees Breakdown
-  const [discountCode, setDiscountCode] = useState(() => savedDraft?.discountCode || '');
-  const [appliedDiscount, setAppliedDiscount] = useState(null);
-  const [discountError, setDiscountError] = useState('');
+  // Fees Breakdown
   const [serviceFeeExpanded, setServiceFeeExpanded] = useState(true);
 
   // Automatically sync checkout draft to sessionStorage so user never loses their place
@@ -203,7 +200,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         cardCvc,
         cardName,
         payhereTenure,
-        discountCode,
         selectedVariantIds: Array.from(selectedVariantIds),
       };
       sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft));
@@ -232,7 +228,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
     cardCvc,
     cardName,
     payhereTenure,
-    discountCode,
     selectedVariantIds,
   ]);
 
@@ -272,14 +267,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               const matched = res.data.data.find((c) => c.city_id === savedUser.assigned_city_id);
               if (matched) targetCity = matched;
             }
-          } catch (_) {}
+          } catch (_) { }
 
           if (!draft?.selectedCityId && targetCity) {
             setSelectedCityId(targetCity.city_id);
             setCityName(targetCity.city_name);
             setPricing((prev) => ({
               ...prev,
-              shipping_fee: parseFloat(targetCity.shipping_fee) || 499.00,
+              shipping_fee: Number.isFinite(parseFloat(res.data.data[0].shipping_fee)) ? parseFloat(res.data.data[0].shipping_fee) : 0,
             }));
           }
         }
@@ -326,8 +321,8 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         const rawItems = Array.isArray(res.data?.items)
           ? res.data.items
           : Array.isArray(res.data)
-          ? res.data
-          : [];
+            ? res.data
+            : [];
 
         if (rawItems.length > 0) {
           const formatted = rawItems.map((it) => ({
@@ -413,12 +408,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         const res = await api.post('/orders/checkout', estimatePayload);
         if (isMounted && res.data && res.data.calculation) {
           const calc = res.data.calculation;
-          const discountAmt = appliedDiscount ? (calc.subtotal * appliedDiscount.pct) / 100 : 0;
           setPricing({
-            subtotal: calc.subtotal,
-            service_fee: calc.service_fee || 217.47,
-            shipping_fee: deliveryType === 'PICKUP' ? 0.00 : (calc.shipping_fee || 499.00),
-            total: Math.max(0, calc.total_amount - discountAmt),
+            subtotal: Number(calc.subtotal) || 0,
+            service_fee: calc.service_fee !== undefined && calc.service_fee !== null ? Number(calc.service_fee) : 217.47,
+            shipping_fee: deliveryType === 'PICKUP' ? 0.00 : (calc.shipping_fee ?? 0.00),
+            total: Number(calc.total_amount) || 0,
           });
           setStockConflictMessage(null);
         }
@@ -429,15 +423,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
           setStockConflictMessage(resData?.message || 'Stock conflict: An item exceeds available warehouse inventory.');
         } else {
           // Local fallback computation
-          const calculatedSubtotal = activeCheckoutItems.reduce((acc, it) => acc + (parseFloat(it.total_price) || parseFloat(it.unit_price) * it.quantity || 7249.00), 0);
-          const shipFee = deliveryType === 'PICKUP' ? 0.00 : 499.00;
+          const calculatedSubtotal = activeCheckoutItems.reduce((acc, it) => acc + (parseFloat(it.total_price) || (parseFloat(it.unit_price) || 0) * (it.quantity || 1)), 0);
+          const shipFee = deliveryType === 'PICKUP' ? 0.00 : 0.00;
           const sFee = 217.47;
-          const discountAmt = appliedDiscount ? (calculatedSubtotal * appliedDiscount.pct) / 100 : 0;
           setPricing({
             subtotal: calculatedSubtotal,
             service_fee: sFee,
             shipping_fee: shipFee,
-            total: Math.max(0, calculatedSubtotal + sFee + shipFee - discountAmt),
+            total: calculatedSubtotal + sFee + shipFee,
           });
         }
       } finally {
@@ -449,7 +442,7 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
     return () => {
       isMounted = false;
     };
-  }, [deliveryType, selectedCityId, itemsDependencyKey, appliedDiscount, activeUserId, firstName, lastName, phone, address, apartment, cityName, postalCode, billingOption, billingAddress, paymentMethod]);
+  }, [deliveryType, selectedCityId, itemsDependencyKey, activeUserId, firstName, lastName, phone, address, apartment, cityName, postalCode, billingOption, billingAddress, paymentMethod]);
 
   // Handle City Change
   const handleCityChange = (e) => {
@@ -461,28 +454,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
       if (deliveryType === 'SHIP') {
         setPricing((prev) => ({
           ...prev,
-          shipping_fee: parseFloat(matchedCity.shipping_fee) || 499.00,
+          shipping_fee: Number.isFinite(parseFloat(matchedCity.shipping_fee)) ? parseFloat(matchedCity.shipping_fee) : 0,
         }));
       }
-    }
-  };
-
-  // Discount Code Application
-  const handleApplyDiscount = (e) => {
-    e.preventDefault();
-    setDiscountError('');
-    const code = discountCode.trim().toUpperCase();
-    if (!code) return;
-
-    if (code === 'BRIGHT10' || code === 'WELCOME10') {
-      setAppliedDiscount({ code, pct: 10, label: '10% Store Discount' });
-      setDiscountCode('');
-    } else if (code === 'FREESHIP') {
-      setAppliedDiscount({ code, pct: 0, freeShipping: true, label: 'Free Delivery Voucher' });
-      setPricing((prev) => ({ ...prev, shipping_fee: 0, total: prev.subtotal + prev.service_fee }));
-      setDiscountCode('');
-    } else {
-      setDiscountError('Enter a valid discount code or gift card.');
     }
   };
 
@@ -613,6 +587,16 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
         });
         setCurrentStep(4);
         sessionStorage.removeItem(CHECKOUT_DRAFT_KEY);
+        if (activeUserId) {
+          try {
+            localStorage.removeItem(`cart_${activeUserId}`);
+          } catch (_) { }
+        }
+        try {
+          localStorage.removeItem('cart');
+        } catch (_) { }
+        window.dispatchEvent(new Event('cartUpdated'));
+
         if (typeof onOrderPlaced === 'function') {
           onOrderPlaced(orderData);
         }
@@ -690,7 +674,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               id="btn-go-to-cart"
               onClick={() => {
                 navigate('/auth-cart');
-                window.location.href = '/auth-cart';
               }}
               style={{
                 padding: '12px 24px',
@@ -716,7 +699,6 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
               id="btn-browse-catalog"
               onClick={() => {
                 navigate('/catalog');
-                window.location.href = '/catalog';
               }}
               style={{
                 padding: '12px 24px',
@@ -1400,8 +1382,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Ship to Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ede6dc' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>Ship to</span>
-                    <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
+                    <span style={{ color: '#5c4b4b', minWidth: '70px', fontWeight: 600 }}>{deliveryType === 'PICKUP' ? 'Pickup at' : 'Ship to'}</span>
+                    <span style={{ color: '#3b2f2f', fontWeight: 600, lineHeight: 1.4 }}>
+                      {deliveryType === 'PICKUP'
+                        ? 'BrightBuy Texas Flagship Hub, 100 Congress Ave, Suite 200, Austin, TX 78701'
+                        : formattedFormattedAddress}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1540,8 +1526,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 {/* Ship to Row */}
                 <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9' }}>
                   <div style={{ display: 'flex', gap: '24px' }}>
-                    <span style={{ color: '#64748b', minWidth: '70px' }}>Ship to</span>
-                    <span style={{ color: '#0f172a', fontWeight: 500, lineHeight: 1.4 }}>{formattedFormattedAddress}</span>
+                    <span style={{ color: '#64748b', minWidth: '70px' }}>{deliveryType === 'PICKUP' ? 'Pickup at' : 'Ship to'}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 500, lineHeight: 1.4 }}>
+                      {deliveryType === 'PICKUP'
+                        ? 'BrightBuy Texas Flagship Hub, 100 Congress Ave, Suite 200, Austin, TX 78701'
+                        : formattedFormattedAddress}
+                    </span>
                   </div>
                   <button type="button" style={{ background: 'none', border: 'none', color: '#0264d6', fontSize: '0.8125rem', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setCurrentStep(1)}>
                     Change
@@ -2079,9 +2069,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                     <div style={{ fontSize: '0.75rem', color: '#826e6e', fontWeight: 600 }}>Payment Method</div>
                     <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#3b2f2f' }}>
                       {placedOrder.payment_method === 'KLARNA' ? 'Klarna (Pay in 4 BNPL)' :
-                       placedOrder.payment_method === 'AFTERPAY' ? 'Afterpay / Affirm (4 Payments)' :
-                       placedOrder.payment_method === 'COD' ? 'Cash on Delivery (COD)' :
-                       'Credit / Debit Card'}
+                        placedOrder.payment_method === 'AFTERPAY' ? 'Afterpay / Affirm (4 Payments)' :
+                          placedOrder.payment_method === 'COD' ? 'Cash on Delivery (COD)' :
+                            'Credit / Debit Card'}
                     </div>
                     {placedOrder.transaction_ref && (
                       <div style={{ fontSize: '0.68rem', color: '#826e6e', fontFamily: 'monospace', marginTop: '2px' }}>
@@ -2095,11 +2085,11 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       style={{
                         display: 'inline-block',
                         background: placedOrder.payment_method === 'COD' ? '#faf7f2' :
-                                    placedOrder.payment_method === 'KLARNA' ? '#f7eee6' :
-                                    placedOrder.payment_method === 'AFTERPAY' ? '#e6f6f4' : '#e6f6f4',
+                          placedOrder.payment_method === 'KLARNA' ? '#f7eee6' :
+                            placedOrder.payment_method === 'AFTERPAY' ? '#e6f6f4' : '#e6f6f4',
                         color: placedOrder.payment_method === 'COD' ? '#c08457' :
-                               placedOrder.payment_method === 'KLARNA' ? '#c08457' :
-                               placedOrder.payment_method === 'AFTERPAY' ? '#2a9d8f' : '#2a9d8f',
+                          placedOrder.payment_method === 'KLARNA' ? '#c08457' :
+                            placedOrder.payment_method === 'AFTERPAY' ? '#2a9d8f' : '#2a9d8f',
                         border: '1px solid #e7d7c1',
                         fontSize: '0.72rem',
                         fontWeight: 700,
@@ -2109,9 +2099,9 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       }}
                     >
                       {placedOrder.payment_method === 'COD' ? 'Cash on Delivery • Pay upon delivery' :
-                       placedOrder.payment_method === 'KLARNA' ? 'Klarna • 1st Payment Complete' :
-                       placedOrder.payment_method === 'AFTERPAY' ? 'Afterpay • 1st Payment Authorized' :
-                       'Payment Confirmed'}
+                        placedOrder.payment_method === 'KLARNA' ? 'Klarna • 1st Payment Complete' :
+                          placedOrder.payment_method === 'AFTERPAY' ? 'Afterpay • 1st Payment Authorized' :
+                            'Payment Confirmed'}
                     </span>
                   </div>
                   <div>
@@ -2357,59 +2347,12 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                       </div>
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? '#3b2f2f' : '#826e6e', textAlign: 'right' }}>
-                      Rs {((parseFloat(item.unit_price) || 7249.00) * (item.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      Rs {(((parseFloat(item.unit_price) || 0) * (item.quantity || 1))).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            {/* Discount Code Input Box */}
-            <form onSubmit={handleApplyDiscount} style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="Discount code or gift card"
-                  value={discountCode}
-                  onChange={(e) => setDiscountCode(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '12px 14px',
-                    borderRadius: '2px',
-                    border: '1.5px solid #e7d7c1',
-                    background: '#ffffff',
-                    color: '#3b2f2f',
-                    fontSize: '0.875rem',
-                  }}
-                />
-                <button
-                  type="submit"
-                  style={{
-                    padding: '12px 20px',
-                    borderRadius: '2px',
-                    background: '#2a9d8f',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(42, 157, 143, 0.25)',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Apply
-                </button>
-              </div>
-              {discountError && <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '6px' }}>{discountError}</div>}
-              {appliedDiscount && (
-                <div style={{ fontSize: '0.75rem', color: '#2a9d8f', marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
-                  <span>✓ {appliedDiscount.label} applied</span>
-                  <button type="button" onClick={() => setAppliedDiscount(null)} style={{ background: 'none', border: 'none', color: '#826e6e', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}>
-                    Remove
-                  </button>
-                </div>
-              )}
-            </form>
 
             {/* Price Calculations */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1.5px solid #e7d7c1', paddingTop: '20px', marginBottom: '20px' }}>
@@ -2429,12 +2372,14 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                 </span>
               </div>
 
-              {appliedDiscount && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#2a9d8f', fontWeight: 600 }}>
-                  <span>Discount ({appliedDiscount.code})</span>
-                  <span>- Rs {((pricing.subtotal * (appliedDiscount.pct || 0)) / 100).toFixed(2)}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#826e6e' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Service Fee <span title="Standard processing and handling fee">ℹ️</span>
+                </span>
+                <span style={{ color: '#3b2f2f', fontWeight: 600 }}>
+                  Rs {pricing.service_fee.toFixed(2)}
+                </span>
+              </div>
             </div>
 
             {/* Grand Total */}
@@ -2500,23 +2445,22 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   paymentMethod === 'KLARNA'
                     ? '#faf7f2'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#f4faf9'
-                    : paymentMethod === 'COD'
-                    ? '#faf7f2'
-                    : '#f4faf9',
+                      ? '#f4faf9'
+                      : paymentMethod === 'COD'
+                        ? '#faf7f2'
+                        : '#f4faf9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.75rem',
-                border: `1.5px solid ${
-                  paymentMethod === 'KLARNA'
+                border: `1.5px solid ${paymentMethod === 'KLARNA'
                     ? '#e7d7c1'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#2a9d8f'
-                    : paymentMethod === 'COD'
-                    ? '#c08457'
-                    : '#2a9d8f'
-                }`,
+                      ? '#2a9d8f'
+                      : paymentMethod === 'COD'
+                        ? '#c08457'
+                        : '#2a9d8f'
+                  }`,
               }}
             >
               {paymentMethod === 'KLARNA' && '🛍️'}
@@ -2536,18 +2480,18 @@ export default function CheckoutSplitView({ onOrderPlaced, onNavigateToTrack }) 
                   paymentMethod === 'KLARNA'
                     ? '#c08457'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#2a9d8f'
-                    : paymentMethod === 'COD'
-                    ? '#c08457'
-                    : '#2a9d8f',
+                      ? '#2a9d8f'
+                      : paymentMethod === 'COD'
+                        ? '#c08457'
+                        : '#2a9d8f',
                 background:
                   paymentMethod === 'KLARNA'
                     ? '#f7eee6'
                     : paymentMethod === 'AFTERPAY'
-                    ? '#e6f6f4'
-                    : paymentMethod === 'COD'
-                    ? '#f7eee6'
-                    : '#e6f6f4',
+                      ? '#e6f6f4'
+                      : paymentMethod === 'COD'
+                        ? '#f7eee6'
+                        : '#e6f6f4',
                 padding: '4px 12px',
                 borderRadius: '2px',
                 border: '1px solid #e7d7c1',

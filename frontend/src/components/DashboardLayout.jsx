@@ -13,6 +13,51 @@ export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Change Password Modal State (Accessible by Customers, Managers, Admins)
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [changePwdCurrent, setChangePwdCurrent] = useState('');
+  const [changePwdNew, setChangePwdNew] = useState('');
+  const [changePwdConfirm, setChangePwdConfirm] = useState('');
+  const [changePwdLoading, setChangePwdLoading] = useState(false);
+  const [changePwdError, setChangePwdError] = useState('');
+  const [changePwdSuccess, setChangePwdSuccess] = useState('');
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setChangePwdError('');
+    setChangePwdSuccess('');
+
+    if (changePwdNew.length < 6) {
+      setChangePwdError('New password must be at least 6 characters.');
+      return;
+    }
+    if (changePwdNew !== changePwdConfirm) {
+      setChangePwdError('New password and confirmation do not match.');
+      return;
+    }
+
+    setChangePwdLoading(true);
+    try {
+      const res = await api.post('/auth_cart/change-password', {
+        current_password: changePwdCurrent,
+        new_password: changePwdNew,
+        confirm_password: changePwdConfirm,
+      });
+      setChangePwdSuccess(res.data?.message || 'Password changed successfully!');
+      setChangePwdCurrent('');
+      setChangePwdNew('');
+      setChangePwdConfirm('');
+      setTimeout(() => {
+        setIsChangePasswordOpen(false);
+        setChangePwdSuccess('');
+      }, 2200);
+    } catch (err) {
+      setChangePwdError(err.response?.data?.message || 'Failed to update password. Please verify your current password.');
+    } finally {
+      setChangePwdLoading(false);
+    }
+  };
+
   // Update cart count from local storage
   const updateCartCount = () => {
     try {
@@ -498,6 +543,35 @@ export default function DashboardLayout() {
                       type="button"
                       onClick={() => {
                         setDropdownOpen(false);
+                        setChangePwdCurrent('');
+                        setChangePwdNew('');
+                        setChangePwdConfirm('');
+                        setChangePwdError('');
+                        setChangePwdSuccess('');
+                        setIsChangePasswordOpen(true);
+                      }}
+                      className="btn-ghost"
+                      style={{
+                        justifyContent: 'flex-start',
+                        padding: '8px 12px',
+                        width: '100%',
+                        borderRadius: '6px',
+                        color: 'var(--primary, #0284c7)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <span>🔑</span>
+                      <span>Change Password</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
                         handleLogout();
                       }}
                       className="btn-ghost"
@@ -655,16 +729,35 @@ export default function DashboardLayout() {
             <span>{isOnline ? 'Backend Connected' : 'Backend Disconnected'}</span>
           </div>
           {user && (
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleLogout();
-              }}
-              className="mobile-logout-btn"
-            >
-              Log Out
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setChangePwdCurrent('');
+                  setChangePwdNew('');
+                  setChangePwdConfirm('');
+                  setChangePwdError('');
+                  setChangePwdSuccess('');
+                  setIsChangePasswordOpen(true);
+                }}
+                className="mobile-auth-btn mobile-auth-login"
+                style={{ width: '100%', justifyContent: 'center', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>🔑</span>
+                <span>Change Password</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="mobile-logout-btn"
+              >
+                Log Out
+              </button>
+            </div>
           )}
         </div>
       </aside>
@@ -720,6 +813,225 @@ export default function DashboardLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Universal Change Password Modal */}
+      {isChangePasswordOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !changePwdLoading) {
+              setIsChangePasswordOpen(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '440px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#f8fafc',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                  Change Account Password
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  Update credentials for <strong>{user?.email || user?.username}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangePasswordOpen(false)}
+                disabled={changePwdLoading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content Form */}
+            <form onSubmit={handleChangePasswordSubmit} style={{ padding: '24px' }}>
+              {changePwdError && (
+                <div
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    borderRadius: '8px',
+                    padding: '12px 14px',
+                    marginBottom: '16px',
+                    color: '#991b1b',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span>⚠️</span>
+                  <span>{changePwdError}</span>
+                </div>
+              )}
+
+              {changePwdSuccess && (
+                <div
+                  style={{
+                    backgroundColor: '#f0fdf4',
+                    border: '1px solid #86efac',
+                    borderRadius: '8px',
+                    padding: '12px 14px',
+                    marginBottom: '16px',
+                    color: '#166534',
+                    fontSize: '0.875rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span>✓</span>
+                  <span>{changePwdSuccess}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter your current password"
+                    value={changePwdCurrent}
+                    onChange={(e) => setChangePwdCurrent(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '0.925rem',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="At least 6 characters"
+                    value={changePwdNew}
+                    onChange={(e) => setChangePwdNew(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '0.925rem',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Confirm New Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Re-enter new password"
+                    value={changePwdConfirm}
+                    onChange={(e) => setChangePwdConfirm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '0.925rem',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(false)}
+                  disabled={changePwdLoading}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#475569',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={changePwdLoading}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.875rem',
+                    cursor: changePwdLoading ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(2, 132, 199, 0.3)',
+                  }}
+                >
+                  {changePwdLoading ? 'Updating Password...' : 'Save New Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

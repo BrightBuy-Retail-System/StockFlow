@@ -47,15 +47,15 @@ export default function AnalyticsPage() {
     { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
   ]);
   const [topSellingData, setTopSellingData] = useState([
-    { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-    { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-    { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+    { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+    { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+    { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
   ]);
   const [categoryData, setCategoryData] = useState([
-    { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-    { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-    { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+    { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+    { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+    { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+    { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
   ]);
   const [customerData, setCustomerData] = useState([
     { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -75,6 +75,12 @@ export default function AnalyticsPage() {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [customerSummary, setCustomerSummary] = useState(null);
   const [customerPayments, setCustomerPayments] = useState([]);
+
+  // Settlement Modal State
+  const [settleModalOrder, setSettleModalOrder] = useState(null);
+  const [settlePaymentMethod, setSettlePaymentMethod] = useState('Credit Card');
+  const [settlingPayment, setSettlingPayment] = useState(false);
+  const [settleMessage, setSettleMessage] = useState(null);
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -104,9 +110,10 @@ export default function AnalyticsPage() {
       const yearQuery = year ? `?year=${year}` : '';
 
       // If Customer (Role 1): Fetch personal orders and summary
-      if (currentRoleId === 1 && currentUser?.id) {
+      const custId = currentUser?.id || currentUser?.user_id;
+      if (currentRoleId === 1 && custId) {
         try {
-          const resCust = await api.get(`/analytics/customer-orders/${currentUser.id}`, { timeout: 4000 });
+          const resCust = await api.get(`/analytics/customer-orders/${custId}`, { timeout: 4000 });
           if (resCust.data?.data) {
             setCustomerSummary(resCust.data.data.summary);
             setCustomerOrders(resCust.data.data.orders || []);
@@ -169,8 +176,8 @@ export default function AnalyticsPage() {
           populateDemoData(2);
         }
       }
-      // If Admin (Role 3): Fetch full executive suite
-      else if (currentRoleId === 3) {
+      // If Admin / Logistics Executive (Role 3 or 4): Fetch full executive suite
+      else if (currentRoleId === 3 || currentRoleId === 4) {
         try {
           const [resQuarterly, resTop, resCat, resCust, resTxn, resDcl] = await Promise.all([
             api.get(`/analytics/reports/quarterly-sales${yearQuery}`, { timeout: 4000 }).catch(() => null),
@@ -189,10 +196,10 @@ export default function AnalyticsPage() {
           if (resDcl?.data?.data) setDclData(resDcl.data.data);
 
           if (!resQuarterly?.data?.data?.length && !resTop?.data?.data?.length) {
-            populateDemoData(3);
+            populateDemoData(currentRoleId);
           }
         } catch {
-          populateDemoData(3);
+          populateDemoData(currentRoleId);
         }
       }
 
@@ -213,7 +220,7 @@ export default function AnalyticsPage() {
   const populateDemoData = (rId) => {
     if (rId === 1) {
       setCustomerSummary({
-        customer_name: user?.username || 'Test Customer',
+        customer_name: user?.username || user?.full_name || 'Test Customer',
         primary_city: 'Dallas Hub',
         total_orders: 5,
         lifetime_spending: 6524.90,
@@ -238,15 +245,15 @@ export default function AnalyticsPage() {
         { sales_year: 2026, sales_quarter: 4, total_orders: 285, gross_revenue: 148900.0, net_collected_revenue: 141200.0, total_units_sold: 890, moving_avg_quarterly_revenue: 130850.0 },
       ]);
       setTopSellingData([
-        { product_id: 1, product_name: 'Apex Pro Terminal Ultra', category_name: 'Enterprise Hardware', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
-        { product_id: 4, product_name: 'Precision Barcode Hub v4', category_name: 'Warehouse Logistics', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
-        { product_id: 2, product_name: 'OmniRouter Wi-Fi 6E Edge', category_name: 'Networking & IoT', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
+        { product_id: 1, product_name: 'VoltBook Pro 15', category_name: 'Laptops & Computers', total_units_sold: 88, total_revenue: 114312.0, revenue_rank: 1 },
+        { product_id: 2, product_name: 'EchoSound ANC Headphones', category_name: 'Audio & Headphones', total_units_sold: 142, total_revenue: 69580.0, revenue_rank: 2 },
+        { product_id: 4, product_name: 'QuantumSpeed 2TB NVMe SSD', category_name: 'Computer Accessories', total_units_sold: 95, total_revenue: 42750.0, revenue_rank: 3 },
       ]);
       setCategoryData([
-        { category_name: 'Enterprise Hardware', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
-        { category_name: 'Warehouse Logistics', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
-        { category_name: 'Networking & IoT', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
-        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 424350.0, total_orders: 849, total_units_sold: 849 },
+        { category_name: 'Laptops & Computers', total_category_revenue: 173652.0, total_orders: 134, total_units_sold: 134 },
+        { category_name: 'Audio & Headphones', total_category_revenue: 153120.0, total_orders: 348, total_units_sold: 348 },
+        { category_name: 'Computer Accessories', total_category_revenue: 86070.0, total_orders: 283, total_units_sold: 283 },
+        { category_name: 'ALL CATEGORIES (GRAND TOTAL)', total_category_revenue: 412842.0, total_orders: 765, total_units_sold: 765 },
       ]);
       setCustomerData([
         { customer_id: 1, customer_name: 'Austin Techworks Hub', email: 'procure@austintech.io', primary_city: 'Austin Hub', total_orders: 14, lifetime_spending: 38450.0, paid_orders: 13, pending_orders: 1, paid_order_value: 36200.0, pending_order_value: 2250.0 },
@@ -278,10 +285,10 @@ export default function AnalyticsPage() {
       const netCollected = quarterlyData.reduce((acc, q) => acc + (q.net_collected_revenue || 0), 0);
       return {
         grossRevenue: gross,
-        netCollected: netCollected || gross * 0.94,
+        netCollected: netCollected,
         totalOrders: totalOrders,
         totalUnits: totalUnits,
-        collectionRate: gross > 0 ? ((netCollected || gross * 0.94) / gross) * 100 : 100,
+        collectionRate: gross > 0 ? (netCollected / gross) * 100 : 100,
       };
     }
 
@@ -299,17 +306,34 @@ export default function AnalyticsPage() {
     };
   }, [categoryData, quarterlyData]);
 
-  // Filtered customer list for Admin
+  // Filtered customer list for Admin (respecting search and selected store branch)
   const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customerData;
+    let list = customerData;
+    if (adminStoreBranch && adminStoreBranch !== 'all_stores') {
+      const branchCityMap = {
+        dallas: 'Dallas',
+        austin: 'Austin',
+        houston: 'Houston',
+        san_antonio: 'San Antonio',
+        fort_worth: 'Fort Worth',
+      };
+      const targetCity = branchCityMap[adminStoreBranch]?.toLowerCase();
+      if (targetCity) {
+        const branchMatches = list.filter((c) => c.primary_city?.toLowerCase().includes(targetCity));
+        if (branchMatches.length > 0) {
+          list = branchMatches;
+        }
+      }
+    }
+    if (!customerSearch.trim()) return list;
     const q = customerSearch.toLowerCase();
-    return customerData.filter(
+    return list.filter(
       (c) =>
         c.customer_name?.toLowerCase().includes(q) ||
         c.email?.toLowerCase().includes(q) ||
         c.primary_city?.toLowerCase().includes(q)
     );
-  }, [customerData, customerSearch]);
+  }, [customerData, customerSearch, adminStoreBranch]);
 
   if (!authChecked) {
     return null;
@@ -343,6 +367,53 @@ export default function AnalyticsPage() {
       </div>
     );
   }
+
+  // Payment Settlement Handlers for Customer
+  const handleOpenSettleModal = (order = null) => {
+    setSettleMessage(null);
+    setSettlePaymentMethod('Credit Card');
+    if (order) {
+      setSettleModalOrder(order);
+    } else {
+      const firstPending = customerOrders.find((o) => o.payment_status === 'Pending');
+      if (firstPending) {
+        setSettleModalOrder(firstPending);
+      } else {
+        alert('All your orders are settled! No pending payments required.');
+      }
+    }
+  };
+
+  const handleExecuteSettlement = async (e) => {
+    e?.preventDefault();
+    if (!settleModalOrder) return;
+    setSettlingPayment(true);
+    setSettleMessage(null);
+    try {
+      const res = await api.post('/analytics/payments/process', {
+        order_id: settleModalOrder.order_id,
+        amount: Number(settleModalOrder.total_amount),
+        payment_method: settlePaymentMethod,
+      });
+      if (res.data?.status === 'success') {
+        setSettleMessage({
+          type: 'success',
+          text: `Payment of $${Number(settleModalOrder.total_amount).toFixed(2)} recorded successfully! Ref: ${res.data.data?.transaction_reference || 'CONFIRMED'}`,
+        });
+        setTimeout(() => {
+          fetchReports(selectedYear, 1, user);
+          setSettleModalOrder(null);
+          setSettleMessage(null);
+        }, 1400);
+      } else {
+        setSettleMessage({ type: 'error', text: res.data?.error || 'Payment failed. Please try again.' });
+      }
+    } catch (err) {
+      setSettleMessage({ type: 'error', text: err.response?.data?.error || 'Payment processing failed.' });
+    } finally {
+      setSettlingPayment(false);
+    }
+  };
 
   // ==========================================================================
   // VIEW 1: CUSTOMER VIEW (when role_id === 1)
@@ -380,24 +451,26 @@ export default function AnalyticsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Link
-              to="/payment"
+            <button
+              type="button"
+              onClick={() => handleOpenSettleModal()}
               style={{
                 padding: '10px 18px',
                 borderRadius: '8px',
                 background: 'var(--primary)',
                 color: '#ffffff',
-                textDecoration: 'none',
+                border: 'none',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                cursor: 'pointer',
               }}
             >
               <span>Pay Pending Orders</span>
               <ArrowRightIcon className="w-4 h-4" />
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => fetchReports(selectedYear, 1, user)}
@@ -573,30 +646,218 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
 
-                    <Link
-                      to={`/payment?order_id=${o.order_id}&amount=${Number(o.total_amount || 0).toFixed(2)}`}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenSettleModal(o)}
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
                         background: 'var(--primary)',
                         color: '#ffffff',
-                        textDecoration: 'none',
+                        border: 'none',
                         fontSize: '0.85rem',
                         fontWeight: 700,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        cursor: 'pointer',
                       }}
                     >
                       <span>Pay Now</span>
                       <ArrowRightIcon className="w-3.5 h-3.5" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Payment Settlement Modal */}
+        {settleModalOrder && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px'
+          }}>
+            <div style={{
+              background: 'var(--bg-card, #ffffff)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'var(--primary-light, #eff6ff)',
+                    color: 'var(--primary, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <CreditCardIcon className="w-5 h-5" />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                    Settle Order Payment
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted, #64748b)',
+                    padding: '4px'
+                  }}
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div style={{
+                background: 'var(--bg-muted, #f8fafc)',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order ID:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>#{settleModalOrder.order_id}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted, #64748b)' }}>Order Status:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>{settleModalOrder.order_status || 'PENDING'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', paddingTop: '8px', borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>Amount Payable:</span>
+                  <span style={{ fontWeight: 800, color: 'var(--primary, #2563eb)', fontSize: '1.2rem' }}>
+                    ${Number(settleModalOrder.total_amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleExecuteSettlement} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', marginBottom: '6px' }}>
+                    Payment Method
+                  </label>
+                  <select
+                    value={settlePaymentMethod}
+                    onChange={(e) => setSettlePaymentMethod(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-main, #0f172a)',
+                      fontSize: '0.9rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    <option value="Credit Card">Credit Card (Instant Online Settlement)</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Visa">Visa Direct</option>
+                    <option value="Mastercard">Mastercard SecureCode</option>
+                    <option value="Bank Transfer">Bank Wire Transfer</option>
+                  </select>
+                </div>
+
+                {settleMessage && (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    background: settleMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                    color: settleMessage.type === 'success' ? '#065f46' : '#991b1b',
+                    border: `1px solid ${settleMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {settleMessage.type === 'success' ? (
+                      <CheckCircleIcon className="w-4 h-4" />
+                    ) : (
+                      <XIcon className="w-4 h-4" />
+                    )}
+                    <span>{settleMessage.text}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setSettleModalOrder(null); setSettleMessage(null); }}
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color, #cbd5e1)',
+                      background: 'var(--bg-card, #ffffff)',
+                      color: 'var(--text-secondary, #475569)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={settlingPayment}
+                    style={{
+                      padding: '9px 20px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'var(--primary, #2563eb)',
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
+                      cursor: settlingPayment ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: settlingPayment ? 0.7 : 1
+                    }}
+                  >
+                    {settlingPayment ? (
+                      <>
+                        <ZapIcon className="w-4 h-4" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Confirm &amp; Settle</span>
+                        <ArrowRightIcon className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -629,76 +890,176 @@ export default function AnalyticsPage() {
     }
   };
 
-  const buildReportHtml = (targetType = 'all') => {
+  const buildReportHtml = (targetType = 'all', overrideBranch = adminStoreBranch) => {
     const durationText = getDurationLabel(reportDuration, customStartDate, customEndDate);
     const dateStamp = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const timeStamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
-    const grandTotalRow = categoryData.find(c => c.category_name?.includes('GRAND TOTAL')) || {};
-    const totalVolume = grandTotalRow.total_category_revenue || categoryData.reduce((a, b) => a + Number(b.total_category_revenue || 0), 0);
-    const totalUnits = grandTotalRow.total_units_sold || categoryData.reduce((a, b) => a + Number(b.total_units_sold || 0), 0);
+    const branchPerformanceMap = {
+      dallas: {
+        id: 'TX-DAL-204',
+        name: 'Dallas Branch #204 (Central Distribution Hub)',
+        city: 'Dallas',
+        revenue: 172400.0,
+        orders: 28,
+        units: 390,
+        settlement: '96.2%',
+        pending: 8,
+        confirmed: 5,
+        shipped: 5,
+        delivered: 10,
+        status: 'Operational Leader',
+        ratio: 0.406
+      },
+      austin: {
+        id: 'TX-AUS-101',
+        name: 'Austin Branch #101 (Tech Corridor Hub)',
+        city: 'Austin',
+        revenue: 112850.0,
+        orders: 22,
+        units: 215,
+        settlement: '94.8%',
+        pending: 6,
+        confirmed: 3,
+        shipped: 3,
+        delivered: 10,
+        status: 'High Velocity',
+        ratio: 0.266
+      },
+      houston: {
+        id: 'TX-HOU-305',
+        name: 'Houston Branch #305 (Gulf Coast Terminal)',
+        city: 'Houston',
+        revenue: 78600.0,
+        orders: 16,
+        units: 134,
+        settlement: '92.4%',
+        pending: 4,
+        confirmed: 2,
+        shipped: 2,
+        delivered: 8,
+        status: 'Standard Fulfilled',
+        ratio: 0.185
+      },
+      san_antonio: {
+        id: 'TX-SAT-402',
+        name: 'San Antonio Branch #402 (Regional Facility)',
+        city: 'San Antonio',
+        revenue: 42150.0,
+        orders: 12,
+        units: 72,
+        settlement: '91.0%',
+        pending: 3,
+        confirmed: 1,
+        shipped: 1,
+        delivered: 7,
+        status: 'Steady Fulfillment',
+        ratio: 0.099
+      },
+      fort_worth: {
+        id: 'TX-FTW-508',
+        name: 'Fort Worth Branch #508 (North Texas Hub)',
+        city: 'Fort Worth',
+        revenue: 18350.0,
+        orders: 8,
+        units: 38,
+        settlement: '95.0%',
+        pending: 3,
+        confirmed: 1,
+        shipped: 1,
+        delivered: 3,
+        status: 'Consistent SLA',
+        ratio: 0.044
+      }
+    };
 
-    const orderBreakdown = (executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
-      ? executiveOverview.order_breakdown
-      : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 };
-
-    const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0) || 48;
-    const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
+    const isAdmin = roleId === 3 || roleId === 4;
+    const isSingleBranch = isAdmin && overrideBranch && overrideBranch !== 'all_stores' && branchPerformanceMap[overrideBranch];
+    const branchSpec = isSingleBranch ? branchPerformanceMap[overrideBranch] : null;
 
     let branchLabel = managerBranch;
     let branchId = 'TX-DAL-204';
     let docClassification = 'Privileged Branch Operations';
 
-    if (roleId === 3) {
-      docClassification = 'Enterprise Multi-Store Executive Operations';
-      if (adminStoreBranch === 'all_stores') {
+    if (isAdmin) {
+      if (isSingleBranch) {
+        branchLabel = branchSpec.name;
+        branchId = branchSpec.id;
+        docClassification = `Single Branch Operations Audit (${branchSpec.city} Hub)`;
+      } else {
         branchLabel = 'All Stores (Enterprise Consolidated • 5 Texas Branches)';
         branchId = 'ENT-TX-ALL';
-      } else if (adminStoreBranch === 'dallas') {
-        branchLabel = 'Dallas Branch #204 (Central Distribution Hub)';
-        branchId = 'TX-DAL-204';
-      } else if (adminStoreBranch === 'austin') {
-        branchLabel = 'Austin Branch #101 (Tech Corridor Hub)';
-        branchId = 'TX-AUS-101';
-      } else if (adminStoreBranch === 'houston') {
-        branchLabel = 'Houston Branch #305 (Gulf Coast Terminal)';
-        branchId = 'TX-HOU-305';
-      } else if (adminStoreBranch === 'san_antonio') {
-        branchLabel = 'San Antonio Branch #402 (Regional Facility)';
-        branchId = 'TX-SAT-402';
-      } else if (adminStoreBranch === 'fort_worth') {
-        branchLabel = 'Fort Worth Branch #508 (North Texas Hub)';
-        branchId = 'TX-FTW-508';
+        docClassification = 'Enterprise Multi-Store Executive Operations';
       }
     }
 
-    let docTitle = roleId === 3 ? 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER' : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
-    let docSubtitle = roleId === 3 ? 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger' : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
+    const grandTotalRow = categoryData.find(c => c.category_name?.includes('GRAND TOTAL')) || {};
+    const totalVolume = isSingleBranch
+      ? branchSpec.revenue
+      : (grandTotalRow.total_category_revenue || categoryData.reduce((a, b) => a + Number(b.total_category_revenue || 0), 0));
+
+    const totalUnits = isSingleBranch
+      ? branchSpec.units
+      : (grandTotalRow.total_units_sold || categoryData.reduce((a, b) => a + Number(b.total_units_sold || 0), 0));
+
+    const orderBreakdown = isSingleBranch
+      ? { pending: branchSpec.pending, confirmed: branchSpec.confirmed, shipped: branchSpec.shipped, delivered: branchSpec.delivered, cancelled: 2 }
+      : ((executiveOverview?.order_breakdown && Object.keys(executiveOverview.order_breakdown).length > 0)
+          ? executiveOverview.order_breakdown
+          : { pending: 24, confirmed: 12, shipped: 12, delivered: 18, cancelled: 10 });
+
+    const undeliveredOrders = (Number(orderBreakdown.pending) || 0) + (Number(orderBreakdown.confirmed) || 0) + (Number(orderBreakdown.shipped) || 0);
+    const completedOrders = (Number(orderBreakdown.delivered) && Number(orderBreakdown.delivered) > 0) ? Number(orderBreakdown.delivered) : 18;
+
+    let docTitle = isAdmin
+      ? (isSingleBranch ? `${branchSpec.name.toUpperCase()} EXECUTIVE AUDIT & PERFORMANCE DOSSIER` : 'ENTERPRISE ADMINISTRATOR EXECUTIVE AUDIT & MULTI-STORE DOSSIER')
+      : 'BRANCH MANAGER EXECUTIVE AUDIT & PERFORMANCE DOSSIER';
+
+    let docSubtitle = isAdmin
+      ? (isSingleBranch ? `Dedicated Branch Operations, Local Velocity, Fulfillment Pipeline & Regional Accounts Ledger` : 'Consolidated Multi-Store Operations, Cross-Branch Comparison, Sales Velocity & Ledger')
+      : 'Comprehensive Store Operations, Catalog Sales Velocity, & Customer Ledger';
 
     if (targetType === 'selling_products') {
-      docTitle = roleId === 3 ? 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD' : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
-      docSubtitle = roleId === 3 ? 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis' : 'Product SKU Rankings, Units Sold, and Revenue Contribution Analysis';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD` : 'ENTERPRISE TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD')
+        : 'TOP-SELLING PRODUCTS & VELOCITY LEADERBOARD REPORT';
+      docSubtitle = isSingleBranch
+        ? `Local SKU Velocity & Revenue Contribution for ${branchSpec.name}`
+        : 'All-Store SKU Rankings, Units Sold, and Cross-Branch Revenue Contribution Analysis';
     } else if (targetType === 'revenue_category') {
-      docTitle = roleId === 3 ? 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT' : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
-      docSubtitle = roleId === 3 ? 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation' : 'Gross Sales Aggregation, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} STORE TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT` : 'ALL STORES TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT')
+        : 'TOTAL REVENUE RECEIVED & CATEGORY SALES AUDIT';
+      docSubtitle = isSingleBranch
+        ? `Branch Gross Sales Aggregation, Category Subtotals, and Hierarchical Reconciliation for ${branchSpec.name}`
+        : 'Gross Sales Aggregation Across All Stores, Category Subtotals, and Hierarchical ROLLUP Reconciliation';
     } else if (targetType === 'customer_history') {
-      docTitle = roleId === 3 ? 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST' : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
-      docSubtitle = roleId === 3 ? 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances' : 'Account Purchasing Activity, Paid Settlement Values, and Outstanding Balances';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `${branchSpec.city.toUpperCase()} CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST` : 'GLOBAL CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST')
+        : 'CUSTOMER PURCHASE HISTORY & LIFETIME VALUE LIST';
+      docSubtitle = isSingleBranch
+        ? `Customer Accounts Ledger & Settlement Values registered to ${branchSpec.city} Hub`
+        : 'Enterprise Account Purchasing Activity across Texas Hubs, Paid Settlement Values, and Balances';
     } else if (targetType === 'branch_essential' || targetType === 'admin_essential') {
-      docTitle = roleId === 3 ? 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT' : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
-      docSubtitle = roleId === 3 ? 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification' : 'Official Store Branch Operating Record, Fulfillment Pipeline & Verification';
+      docTitle = isAdmin
+        ? (isSingleBranch ? `ESSENTIAL ${branchSpec.city.toUpperCase()} BRANCH AUDIT DOSSIER` : 'ESSENTIAL SHOP ADMINISTRATOR MULTI-STORE AUDIT')
+        : 'ESSENTIAL SHOP BRANCH MANAGER OPERATIONS AUDIT';
+      docSubtitle = isSingleBranch
+        ? `Official Operating Record, Branch Benchmarks & Verification for ${branchSpec.name}`
+        : 'Comprehensive All-Stores Operations Record, Branch Benchmarks & Verification';
     }
 
-    const includeComparison = roleId === 3 && (targetType === 'all' || targetType === 'admin_essential');
+    const includeComparison = isAdmin && (targetType === 'all' || targetType === 'admin_essential');
     const includeProducts = targetType === 'all' || targetType === 'selling_products' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeRevenue = targetType === 'all' || targetType === 'revenue_category' || targetType === 'branch_essential' || targetType === 'admin_essential';
     const includeCustomers = targetType === 'all' || targetType === 'customer_history' || targetType === 'branch_essential' || targetType === 'admin_essential';
-    const includeLogistics = (roleId !== 3) && (targetType === 'all' || targetType === 'branch_essential');
+    const includeLogistics = (!isAdmin) && (targetType === 'all' || targetType === 'branch_essential');
 
-    // Products table rows
-    // Products table rows
+    // Products table rows (calculated specifically for selected branch)
     const productRowsHtml = topSellingData.map((p, idx) => {
-      const share = totalVolume > 0 ? ((Number(p.total_revenue || 0) / Number(totalVolume)) * 100).toFixed(1) : '0.0';
+      const units = isSingleBranch ? Math.max(1, Math.round(Number(p.total_units_sold || 0) * branchSpec.ratio)) : Number(p.total_units_sold || 0);
+      const revenue = isSingleBranch ? (Number(p.total_revenue || 0) * branchSpec.ratio) : Number(p.total_revenue || 0);
+      const share = totalVolume > 0 ? ((Number(revenue) / Number(totalVolume)) * 100).toFixed(1) : '0.0';
       return `
         <tr>
           <td style="text-align: center; font-weight: 500; color: #64748b;">#${p.revenue_rank || idx + 1}</td>
@@ -707,28 +1068,46 @@ export default function AnalyticsPage() {
             <div style="font-size: 10px; color: #64748b; margin-top: 2px;">SKU: BB-PRD-00${p.product_id || idx + 1}</div>
           </td>
           <td>${p.category_name}</td>
-          <td style="text-align: right; font-weight: 500;">${Number(p.total_units_sold || 0).toLocaleString()}</td>
-          <td style="text-align: right; font-weight: 600; color: #0f172a;">$${Number(p.total_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right; font-weight: 500;">${units.toLocaleString()}</td>
+          <td style="text-align: right; font-weight: 600; color: #0f172a;">$${Number(revenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td style="text-align: right; color: #475569; font-weight: 500;">${share}%</td>
         </tr>
       `;
     }).join('');
 
-    // Category table rows
+    // Category table rows (calculated specifically for selected branch)
     const categoryRowsHtml = categoryData.map((c) => {
       const isGrand = c.category_name?.includes('GRAND TOTAL');
+      const catOrders = isSingleBranch ? Math.max(1, Math.round(Number(c.total_orders || 0) * branchSpec.ratio)) : Number(c.total_orders || 0);
+      const catUnits = isSingleBranch ? Math.max(1, Math.round(Number(c.total_units_sold || 0) * branchSpec.ratio)) : Number(c.total_units_sold || 0);
+      const catRev = isSingleBranch ? (Number(c.total_category_revenue || 0) * branchSpec.ratio) : Number(c.total_category_revenue || 0);
+
+      const label = isGrand
+        ? (isSingleBranch ? `⭐ BRANCH TOTAL (${branchSpec.city.toUpperCase()} HUB)` : 'ALL CATEGORIES (GRAND TOTAL)')
+        : c.category_name;
+
+      const finalRev = isGrand && isSingleBranch ? branchSpec.revenue : catRev;
+      const finalOrders = isGrand && isSingleBranch ? branchSpec.orders : catOrders;
+      const finalUnits = isGrand && isSingleBranch ? branchSpec.units : catUnits;
+
       return `
         <tr class="${isGrand ? 'row-rollup' : ''}">
-          <td>${isGrand ? '<span style="font-weight: 600;">' + c.category_name + '</span>' : c.category_name}</td>
-          <td style="text-align: right;">${Number(c.total_orders || 0).toLocaleString()}</td>
-          <td style="text-align: right;">${Number(c.total_units_sold || 0).toLocaleString()}</td>
-          <td style="text-align: right; font-weight: 600;">$${Number(c.total_category_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${isGrand ? '<span style="font-weight: 600;">' + label + '</span>' : label}</td>
+          <td style="text-align: right;">${Number(finalOrders).toLocaleString()}</td>
+          <td style="text-align: right;">${Number(finalUnits).toLocaleString()}</td>
+          <td style="text-align: right; font-weight: 600;">$${Number(finalRev).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>
       `;
     }).join('');
 
-    // Customer table rows
-    const customerRowsHtml = customerData.map((cust) => {
+    // Customer table rows (scoped strictly to selected branch hub)
+    let targetCustomers = customerData;
+    if (isSingleBranch) {
+      const matches = customerData.filter((c) => c.primary_city?.toLowerCase().includes(branchSpec.city.toLowerCase()));
+      if (matches.length > 0) targetCustomers = matches;
+    }
+
+    const customerRowsHtml = targetCustomers.map((cust) => {
       return `
         <tr>
           <td style="font-weight: 500; color: #64748b;">#${cust.customer_id}</td>
@@ -979,7 +1358,7 @@ export default function AnalyticsPage() {
       <div class="brand-sub">${branchLabel} • ID: ${branchId}</div>
     </div>
     <div style="text-align: right;">
-      <div class="doc-badge">${roleId === 3 ? 'Administrator Report' : 'Branch Manager Report'}</div>
+      <div class="doc-badge">${isAdmin ? 'Administrator Report' : 'Branch Manager Report'}</div>
       <div style="font-size: 10px; color: #64748b; margin-top: 4px;">Classification: ${docClassification}</div>
     </div>
   </div>
@@ -997,8 +1376,8 @@ export default function AnalyticsPage() {
       <div class="meta-val">${durationText}</div>
     </div>
     <div>
-      <div class="meta-label">${roleId === 3 ? 'System Administrator' : 'Branch Manager'}</div>
-      <div class="meta-val">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
+      <div class="meta-label">${isAdmin ? 'System Administrator' : 'Branch Manager'}</div>
+      <div class="meta-val">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')}</div>
     </div>
     <div>
       <div class="meta-label">Store Scope</div>
@@ -1013,9 +1392,9 @@ export default function AnalyticsPage() {
   <!-- Executive Operational KPI Snapshot -->
   <div class="kpi-grid">
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Gross Enterprise Revenue' : 'Gross Category Revenue'}</div>
+      <div class="kpi-label">${isSingleBranch ? `Gross Revenue (${branchSpec.city} Hub)` : (isAdmin ? 'Gross Enterprise Revenue' : 'Gross Category Revenue')}</div>
       <div class="kpi-val">$${Number(totalVolume).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across all catalog items and stores' : 'Total catalog sales volume'}</div>
+      <div class="kpi-sub">${isSingleBranch ? `Branch contribution: ${(branchSpec.ratio * 100).toFixed(1)}% of enterprise` : (isAdmin ? 'Across all catalog items and stores' : 'Total catalog sales volume')}</div>
     </div>
     <div class="kpi-box">
       <div class="kpi-label">Pending / Undelivered</div>
@@ -1028,9 +1407,9 @@ export default function AnalyticsPage() {
       <div class="kpi-sub">Successfully fulfilled to customers</div>
     </div>
     <div class="kpi-box">
-      <div class="kpi-label">${roleId === 3 ? 'Total Units Dispatched' : 'Units Shipped'}</div>
+      <div class="kpi-label">${isSingleBranch ? `Units Dispatched (${branchSpec.city})` : (isAdmin ? 'Total Units Dispatched' : 'Units Shipped')}</div>
       <div class="kpi-val">${Number(totalUnits).toLocaleString()} Units</div>
-      <div class="kpi-sub">${roleId === 3 ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch'}</div>
+      <div class="kpi-sub">${isSingleBranch ? `Dispatched via ${branchSpec.name}` : (isAdmin ? 'Across 5 Texas Regional Hubs' : 'Dispatched via Dallas Branch')}</div>
     </div>
   </div>
 
@@ -1038,7 +1417,7 @@ export default function AnalyticsPage() {
   <!-- SECTION: MULTI-STORE BRANCH COMPARISON BENCHMARK -->
   <div class="section-title">
     <span>Enterprise Store Branches Comparison &amp; Operating Performance</span>
-    <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">All 5 Texas Branches Benchmark</span>
+    <span style="font-size: 10.5px; font-weight: 500; color: #64748b;">${isSingleBranch ? `Focused Branch Audit: ${branchSpec.name}` : 'All 5 Texas Branches Benchmark'}</span>
   </div>
   <table>
     <thead>
@@ -1052,47 +1431,22 @@ export default function AnalyticsPage() {
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Dallas Branch #204 (Central Distribution Hub)</td>
-        <td style="text-align: right; font-weight: 500;">28</td>
-        <td style="text-align: right; font-weight: 500;">390</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$172,400.00</td>
-        <td style="text-align: right; color: #475569;">96.2%</td>
-        <td><span style="color: #475569; font-weight: 500;">Operational Leader</span></td>
-      </tr>
-      <tr>
-        <td>Austin Branch #101 (Tech Corridor Hub)</td>
-        <td style="text-align: right; font-weight: 500;">22</td>
-        <td style="text-align: right; font-weight: 500;">215</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$112,850.00</td>
-        <td style="text-align: right; color: #475569;">94.8%</td>
-        <td><span style="color: #475569; font-weight: 500;">High Velocity</span></td>
-      </tr>
-      <tr>
-        <td>Houston Branch #305 (Gulf Coast Terminal)</td>
-        <td style="text-align: right; font-weight: 500;">16</td>
-        <td style="text-align: right; font-weight: 500;">134</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$78,600.00</td>
-        <td style="text-align: right; color: #475569;">92.4%</td>
-        <td><span style="color: #475569; font-weight: 500;">Standard Fulfilled</span></td>
-      </tr>
-      <tr>
-        <td>San Antonio Branch #402 (Regional Facility)</td>
-        <td style="text-align: right; font-weight: 500;">12</td>
-        <td style="text-align: right; font-weight: 500;">72</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$42,150.00</td>
-        <td style="text-align: right; color: #475569;">91.0%</td>
-        <td><span style="color: #475569; font-weight: 500;">Steady Fulfillment</span></td>
-      </tr>
-      <tr>
-        <td>Fort Worth Branch #508 (North Texas Hub)</td>
-        <td style="text-align: right; font-weight: 500;">8</td>
-        <td style="text-align: right; font-weight: 500;">38</td>
-        <td style="text-align: right; font-weight: 600; color: #0f172a;">$18,350.00</td>
-        <td style="text-align: right; color: #475569;">95.0%</td>
-        <td><span style="color: #475569; font-weight: 500;">Consistent SLA</span></td>
-      </tr>
-      <tr class="row-rollup">
+      ${Object.entries(branchPerformanceMap).map(([key, b]) => {
+        const isCurrentBranch = isSingleBranch && overrideBranch === key;
+        return `
+          <tr style="${isCurrentBranch ? 'background: #eff6ff; font-weight: 600;' : ''}">
+            <td>
+              ${isCurrentBranch ? '▶ <strong>' + b.name + '</strong> <span style="font-size: 10px; background: #2563eb; color: #ffffff; padding: 1px 6px; border-radius: 3px; margin-left: 6px;">Active Scope</span>' : b.name}
+            </td>
+            <td style="text-align: right; font-weight: 500;">${b.orders}</td>
+            <td style="text-align: right; font-weight: 500;">${b.units}</td>
+            <td style="text-align: right; font-weight: 600; color: #0f172a;">$${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="text-align: right; color: #475569;">${b.settlement}</td>
+            <td><span style="color: ${isCurrentBranch ? '#1d4ed8' : '#475569'}; font-weight: 500;">${b.status}</span></td>
+          </tr>
+        `;
+      }).join('')}
+      <tr class="row-rollup" style="${!isSingleBranch ? 'background: #f8fafc;' : ''}">
         <td><span style="font-weight: 600;">⭐ ALL STORES CONSOLIDATED (5 BRANCHES)</span></td>
         <td style="text-align: right; font-weight: 600;">86</td>
         <td style="text-align: right; font-weight: 600;">849</td>
@@ -1220,24 +1574,24 @@ export default function AnalyticsPage() {
   <div class="sign-block">
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'System Administrator' : 'Store Branch Manager'}</div>
-      <div class="sign-sub">${user?.email || (roleId === 3 ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
+      <div class="sign-title">${isAdmin ? 'System Administrator' : 'Store Branch Manager'}</div>
+      <div class="sign-sub">${user?.email || (isAdmin ? 'admin@stockflow.test' : 'manager@stockflow.test')} • ${branchLabel}</div>
     </div>
     <div>
       <div class="sign-line"></div>
-      <div class="sign-title">${roleId === 3 ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
-      <div class="sign-sub">${roleId === 3 ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
+      <div class="sign-title">${isAdmin ? 'Enterprise Financial Auditor' : 'Branch Operations Auditor'}</div>
+      <div class="sign-sub">${isAdmin ? 'Corporate Operations Compliance' : 'Internal Branch Compliance'}</div>
     </div>
     <div>
       <div class="stamp-box">
-        ${roleId === 3 ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
+        ${isAdmin ? 'Official Enterprise Seal<br />Verified &amp; Audited' : 'Official Store Seal<br />Verified &amp; Audited'}
       </div>
     </div>
   </div>
 
   <!-- Document Footer -->
   <div class="footer-note">
-    <span>${roleId === 3 ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
+    <span>${isAdmin ? 'StockFlow Enterprise BI & Multi-Store Analytics Platform • Generated for System Administrator' : 'StockFlow Enterprise BI & Store Analytics Platform • Generated for Shop Branch Operations'}</span>
     <span>Doc ID: SF-RPT-TX-${Math.floor(Math.random() * 89999 + 10000)} • Page 1 of 1</span>
   </div>
 
@@ -1276,7 +1630,6 @@ export default function AnalyticsPage() {
     link.download = `BrightBuy_Branch_Report_${targetType}_${reportDuration}.html`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
@@ -2220,7 +2573,7 @@ export default function AnalyticsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => fetchReports(selectedYear, 3, user)}
+            onClick={() => fetchReports(selectedYear, roleId || 4, user)}
             disabled={loading}
             style={{
               padding: '8px 14px',
@@ -2493,15 +2846,30 @@ export default function AnalyticsPage() {
               </p>
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Search by customer or hub..."
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                style={{ padding: '6px 12px 6px 30px', borderRadius: '2px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
-              />
-              <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {adminStoreBranch !== 'all_stores' && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '2px', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <span>Branch: {adminStoreBranch.toUpperCase()}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdminStoreBranch('all_stores')}
+                    title="Clear branch filter and view all hubs"
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '0 2px', fontWeight: 700 }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search by customer or hub..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  style={{ padding: '6px 12px 6px 30px', borderRadius: '2px', border: '1px solid var(--border-color)', fontSize: '0.8rem', width: '220px' }}
+                />
+                <SearchIcon className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
+              </div>
             </div>
           </div>
 
@@ -2566,7 +2934,7 @@ export default function AnalyticsPage() {
                 {transactionsData.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No payment settlements executed yet. Run a settlement at <Link to="/payment" style={{ color: 'var(--primary)' }}>Payment Page</Link>.
+                      No payment settlements executed yet. Run a settlement via <Link to="/orders" style={{ color: 'var(--primary)' }}>Orders &amp; Checkout</Link>.
                     </td>
                   </tr>
                 ) : (
@@ -2765,7 +3133,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={reportDuration}
-              onChange={(e) => setReportDuration(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setReportDuration(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(selectedReportType, adminStoreBranch)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -2840,7 +3214,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={adminStoreBranch}
-              onChange={(e) => setAdminStoreBranch(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAdminStoreBranch(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(selectedReportType, val)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -2869,7 +3249,13 @@ export default function AnalyticsPage() {
             </label>
             <select
               value={selectedReportType}
-              onChange={(e) => setSelectedReportType(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedReportType(val);
+                if (previewModalOpen) {
+                  setTimeout(() => setPreviewReportHtml(buildReportHtml(val, adminStoreBranch)), 20);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -2888,6 +3274,87 @@ export default function AnalyticsPage() {
               <option value="customer_history">Global Customer Purchase History &amp; Accounts Ledger</option>
               <option value="admin_essential">Essential Shop Administrator Multi-Store Audit</option>
             </select>
+          </div>
+
+          {/* Active Configuration Feedback Banner */}
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              padding: '10px 14px',
+              borderRadius: '2px',
+              background: 'var(--primary-light, #eff6ff)',
+              border: '1px solid var(--primary-border, #bfdbfe)',
+              color: 'var(--primary, #1d4ed8)',
+              fontSize: '0.82rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px',
+              marginTop: '4px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <CheckCircleIcon className="w-4 h-4 text-primary" />
+                Active Document Export Scope:
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                {adminStoreBranch === 'all_stores'
+                  ? 'All Stores (Enterprise Consolidated)'
+                  : adminStoreBranch === 'dallas'
+                  ? 'Dallas Branch #204'
+                  : adminStoreBranch === 'austin'
+                  ? 'Austin Branch #101'
+                  : adminStoreBranch === 'houston'
+                  ? 'Houston Branch #305'
+                  : adminStoreBranch === 'san_antonio'
+                  ? 'San Antonio Branch #402'
+                  : 'Fort Worth Branch #508'}
+              </span>
+              <span>•</span>
+              <span style={{ color: 'var(--text-secondary)' }}>
+                {getDurationLabel(reportDuration, customStartDate, customEndDate)}
+              </span>
+              <span>•</span>
+              <span style={{ color: 'var(--text-muted)' }}>
+                {selectedReportType === 'all'
+                  ? 'Comprehensive Executive Audit'
+                  : selectedReportType === 'selling_products'
+                  ? 'Top-Selling Leaderboard'
+                  : selectedReportType === 'revenue_category'
+                  ? 'Category Revenue'
+                  : selectedReportType === 'customer_history'
+                  ? 'Customer Accounts Ledger'
+                  : 'Essential Multi-Store Audit'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                Configures PDF and printable dossier
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePreviewReport(selectedReportType)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '2px',
+                  background: 'var(--primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <EyeIcon className="w-3.5 h-3.5" />
+                <span>Preview Document →</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -12,6 +12,8 @@ from email_service import (
     send_registration_otp_email,
     send_forgot_password_otp_email,
     send_password_reset_success_email,
+    send_staff_welcome_email,
+    send_staff_credentials_reset_email,
 )
 from otp_service import generate_otp, verify_otp
 
@@ -467,12 +469,13 @@ def register_staff_member():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip()
     email = (data.get('email') or '').strip()
-    password = (data.get('password') or '').strip()
+    # Default temporary password is password123; manager/staff can change it after logging in
+    password = 'password123'
     role_id = data.get('role_id')
     raw_city = data.get('assigned_city_id')
 
-    if not username or not email or not password or not role_id:
-        return jsonify({"message": "All fields (Full Name / Username, Email, Password, Role) are required"}), 400
+    if not username or not email or not role_id:
+        return jsonify({"message": "Full Name / Username, Corporate Email, and Role are required"}), 400
 
     try:
         role_id = int(role_id)
@@ -525,17 +528,38 @@ def register_staff_member():
         conn.commit()
         new_user_id = cursor.lastrowid
 
+        # Dispatch Welcome Email to newly onboarded staff member
+        role_label = 'System Administrator' if role_id == 3 else 'Store Executive & Manager'
+        email_sent = False
+        email_note = ""
+        try:
+            email_sent, email_note = send_staff_welcome_email(
+                to_email=email,
+                username=username,
+                role_name=role_label,
+                temp_password=password,
+                sync=True
+            )
+        except Exception as exc:
+            email_sent = False
+            email_note = f"Dispatch error: {str(exc)}"
+
         return jsonify({
-            "message": f"Successfully registered new staff member as {'System Administrator' if role_id == 3 else f'Warehouse Manager for {hub_name} ({city_name})'}.",
+            "message": f"Successfully registered new staff member as {role_label}.",
             "user": {
                 "id": new_user_id,
                 "username": username,
                 "email": email,
-                "role_id": role_id,
-                "assigned_city_id": assigned_city_id,
-                "city_name": city_name,
-                "hub_name": hub_name
-            }
+                "role_id": role_id
+            },
+            "credentials": {
+                "username": username,
+                "email": email,
+                "temp_password": password,
+                "role_title": role_label
+            },
+            "email_dispatched": email_sent,
+            "email_message": email_note
         }), 201
 
     except Exception as e:
@@ -543,6 +567,199 @@ def register_staff_member():
     finally:
         cursor.close()
         conn.close()
+
+
+@auth_cart_bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    """
+    Allows any authenticated user (Customer, Manager, System Admin) to update their account password.
+    Requires current password verification and validates new password complexity.
+    Dispatches a confirmation email upon successful update.
+    """
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    current_password = (data.get('current_password') or '').strip()
+    new_password = (data.get('new_password') or '').strip()
+    confirm_password = (data.get('confirm_password') or '').strip()
+
+    if not current_password or not new_password:
+        return jsonify({"message": "Current password and new password are required."}), 400
+
+    if len(new_password) < 6:
+        return jsonify({"message": "New password must be at least 6 characters long."}), 400
+
+    if confirm_password and new_password != confirm_password:
+        return jsonify({"message": "New password and confirmation do not match."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT user_id, full_name, email, password_hash FROM users WHERE user_id = %s", (current_user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"message": "User account not found."}), 404
+
+        # Verify current password matches hash in DB
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            return jsonify({"message": "Current password is incorrect."}), 401
+
+        # Prevent setting identical password
+        if bcrypt.checkpw(new_password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+            return jsonify({"message": "New password cannot be identical to your current password."}), 400
+
+        salt = bcrypt.gensalt()
+        new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), salt).decode('utf-8')
+
+        cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (new_password_hash, current_user_id))
+        conn.commit()
+
+        # Send confirmation email
+        try:
+            send_password_reset_success_email(
+                to_email=user['email'],
+                username=user.get('full_name') or 'Valued User'
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "success",
+            "message": "Your password has been changed successfully. A security confirmation email was sent."
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/staff/<int:staff_id>/reset-password', methods=['POST'])
+@jwt_required()
+def admin_reset_staff_password(staff_id):
+    """
+    Allows System Administrators (role 3 & 4) to reset the password for any staff member or manager.
+    Updates the password hash and sends an email notification with the new temporary credentials.
+    """
+    claims = get_jwt()
+    caller_role = claims.get('role_id')
+    if caller_role not in (3, 4):
+        return jsonify({"message": "Access denied. Only System Administrators can reset staff credentials."}), 403
+
+    data = request.get_json() or {}
+    new_password = (data.get('new_password') or '').strip()
+
+    if not new_password or len(new_password) < 6:
+        return jsonify({"message": "New temporary password must be at least 6 characters long."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT user_id, full_name, email, role_id FROM users WHERE user_id = %s", (staff_id,))
+        target_user = cursor.fetchone()
+        if not target_user:
+            return jsonify({"message": f"Staff member #{staff_id} not found."}), 404
+
+        salt = bcrypt.gensalt()
+        new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), salt).decode('utf-8')
+
+        cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (new_password_hash, staff_id))
+        conn.commit()
+
+        # Send credentials email to the staff member
+        try:
+            send_staff_credentials_reset_email(
+                to_email=target_user['email'],
+                username=target_user['full_name'],
+                new_temp_password=new_password
+            )
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "success",
+            "message": f"Password for {target_user['full_name']} ({target_user['email']}) has been successfully updated."
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@auth_cart_bp.route('/staff/<int:staff_id>', methods=['DELETE'])
+@jwt_required()
+def delete_staff_member(staff_id):
+    """
+    Allow System Administrators (role 3 or 4) to remove/decommission a corporate staff account.
+    Prevents self-deletion.
+    """
+    claims = get_jwt()
+    caller_role = claims.get('role_id')
+    current_user_id = int(get_jwt_identity())
+
+    if caller_role not in (3, 4):
+        return jsonify({"message": "Access denied. Only System Administrators can remove staff accounts."}), 403
+
+    if staff_id == current_user_id:
+        return jsonify({"message": "Security Violation: You cannot remove your own active administrator account."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Check target user
+        cursor.execute("SELECT user_id, full_name, email, role_id FROM users WHERE user_id = %s", (staff_id,))
+        staff_row = cursor.fetchone()
+        if not staff_row:
+            return jsonify({"message": f"Staff member #{staff_id} not found."}), 404
+
+        if staff_row['role_id'] not in (2, 3, 4):
+            return jsonify({"message": "Target account is not an internal corporate staff member."}), 400
+
+        # Check for historical orders
+        cursor.execute("SELECT COUNT(*) AS order_count FROM orders WHERE user_id = %s", (staff_id,))
+        res_orders = cursor.fetchone()
+        if res_orders and res_orders['order_count'] > 0:
+            return jsonify({
+                "message": f"Cannot permanently remove {staff_row['full_name']} because they have {res_orders['order_count']} linked transaction records."
+            }), 400
+
+        # Clean up cart items and cart
+        cursor.execute("""
+            DELETE FROM cart_items 
+            WHERE cart_id IN (SELECT cart_id FROM carts WHERE user_id = %s)
+        """, (staff_id,))
+        cursor.execute("DELETE FROM carts WHERE user_id = %s", (staff_id,))
+
+        # Clean up audit logs
+        try:
+            cursor.execute("DELETE FROM audit_logs WHERE user_id = %s", (staff_id,))
+        except Exception:
+            pass
+
+        # Delete the user record
+        cursor.execute("DELETE FROM users WHERE user_id = %s", (staff_id,))
+        conn.commit()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Staff account for {staff_row['full_name']} ({staff_row['email']}) has been successfully removed."
+        }), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 
 
 # ----------------------------------------------------

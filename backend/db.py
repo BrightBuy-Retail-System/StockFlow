@@ -55,4 +55,4 @@ def get_db_connection():
             pool_reset_session=True,
             **db_config
         )
-    return _connection_pool.get_connection()
+    return _connection_pool.get_connection()
