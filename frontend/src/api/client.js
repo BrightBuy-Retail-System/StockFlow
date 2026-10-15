@@ -25,6 +25,10 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
+            // Allow callers to opt-out of an automatic redirect by setting `skipAuthRedirect` on the request config
+            if (error.config && error.config.skipAuthRedirect) {
+                return Promise.reject(error);
+            }
             // Only redirect if not already on the login page
             localStorage.removeItem('token');
             localStorage.removeItem('user');
