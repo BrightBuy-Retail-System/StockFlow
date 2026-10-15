@@ -336,15 +336,31 @@ def process_payment():
         # 4. Optional: Log to audit_logs if table exists
         try:
             audit_query = """
-                INSERT INTO audit_logs (action, table_name, record_id, details, created_at)
+                INSERT INTO audit_logs (user_id, event_action, event_details, ip_address, created_at)
                 VALUES (%s, %s, %s, %s, NOW())
             """
             cursor.execute(audit_query, (
+                None,
                 'PAYMENT_RECORDED',
-                'PAYMENT_TRANSACTION',
-                payment_id,
-                f"Txn Ref: {transaction_reference} | Amount: ${amount_decimal:.2f} | Status: {payment_status}"
+                f"Txn Ref: {transaction_reference} | Amount: ${amount_decimal:.2f} | Status: {payment_status} | Order #{order_id}",
+                '127.0.0.1'
             ))
+        except Exception:
+            pass
+
+        # 5. Also sync payments table if present
+        try:
+            cursor.execute(
+                """
+                INSERT INTO payments (order_id, payment_method, transaction_ref, amount, payment_status, processed_at)
+                VALUES (%s, %s, %s, %s, %s, NOW())
+                ON DUPLICATE KEY UPDATE
+                    payment_status = VALUES(payment_status),
+                    transaction_ref = VALUES(transaction_ref),
+                    processed_at = NOW()
+                """,
+                (order_id, payment_method, transaction_reference, amount_decimal, 'SUCCESS' if is_card else 'INITIATED')
+            )
         except Exception:
             pass
 
@@ -760,10 +776,7 @@ def delivery_estimates_report():
                 s.estimated_arrival,
                 COALESCE(c.city_name, 'Texas Regional') AS city_name,
                 COALESCE(c.hub_name, 'Central Hub') AS hub_name,
-                CASE 
-                    WHEN LOWER(c.city_name) IN ('dallas', 'fort worth', 'austin', 'houston', 'san antonio') THEN 5
-                    ELSE 7
-                END AS base_days,
+                COALESCE(c.base_lead_time_days, 5) AS base_days,
                 COALESCE((
                     SELECT MAX(CASE WHEN inv.stock_quantity <= 0 THEN 3 ELSE 0 END)
                     FROM order_items oi
