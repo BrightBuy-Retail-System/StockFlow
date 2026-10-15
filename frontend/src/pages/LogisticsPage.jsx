@@ -93,7 +93,7 @@ export default function LogisticsPage() {
     { code: 'TX-202610101300-C95F90', city: 'Dallas DFW Hub', status: 'PENDING' },
   ];
 
-  
+
 
   // Load initial cities, KPIs, sample variants, and shipments
   const loadInitialData = async () => {
@@ -261,7 +261,7 @@ export default function LogisticsPage() {
       });
       // Refresh pipeline list and KPIs
       fetchShipmentsList(pipelineStatusFilter, pipelineSearch);
-      api.get('/logistics/stats').then((r) => setStats(r.data)).catch(() => {});
+      api.get('/logistics/stats').then((r) => setStats(r.data)).catch(() => { });
     } catch (err) {
       setStatusUpdateMessage({
         type: 'error',
