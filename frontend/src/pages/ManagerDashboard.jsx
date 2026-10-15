@@ -29,25 +29,15 @@ export default function ManagerDashboard() {
   const [activeTab, setActiveTab] = useState('pipeline');
   const [pipelineSearch, setPipelineSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState('ALL');
+  // Confirmation Action State
   const [confirmingOrderId, setConfirmingOrderId] = useState(null);
   const [pipelinePage, setPipelinePage] = useState(1);
+  const [notice, setNotice] = useState(null);
 
-  // Staff Management State
-  const [staffList, setStaffList] = useState([]);
-  const [loadingStaff, setLoadingStaff] = useState(false);
-  const [staffSearch, setStaffSearch] = useState('');
-  const [staffRoleFilter, setStaffRoleFilter] = useState('ALL');
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [staffForm, setStaffForm] = useState({
-    username: '',
-    email: '',
-    password: 'password123',
-    role_id: 2,
-  });
-  const [staffFormSubmitting, setStaffFormSubmitting] = useState(false);
-  const [staffFormError, setStaffFormError] = useState('');
-  const [staffFormSuccess, setStaffFormSuccess] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const showNotice = (msg, type = 'success') => {
+    setNotice({ msg, type });
+    setTimeout(() => setNotice(null), 4500);
+  };
 
   // Authentication check
   useEffect(() => {
@@ -110,25 +100,10 @@ export default function ManagerDashboard() {
   // Dispatch / Ship order
   const handleDispatchOrder = async (orderId) => {
     try {
-      await api.post('/auth_cart/staff/register', {
-        username: staffForm.username.trim(),
-        email: staffForm.email.trim(),
-        password: staffForm.password,
-        role_id: Number(staffForm.role_id),
-      });
-
-      const roleTitle = Number(staffForm.role_id) === 3 ? 'System Administrator' : 'Store Executive & Manager';
-      setStaffFormSuccess(`Successfully registered ${staffForm.username} as ${roleTitle}!`);
-
-      await fetchStaffMembers();
-
-      setStaffForm({
-        username: '',
-        email: '',
-        password: 'password123',
-        role_id: 2,
-      });
-      setShowPassword(false);
+      setConfirmingOrderId(orderId);
+      const res = await api.patch(`/orders/${orderId}/status`, { status: 'SHIPPED' });
+      showNotice(res.data?.message || `Order #${orderId} marked as Dispatched & In Transit!`);
+      await fetchExecutiveData();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to dispatch order.';
       showNotice(msg, 'error');
