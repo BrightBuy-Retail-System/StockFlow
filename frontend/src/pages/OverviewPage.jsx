@@ -465,6 +465,7 @@ export default function OverviewPage() {
       localStorage.setItem('cart', JSON.stringify(list));
     }
 
+    window.dispatchEvent(new Event('cartUpdated'));
     showToast('Added to cart', `${p.name} (x${quantity})`, 'success', '/auth-cart');
     setQuickView(null);
   };
