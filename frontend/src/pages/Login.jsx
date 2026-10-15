@@ -67,29 +67,12 @@ export default function LoginPage() {
     setIsSuccess(false);
 
     try {
-      let data;
-      try {
-        const res = await api.post('/auth_cart/login', {
-          email: emailOrUser,
-          username: emailOrUser,
-          password: pwdToUse,
-        });
-        data = res.data;
-      } catch (axiosErr) {
-        if (axiosErr.response?.data?.message) {
-          throw new Error(axiosErr.response.data.message);
-        }
-        // Fallback to direct fetch if network/proxy issue
-        const response = await fetch(`${baseUrl}/api/auth_cart/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: emailOrUser, username: emailOrUser, password: pwdToUse }),
-        });
-        data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || 'Invalid credentials. Please try again.');
-        }
-      }
+      const res = await api.post('/auth_cart/login', {
+        email: emailOrUser,
+        username: emailOrUser,
+        password: pwdToUse,
+      });
+      const data = res.data;
 
       if (data.access_token) {
         localStorage.setItem('token', data.access_token);
@@ -101,13 +84,14 @@ export default function LoginPage() {
 
       setTimeout(() => {
         const roleId = Number(data.user?.role_id);
-        if (redirectUrl && roleId === 1) {
+        const isSafeRedirect = redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//');
+        if (isSafeRedirect && roleId === 1) {
           navigate(redirectUrl);
         } else if (roleId === 1) {
           navigate('/customer-dashboard');
         } else if (roleId === 2) {
           navigate('/manager-dashboard');
-        } else if (roleId === 3) {
+        } else if (roleId === 3 || roleId === 4) {
           navigate('/system-administrator');
         } else {
           navigate('/analytics');
@@ -115,7 +99,7 @@ export default function LoginPage() {
       }, 500);
     } catch (error) {
       console.error('Login error:', error);
-      setMessage(error.message || 'Invalid email or password. Please try again.');
+      setMessage(error.response?.data?.message || error.message || 'Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
