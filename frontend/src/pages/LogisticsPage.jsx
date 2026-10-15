@@ -51,6 +51,17 @@ function formatDateTime(dateTimeStr) {
 }
 
 export default function LogisticsPage() {
+  // Auth Identity Context
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const currentUserRole = Number(storedUser?.role_id ?? 1);
+  const isManagerOrAdmin = [2, 3, 4].includes(currentUserRole);
+
   // Navigation Tabs: 'hubs' | 'estimator' | 'tracker' | 'pipeline'
   const [activeTab, setActiveTab] = useState('hubs');
 
@@ -85,13 +96,20 @@ export default function LogisticsPage() {
   const [statusUpdateMessage, setStatusUpdateMessage] = useState(null);
   const [updatingShipmentId, setUpdatingShipmentId] = useState(null);
 
-  // Sample quick-click tracking numbers
-  const sampleTrackingNumbers = [
-    { code: 'TX-TRK-9081241', city: 'Austin Hub', status: 'DELIVERED' },
-    { code: 'TX-BRIGHT-20260107', city: 'Plano Annex', status: 'IN_TRANSIT' },
-    { code: 'TX-BRIGHT-20260106', city: 'Arlington Station', status: 'DISPATCHED' },
-    { code: 'TX-202610101300-C95F90', city: 'Dallas DFW Hub', status: 'PENDING' },
-  ];
+  // Dynamic quick-click tracking samples from recent shipments
+  const quickTrackSamples = useMemo(() => {
+    if (shipmentsList && shipmentsList.length > 0) {
+      return shipmentsList.slice(0, 4).map((s) => ({
+        code: s.tracking_number,
+        city: s.hub_name || s.city_name || 'Texas Hub',
+        status: s.shipping_status,
+      }));
+    }
+    return [
+      { code: 'TX-TRK-9081241', city: 'Austin Hub', status: 'DELIVERED' },
+      { code: 'TX-TRK-9081242', city: 'Gulf Coast Hub', status: 'DISPATCHED' },
+    ];
+  }, [shipmentsList]);
 
   // Load initial cities, KPIs, sample variants, and shipments
   const loadInitialData = async () => {
@@ -110,6 +128,12 @@ export default function LogisticsPage() {
       if (variantsRes.data && variantsRes.data.length > 0 && !selectedVariantId) {
         setSelectedVariantId(variantsRes.data[0].variant_id);
       }
+      try {
+        const shipRes = await api.get('/logistics/shipments', { params: { limit: 10 } });
+        if (Array.isArray(shipRes.data)) {
+          setShipmentsList(shipRes.data);
+        }
+      } catch (_) {}
     } catch (err) {
       console.error('Failed to load logistics metadata:', err);
     } finally {
@@ -141,12 +165,17 @@ export default function LogisticsPage() {
   useEffect(() => {
     if (activeTab === 'pipeline' && !isManagerOrAdmin) {
       setActiveTab('tracker');
-      return;
     }
-    if (activeTab === 'pipeline') {
+  }, [activeTab, isManagerOrAdmin]);
+
+  // Debounce pipelineSearch before querying backend
+  useEffect(() => {
+    if (activeTab !== 'pipeline' || !isManagerOrAdmin) return;
+    const timer = setTimeout(() => {
       fetchShipmentsList(pipelineStatusFilter, pipelineSearch);
-    }
-  }, [activeTab, pipelineStatusFilter]);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [activeTab, pipelineStatusFilter, pipelineSearch, isManagerOrAdmin]);
 
   // Refresh all logistics data
   const handleRefresh = async () => {
@@ -266,16 +295,6 @@ export default function LogisticsPage() {
         return 1;
     }
   };
-
-  const storedUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
-    } catch {
-      return {};
-    }
-  })();
-  const currentUserRole = Number(storedUser?.role_id ?? 1);
-  const isManagerOrAdmin = [2, 3, 4].includes(currentUserRole);
 
   return (
     <div>
@@ -782,32 +801,34 @@ export default function LogisticsPage() {
           </div>
 
           {/* Quick-Click Sample Tracking Badges */}
-          <div style={{ marginBottom: '16px' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '8px' }}>
-              1-Click Demo Samples:
-            </span>
-            <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-              {sampleTrackingNumbers.map((s) => (
-                <button
-                  key={s.code}
-                  type="button"
-                  onClick={() => handleQuickTrack(s.code)}
-                  style={{
-                    background: 'var(--bg-subtle)',
-                    border: '1px solid var(--border-color)',
-                    padding: '4px 10px',
-                    borderRadius: '8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    color: 'var(--text-main)',
-                  }}
-                >
-                  <code>{s.code}</code> ({s.city}) &middot; <span className={`chip ${STATUS_CHIP[s.status] || 'chip-slate'}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>{s.status}</span>
-                </button>
-              ))}
+          {quickTrackSamples.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginRight: '8px' }}>
+                Quick Track Recent Shipments:
+              </span>
+              <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                {quickTrackSamples.map((s) => (
+                  <button
+                    key={s.code}
+                    type="button"
+                    onClick={() => handleQuickTrack(s.code)}
+                    style={{
+                      background: 'var(--bg-subtle)',
+                      border: '1px solid var(--border-color)',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    <code>{s.code}</code> ({s.city}) · <span className={`chip ${STATUS_CHIP[s.status] || 'chip-slate'}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>{s.status}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Search Bar */}
           <form onSubmit={(e) => { e.preventDefault(); handleTrack(); }} style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -950,7 +971,7 @@ export default function LogisticsPage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recipient Information</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>
                     {shipment.customer_name || 'Registered Customer'}
-                    {shipment.recipient_phone ? ` &middot; ${shipment.recipient_phone}` : ''}
+                    {shipment.recipient_phone ? ` · ${shipment.recipient_phone}` : ''}
                   </div>
                 </div>
               </div>
