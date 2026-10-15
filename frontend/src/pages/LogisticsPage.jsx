@@ -93,6 +93,8 @@ export default function LogisticsPage() {
     { code: 'TX-202610101300-C95F90', city: 'Dallas DFW Hub', status: 'PENDING' },
   ];
 
+  
+
   // Load initial cities, KPIs, sample variants, and shipments
   const loadInitialData = async () => {
     try {
@@ -147,6 +149,15 @@ export default function LogisticsPage() {
       fetchShipmentsList(pipelineStatusFilter, pipelineSearch);
     }
   }, [activeTab, pipelineStatusFilter]);
+
+  // Debounced search for pipeline to avoid firing on every keystroke
+  useEffect(() => {
+    if (activeTab !== 'pipeline') return;
+    const t = setTimeout(() => {
+      fetchShipmentsList(pipelineStatusFilter, pipelineSearch);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [pipelineSearch, pipelineStatusFilter, activeTab]);
 
   // Refresh all logistics data
   const handleRefresh = async () => {
@@ -203,7 +214,7 @@ export default function LogisticsPage() {
 
     setLoadingTrack(true);
     try {
-      const res = await api.get(`/logistics/shipments/${encodeURIComponent(queryCode)}`);
+      const res = await api.get(`/logistics/shipments/${encodeURIComponent(queryCode)}`, { skipAuthRedirect: true });
       setShipment(res.data);
       setTrackingNumber(queryCode);
     } catch (err) {
@@ -215,8 +226,24 @@ export default function LogisticsPage() {
 
   // Quick track helper for sample pills
   const handleQuickTrack = (code) => {
+    const demo = sampleTrackingNumbers.find((s) => s.code === code);
     setTrackingNumber(code);
     setActiveTab('tracker');
+    if (demo) {
+      // Render a harmless demo shipment locally for guest users to avoid protected API call
+      setShipment({
+        tracking_number: demo.code,
+        shipping_status: demo.status,
+        estimated_arrival: null,
+        dispatched_at: null,
+        delivered_at: null,
+        delivery_address: '',
+        recipient_phone: '',
+        city_name: demo.city,
+        customer_name: 'Demo Customer',
+      });
+      return;
+    }
     handleTrack(code);
   };
 
@@ -954,7 +981,7 @@ export default function LogisticsPage() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Recipient Information</div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>
                     {shipment.customer_name || 'Registered Customer'}
-                    {shipment.recipient_phone ? ` &middot; ${shipment.recipient_phone}` : ''}
+                    {shipment.recipient_phone ? ' · ' + shipment.recipient_phone : ''}
                   </div>
                 </div>
               </div>
@@ -1014,7 +1041,6 @@ export default function LogisticsPage() {
               value={pipelineSearch}
               onChange={(e) => {
                 setPipelineSearch(e.target.value);
-                fetchShipmentsList(pipelineStatusFilter, e.target.value);
               }}
               style={{
                 width: '100%',
