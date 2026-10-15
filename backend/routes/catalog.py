@@ -1,3 +1,4 @@
+import mysql.connector
 from flask import Blueprint, jsonify, request  # pyrefly: ignore
 from db import get_db_connection  # pyrefly: ignore
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity, verify_jwt_in_request
@@ -57,7 +58,7 @@ def get_categories():
 def get_products():
     """
     Return products.
-    Managers & Admins (role 2, 3) see all products including inactive ones.
+    Managers & Admins (role 2, 3, 4) see all products including inactive ones.
     Customers (role 1) and guests see only active products.
     """
     role = get_role()
@@ -66,9 +67,13 @@ def get_products():
 
     sql = """
         SELECT p.product_id, p.title, p.title AS name, p.description, p.image_url, p.base_price,
-               p.is_active, c.category_id, c.name AS category_name
+               p.is_active, c.category_id, c.name AS category_name,
+               COALESCE(SUM(i.stock_quantity), 0) AS total_stock,
+               GROUP_CONCAT(DISTINCT pv.attribute_value SEPARATOR ' ') AS variant_attributes
         FROM   products p
         JOIN   categories c ON c.category_id = p.category_id
+        LEFT JOIN product_variants pv ON pv.product_id = p.product_id
+        LEFT JOIN inventory i ON i.variant_id = pv.variant_id
     """
 
     conditions = []
@@ -88,7 +93,8 @@ def get_products():
         params.extend([like, like])
 
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    rows = query(f"{sql} {where_clause} ORDER BY p.title", tuple(params))
+    group_clause = "GROUP BY p.product_id, p.title, p.description, p.image_url, p.base_price, p.is_active, c.category_id, c.name"
+    rows = query(f"{sql} {where_clause} {group_clause} ORDER BY p.title", tuple(params))
     return jsonify(rows)
 
 
@@ -97,6 +103,7 @@ def get_product_detail(product_id):
     """
     Return one product with all its variants and current stock levels.
     """
+    role = get_role()
     products = query(
         """
         SELECT p.product_id, p.title AS name, p.description, p.image_url, p.base_price,
@@ -112,11 +119,14 @@ def get_product_detail(product_id):
         return jsonify({"error": "Product not found"}), 404
 
     product = products[0]
+    if product.get('is_active') == 0 and role not in (2, 3, 4):
+        return jsonify({"error": "Product not found"}), 404
 
     # Variants + stock for this product
     variants = query(
         """
         SELECT pv.variant_id, pv.sku, pv.attribute_name, pv.attribute_value,
+               pv.price_override,
                COALESCE(pv.price_override, p.base_price) AS price,
                COALESCE(i.stock_quantity, 0) AS stock
         FROM   product_variants pv
@@ -133,11 +143,18 @@ def get_product_detail(product_id):
 
 # get low stock
 @catalog_bp.route('/inventory/low-stock', methods=['GET'])
+@jwt_required()
 def get_low_stock():
+    err = manager_required()
+    if err: return err
+
     """
     Return all variants where stock is below a threshold
     """
-    threshold = int(request.args.get('threshold', 10))
+    try:
+        threshold = int(request.args.get('threshold', 10))
+    except (ValueError, TypeError):
+        threshold = 10
 
     rows = query(
         """
@@ -276,12 +293,22 @@ def create_product():
     err = manager_required()
     if err: return err
 
-    data = request.get_json()
-    res = execute(
-        "INSERT INTO products (title, description, image_url, base_price, category_id, is_active) VALUES (%s, %s, %s, %s, %s, 1)",
-        (data['title'], data.get('description', ''), data.get('image_url'), data['base_price'], data['category_id'])
-    )
-    return jsonify({"product_id": res['lastrowid']}), 201
+    data = request.get_json() or {}
+    title = data.get('title')
+    base_price = data.get('base_price')
+    category_id = data.get('category_id')
+
+    if not title or base_price is None or not category_id:
+        return jsonify({"error": "title, base_price, and category_id are required"}), 400
+
+    try:
+        res = execute(
+            "INSERT INTO products (title, description, image_url, base_price, category_id, is_active) VALUES (%s, %s, %s, %s, %s, 1)",
+            (title, data.get('description', ''), data.get('image_url'), base_price, category_id)
+        )
+        return jsonify({"product_id": res['lastrowid']}), 201
+    except mysql.connector.IntegrityError as ie:
+        return jsonify({"error": f"Database integrity error: {str(ie)}"}), 409
 
 # update product — managers & admins only
 @catalog_bp.route('/products/<int:product_id>', methods=['PATCH', 'PUT'])
@@ -340,22 +367,25 @@ def create_variant(product_id=None):
     if not product:
         return jsonify({"error": "Product not found"}), 404
 
-    res = execute(
-        """
-        INSERT INTO product_variants (product_id, sku, attribute_name, attribute_value, price_override)
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (target_product_id, sku, attribute_name, attribute_value, price_override)
-    )
-    variant_id = res['lastrowid']
+    try:
+        res = execute(
+            """
+            INSERT INTO product_variants (product_id, sku, attribute_name, attribute_value, price_override)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (target_product_id, sku, attribute_name, attribute_value, price_override)
+        )
+        variant_id = res['lastrowid']
 
-    # Seed an inventory row
-    execute(
-        "INSERT INTO inventory (variant_id, stock_quantity, low_stock_threshold) VALUES (%s, %s, %s)",
-        (variant_id, max(0, initial_stock), max(1, low_stock))
-    )
+        # Seed an inventory row
+        execute(
+            "INSERT INTO inventory (variant_id, stock_quantity, low_stock_threshold) VALUES (%s, %s, %s)",
+            (variant_id, max(0, initial_stock), max(1, low_stock))
+        )
 
-    return jsonify({"variant_id": variant_id}), 201
+        return jsonify({"variant_id": variant_id}), 201
+    except mysql.connector.IntegrityError as ie:
+        return jsonify({"error": f"SKU already exists or integrity constraint failed: {str(ie)}"}), 409
 
 
 # update variant — managers & admins only
@@ -391,11 +421,29 @@ def delete_variant(variant_id):
     if err: return err
 
     """
-    Permanently remove a variant and its inventory row.
+    Permanently remove a variant and its inventory row if not referenced in orders/cart.
     """
-    execute("DELETE FROM inventory WHERE variant_id = %s", (variant_id,))
-    execute("DELETE FROM product_variants WHERE variant_id = %s", (variant_id,))
-    return jsonify({"deleted": variant_id})
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT COUNT(*) AS c FROM order_items WHERE variant_id = %s", (variant_id,))
+        if cursor.fetchone()['c'] > 0:
+            return jsonify({"error": "Cannot delete variant: It is referenced in existing order items."}), 400
+
+        cursor.execute("SELECT COUNT(*) AS c FROM cart_items WHERE variant_id = %s", (variant_id,))
+        if cursor.fetchone()['c'] > 0:
+            return jsonify({"error": "Cannot delete variant: It is currently present in customer cart(s)."}), 400
+
+        cursor.execute("DELETE FROM inventory WHERE variant_id = %s", (variant_id,))
+        cursor.execute("DELETE FROM product_variants WHERE variant_id = %s", (variant_id,))
+        conn.commit()
+        return jsonify({"deleted": variant_id})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # restock / adjust stock for a variant — managers & admins only
@@ -422,6 +470,7 @@ def update_inventory(variant_id):
             (variant_id,)
         )
 
+    has_updated = False
     if 'stock_quantity' in data:
         # Set exact stock count directly
         try:
@@ -433,6 +482,7 @@ def update_inventory(variant_id):
             "UPDATE inventory SET stock_quantity = %s WHERE variant_id = %s",
             (exact_qty, variant_id)
         )
+        has_updated = True
     elif 'adjust' in data:
         # Relative adjustment (+/- delta)
         try:
@@ -448,13 +498,21 @@ def update_inventory(variant_id):
             """,
             (delta, variant_id)
         )
-    elif 'low_stock_threshold' in data:
-        threshold = max(0, int(data['low_stock_threshold']))
+        has_updated = True
+
+    if 'low_stock_threshold' in data:
+        try:
+            threshold = max(0, int(data['low_stock_threshold']))
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid low_stock_threshold value"}), 400
+
         execute(
             "UPDATE inventory SET low_stock_threshold = %s WHERE variant_id = %s",
             (threshold, variant_id)
         )
-    else:
+        has_updated = True
+
+    if not has_updated:
         return jsonify({"error": "Provide stock_quantity, adjust, or low_stock_threshold"}), 400
 
     # Return the updated row
@@ -467,7 +525,11 @@ def update_inventory(variant_id):
 
 # admin inventory overview — product variants + stock
 @catalog_bp.route('/admin/inventory', methods=['GET'])
+@jwt_required()
 def get_admin_inventory():
+    err = manager_required()
+    if err: return err
+
     """
     Return all product variants joined with parent product, category, and inventory stock.
     Accessible to managers and admins.
@@ -499,11 +561,12 @@ def get_admin_inventory():
     return jsonify(rows)
 
 
-# reserve stock when added to cart
+# check stock availability for cart items (read-only; no double deduction)
 @catalog_bp.route('/cart/reserve', methods=['POST'])
 def reserve_cart_stock():
     """
-    Atomically deduct stock from inventory in the database when a customer adds items to their cart.
+    Read-only stock availability check when adding items to cart.
+    Actual stock deduction occurs once at checkout in orders.py.
     Body: { "variant_id": <int>, "quantity": <int> }
     """
     data = request.get_json() or {}
@@ -519,7 +582,7 @@ def reserve_cart_stock():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s FOR UPDATE", (variant_id,))
+        cursor.execute("SELECT stock_quantity FROM inventory WHERE variant_id = %s", (variant_id,))
         row = cursor.fetchone()
         if not row:
             return jsonify({"error": "Inventory record for variant not found"}), 404
@@ -531,21 +594,14 @@ def reserve_cart_stock():
                 "available_stock": current_stock
             }), 400
 
-        cursor.execute(
-            "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE variant_id = %s",
-            (qty, variant_id)
-        )
-        conn.commit()
-
-        new_stock = current_stock - qty
         return jsonify({
             "success": True,
             "variant_id": variant_id,
-            "deducted": qty,
-            "remaining_stock": new_stock
+            "available_stock": current_stock,
+            "reserved": qty,
+            "remaining_stock": current_stock
         })
     except Exception as e:
-        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -639,11 +695,14 @@ def create_category():
     if not name or not slug:
         return jsonify({"error": "name and slug are required"}), 400
 
-    res = execute(
-        "INSERT INTO categories (name, slug) VALUES (%s, %s)",
-        (name, slug)
-    )
-    return jsonify({"category_id": res['lastrowid']}), 201
+    try:
+        res = execute(
+            "INSERT INTO categories (name, slug) VALUES (%s, %s)",
+            (name, slug)
+        )
+        return jsonify({"category_id": res['lastrowid']}), 201
+    except mysql.connector.IntegrityError as ie:
+        return jsonify({"error": f"Category name or slug already exists: {str(ie)}"}), 409
 
 
 # update category — managers & admins only
@@ -682,15 +741,15 @@ def delete_category(category_id):
     if err: return err
 
     """
-    Delete a category. If products are linked to this category,
+    Delete a category. If active products are linked to this category,
     returns an informative conflict error to prevent orphaned products.
     """
-    linked_prods = query("SELECT COUNT(*) AS count FROM products WHERE category_id = %s", (category_id,))
+    linked_prods = query("SELECT COUNT(*) AS count FROM products WHERE category_id = %s AND is_active = 1", (category_id,))
     prod_count = linked_prods[0]['count'] if linked_prods else 0
 
     if prod_count > 0:
         return jsonify({
-            "error": f"Cannot delete category: {prod_count} product(s) are currently assigned to it. Please reassign or delete those products first."
+            "error": f"Cannot delete category: {prod_count} active product(s) are currently assigned to it. Please reassign or delete those products first."
         }), 400
 
     execute("DELETE FROM categories WHERE category_id = %s", (category_id,))
