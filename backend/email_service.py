@@ -129,6 +129,8 @@ def _base_email_template(title: str, content_html: str) -> str:
 
 # 1. Registration OTP
 def send_registration_otp_email(to_email: str, username: str, otp_code: str):
+    logger.info(f"[AUTH DEV FALLBACK] Registration OTP for {to_email}: {otp_code}")
+    print(f"[AUTH DEV FALLBACK] Registration OTP for {to_email}: {otp_code}", flush=True)
     subject = f"Your BrightBuy Ecommerce Verification Code: {otp_code}"
     body = f"""
         <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 700;">Welcome to BrightBuy Ecommerce!</h2>
@@ -148,6 +150,8 @@ def send_registration_otp_email(to_email: str, username: str, otp_code: str):
 
 # 2. Forgot Password OTP
 def send_forgot_password_otp_email(to_email: str, username: str, otp_code: str):
+    logger.info(f"[AUTH DEV FALLBACK] Password Reset OTP for {to_email}: {otp_code}")
+    print(f"[AUTH DEV FALLBACK] Password Reset OTP for {to_email}: {otp_code}", flush=True)
     subject = f"BrightBuy Ecommerce Password Reset Code: {otp_code}"
     body = f"""
         <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 700;">Password Reset Request</h2>
