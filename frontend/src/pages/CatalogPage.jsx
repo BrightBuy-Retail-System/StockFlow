@@ -111,10 +111,10 @@ function safeStarCount(reviews) {
   return '★'.repeat(avg) + '☆'.repeat(5 - avg);
 }
 
-// ─── format Sri Lankan Rupee ──────────────────────────────────────────────────
+// ─── format USD ($) ──────────────────────────────────────────────────────────
 function formatRs(amount) {
   const val = Number(amount) || 0;
-  return `Rs ${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // ─── reusable field row for forms ─────────────────────────────────────────────
@@ -139,7 +139,7 @@ export default function CatalogPage() {
     currentUser = null;
   }
   const isLoggedIn = !!currentUser;
-  const isManager = currentUser?.role_id === 2 || currentUser?.role_id === 3;
+  const isManager = [2, 3, 4].includes(Number(currentUser?.role_id));
 
   // ── Catalog State ──
   const [categories, setCategories] = useState([]);
@@ -151,7 +151,7 @@ export default function CatalogPage() {
   const [error, setError] = useState(null);
 
   // ── Sorting ──
-  const [sortBy, setSortBy] = useState('best-selling');
+  const [sortBy, setSortBy] = useState('newest');
 
   // ── Filters State ──
   const [availabilityFilter, setAvailabilityFilter] = useState({ inStock: true, outOfStock: true });
@@ -206,9 +206,6 @@ export default function CatalogPage() {
   const [activeTab, setActiveTab] = useState('description');
   const [toastMessage, setToastMessage] = useState(null);
   const [faqOpen, setFaqOpen] = useState({ 0: false, 1: false, 2: false });
-  const [showWriteReview, setShowWriteReview] = useState(false);
-  const [newReview, setNewReview] = useState({ rating: 5, name: '', title: '', comment: '' });
-  const [userReviews, setUserReviews] = useState([]);
 
   // In-cart quantity helper for any variant (supports both guest and authenticated users)
   const getVariantInCart = useCallback((vId) => {
@@ -241,7 +238,7 @@ export default function CatalogPage() {
   const [showLowStock, setShowLowStock] = useState(false);
 
   // ── Create/Edit Product modal ──
-  const EMPTY_PRODUCT = { title: '', description: '', base_price: '', category_id: '', is_active: 1 };
+  const EMPTY_PRODUCT = { title: '', description: '', base_price: '', category_id: '', image_url: '', is_active: 1 };
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
@@ -249,7 +246,7 @@ export default function CatalogPage() {
   const [productFormError, setProductFormError] = useState(null);
 
   // ── Variant modal ──
-  const EMPTY_VARIANT = { sku: '', attribute_name: '', attribute_value: '', price_override: '' };
+  const EMPTY_VARIANT = { sku: '', attribute_name: '', attribute_value: '', price_override: '', stock_quantity: 0, low_stock_threshold: 10 };
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editVariant, setEditVariant] = useState(null);
   const [variantForm, setVariantForm] = useState(EMPTY_VARIANT);
@@ -309,12 +306,6 @@ export default function CatalogPage() {
     if (!selectedProductId) return;
     if (!silent) setDetailLoading(true);
     setDetailError(null);
-    try {
-      const stored = localStorage.getItem(`reviews_${selectedProductId}`);
-      setUserReviews(stored ? JSON.parse(stored) : []);
-    } catch {
-      setUserReviews([]);
-    }
     api.get(`/catalog/products/${selectedProductId}`)
       .then((res) => {
         setProductDetail(res.data);
@@ -422,6 +413,7 @@ export default function CatalogPage() {
       description: p.description || '',
       base_price: p.base_price || '',
       category_id: p.category_id || categories.find((c) => c.name === p.category_name)?.category_id || '',
+      image_url: p.image_url || '',
       is_active: p.is_active ?? 1,
     });
     setProductFormError(null);
@@ -481,7 +473,7 @@ export default function CatalogPage() {
       sku: v.sku || '',
       attribute_name: v.attribute_name || '',
       attribute_value: v.attribute_value || '',
-      price_override: v.price !== undefined && v.price !== null ? v.price : '',
+      price_override: v.price_override ?? '',
     });
     setVariantFormError(null);
     setShowVariantForm(true);
@@ -501,6 +493,15 @@ export default function CatalogPage() {
       attribute_value: variantForm.attribute_value.trim() || null,
       price_override: variantForm.price_override !== '' ? Number(variantForm.price_override) : null,
     };
+
+    if (!editVariant) {
+      if (variantForm.stock_quantity !== undefined && variantForm.stock_quantity !== '') {
+        payload.stock_quantity = Number(variantForm.stock_quantity);
+      }
+      if (variantForm.low_stock_threshold !== undefined && variantForm.low_stock_threshold !== '') {
+        payload.low_stock_threshold = Number(variantForm.low_stock_threshold);
+      }
+    }
 
     const call = editVariant
       ? api.patch(`/catalog/variants/${editVariant.variant_id}`, payload)
@@ -797,38 +798,6 @@ export default function CatalogPage() {
     }
   };
 
-  const handleAddReview = (e) => {
-    e.preventDefault();
-    if (!newReview.name.trim() || !newReview.comment.trim()) {
-      alert('Please provide your name and review details.');
-      return;
-    }
-    const rev = {
-      id: Date.now(),
-      rating: Math.max(1, Math.min(5, Number(newReview.rating) || 5)),
-      name: newReview.name.trim(),
-      title: newReview.title.trim() || 'Great purchase!',
-      comment: newReview.comment.trim(),
-      date: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-      verified: true,
-    };
-    try {
-      const raw = localStorage.getItem(`reviews_${selectedProductId}`);
-      const existing = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(existing) ? existing : [];
-      const updated = [rev, ...list];
-      localStorage.setItem(`reviews_${selectedProductId}`, JSON.stringify(updated));
-      setUserReviews(updated);
-    } catch (err) {
-      console.error(err);
-      setUserReviews((prev) => [rev, ...prev]);
-    }
-    setNewReview({ rating: 5, name: '', title: '', comment: '' });
-    setShowWriteReview(false);
-    setToastMessage('✓ Thank you for your review!');
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
   // ═══════════════════════════════════════════════════════════════════════════
   // CATEGORIES LIST PREPARATION (Strictly from database)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -861,9 +830,9 @@ export default function CatalogPage() {
     let list = Array.isArray(products) ? [...products] : [];
 
     if (!availabilityFilter.inStock && availabilityFilter.outOfStock) {
-      list = list.filter((p) => p.is_active === 0);
+      list = list.filter((p) => Number(p.total_stock) === 0 || p.is_active === 0);
     } else if (availabilityFilter.inStock && !availabilityFilter.outOfStock) {
-      list = list.filter((p) => p.is_active !== 0);
+      list = list.filter((p) => Number(p.total_stock) > 0 && p.is_active !== 0);
     } else if (!availabilityFilter.inStock && !availabilityFilter.outOfStock) {
       list = [];
     }
@@ -879,15 +848,15 @@ export default function CatalogPage() {
 
     if (selectedColors.length > 0) {
       list = list.filter((p) => {
-        const name = (p.name || '').toLowerCase();
-        return selectedColors.some((c) => name.includes(c.toLowerCase()));
+        const text = (p.variant_attributes || p.name || p.title || '').toLowerCase();
+        return selectedColors.some((c) => text.includes(c.toLowerCase()));
       });
     }
 
     if (selectedStorage.length > 0) {
       list = list.filter((p) => {
-        const name = (p.name || '').toLowerCase();
-        return selectedStorage.some((s) => name.includes(s.toLowerCase()));
+        const text = (p.variant_attributes || p.name || p.title || '').toLowerCase();
+        return selectedStorage.some((s) => text.includes(s.toLowerCase()));
       });
     }
 
@@ -896,9 +865,11 @@ export default function CatalogPage() {
     } else if (sortBy === 'price-high') {
       list.sort((a, b) => Number(b.base_price) - Number(a.base_price));
     } else if (sortBy === 'alpha-asc') {
-      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      list.sort((a, b) => (a.name || a.title || '').localeCompare(b.name || b.title || ''));
     } else if (sortBy === 'alpha-desc') {
-      list.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+      list.sort((a, b) => (b.name || b.title || '').localeCompare(a.name || a.title || ''));
+    } else {
+      list.sort((a, b) => (Number(b.product_id) || 0) - (Number(a.product_id) || 0));
     }
 
     return list;
@@ -1023,7 +994,7 @@ export default function CatalogPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
                 type="number"
-                placeholder="Rs Min"
+                placeholder="$ Min"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 style={{
@@ -1040,7 +1011,7 @@ export default function CatalogPage() {
               <span style={{ color: '#826e6e' }}>–</span>
               <input
                 type="number"
-                placeholder="Rs Max"
+                placeholder="$ Max"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
                 style={{
@@ -1517,38 +1488,12 @@ export default function CatalogPage() {
                 {formatRs(currentPrice)}
               </div>
               <div style={{ fontSize: '0.82rem', color: '#78716c', marginTop: '4px' }}>
-                Product Price: <strong>Rs {priceWithFee}</strong> with Service Fee (Rs {serviceFee})
+                Product Price: <strong>${priceWithFee}</strong> with Service Fee (${serviceFee})
               </div>
 
               <div style={{ fontSize: '0.8rem', color: '#a8a29e', marginTop: '3px' }}>
                 Shipping calculated at checkout.
               </div>
-            </div>
-
-            {/* Ratings Row (Real reviews only) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {userReviews.length > 0 ? (
-                <>
-                  <span style={{ color: '#f59e0b', fontSize: '0.95rem', letterSpacing: '2px' }}>
-                    {safeStarCount(userReviews)}
-                  </span>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1a1917' }}>
-                    {safeAverageRating(userReviews)}
-                  </span>
-                  <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
-                    ({userReviews.length} {userReviews.length === 1 ? 'review' : 'reviews'})
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span style={{ color: '#cbd5e1', fontSize: '0.95rem', letterSpacing: '2px' }}>
-                    ☆☆☆☆☆
-                  </span>
-                  <span style={{ fontSize: '0.82rem', color: '#78716c' }}>
-                    No reviews yet
-                  </span>
-                </>
-              )}
             </div>
 
             {/* Short Description Accordion */}
@@ -1906,7 +1851,7 @@ export default function CatalogPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => adjustStock(v.variant_id, 5)}
+                            onClick={() => adjustStock(v.variant_id, '+5')}
                             disabled={stockSaving[v.variant_id]}
                             title="Increase stock by 5"
                             style={{
@@ -2074,178 +2019,7 @@ export default function CatalogPage() {
           </div>
         </div>
 
-        {/* ── SECTION 4: CUSTOMER REVIEWS ── */}
-        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)', padding: '28px' }}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1a1917', margin: '0 0 20px 0', textAlign: 'center' }}>
-            Customer Reviews
-          </h2>
 
-          {/* Rating Summary Header & Write Review Button */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '24px',
-              paddingBottom: '24px',
-              borderBottom: '1px solid rgba(0,0,0,0.08)',
-            }}
-          >
-            <div>
-              <div style={{ color: userReviews.length > 0 ? '#f59e0b' : '#cbd5e1', fontSize: '1.2rem', letterSpacing: '3px' }}>
-                {safeStarCount(userReviews)}
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1917', marginTop: '4px' }}>
-                {userReviews.length > 0 ? `${safeAverageRating(userReviews)} out of 5` : 'No reviews yet'}
-              </div>
-              <div style={{ fontSize: '0.82rem', color: '#78716c' }}>
-                {userReviews.length > 0 ? `Based on ${userReviews.length} ${userReviews.length === 1 ? 'review' : 'reviews'}` : 'Be the first to review this product'}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowWriteReview((v) => !v)}
-              style={{
-                padding: '10px 24px',
-                borderRadius: '9999px',
-                border: 'none',
-                background: '#3b5bcf',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(59,91,207,0.3)',
-              }}
-            >
-              {showWriteReview ? 'Close Form' : 'Write a review'}
-            </button>
-          </div>
-
-          {/* Write a review interactive form */}
-          {showWriteReview && (
-            <form
-              onSubmit={handleAddReview}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: '16px',
-                padding: '20px',
-                margin: '20px 0',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#1a1917' }}>Write a Customer Review</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                <Field label="Your Name *">
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dineth T."
-                    value={newReview.name}
-                    onChange={(e) => setNewReview((r) => ({ ...r, name: e.target.value }))}
-                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem' }}
-                  />
-                </Field>
-                <Field label="Rating">
-                  <select
-                    value={newReview.rating}
-                    onChange={(e) => setNewReview((r) => ({ ...r, rating: Number(e.target.value) }))}
-                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', background: '#fff' }}
-                  >
-                    <option value={5}>★★★★★ 5 Stars</option>
-                    <option value={4}>★★★★☆ 4 Stars</option>
-                    <option value={3}>★★★☆☆ 3 Stars</option>
-                    <option value={2}>★★☆☆☆ 2 Stars</option>
-                    <option value={1}>★☆☆☆☆ 1 Star</option>
-                  </select>
-                </Field>
-              </div>
-
-              <Field label="Review Title">
-                <input
-                  type="text"
-                  placeholder="e.g. Excellent sound quality & fast shipping!"
-                  value={newReview.title}
-                  onChange={(e) => setNewReview((r) => ({ ...r, title: e.target.value }))}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem' }}
-                />
-              </Field>
-
-              <Field label="Review Comments *">
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Share details of your experience with this item..."
-                  value={newReview.comment}
-                  onChange={(e) => setNewReview((r) => ({ ...r, comment: e.target.value }))}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '0.86rem', fontFamily: 'inherit' }}
-                />
-              </Field>
-
-              <button
-                type="submit"
-                style={{
-                  alignSelf: 'flex-end',
-                  padding: '8px 20px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: '#1a1917',
-                  color: '#fff',
-                  fontWeight: 600,
-                  fontSize: '0.84rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Submit Review
-              </button>
-            </form>
-          )}
-
-          {/* Customer Reviews List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '20px' }}>
-            {userReviews.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: '#78716c' }}>
-                <p style={{ margin: '0 0 12px 0', fontSize: '0.92rem' }}>No reviews yet for this product.</p>
-                <button
-                  type="button"
-                  onClick={() => setShowWriteReview(true)}
-                  style={{
-                    padding: '7px 16px',
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(0,0,0,0.12)',
-                    background: '#fff',
-                    color: '#1c1917',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Write the first review
-                </button>
-              </div>
-            ) : (
-              userReviews.map((rev) => (
-                <div key={rev.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '16px' }}>
-                  <div style={{ color: '#f59e0b', fontSize: '0.9rem', marginBottom: '4px' }}>
-                    {safeStars(rev.rating)}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: 700, color: '#1a1917' }}>
-                    <span>{rev.name}</span>
-                    <span style={{ fontSize: '0.74rem', background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '4px' }}>Verified</span>
-                    <span style={{ fontSize: '0.78rem', color: '#a8a29e', fontWeight: 400, marginLeft: 'auto' }}>{rev.date}</span>
-                  </div>
-                  {rev.title && (
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#1c1917', marginTop: '6px' }}>{rev.title}</div>
-                  )}
-                  <p style={{ fontSize: '0.86rem', color: '#44403c', margin: '4px 0 0 0', lineHeight: 1.5 }}>{rev.comment}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
 
         {/* ── SECTION 5: FREQUENTLY ASKED QUESTIONS (Screenshot 5) ── */}
         <div
@@ -2343,7 +2117,7 @@ export default function CatalogPage() {
               {relatedProducts.map((p) => {
                 const photo = getProductPhoto(p);
                 const price = Number(p.base_price) || 0;
-                const isInStock = p.is_active !== 0;
+                const isInStock = Number(p.total_stock) > 0 && p.is_active !== 0;
                 return (
                   <div
                     key={p.product_id}
@@ -3009,7 +2783,7 @@ export default function CatalogPage() {
                         verticalAlign: 'middle',
                       }}
                     >
-                      <option value="best-selling">Best selling</option>
+                      <option value="newest">Featured / Newest</option>
                       <option value="price-low">Price: low to high</option>
                       <option value="price-high">Price: high to low</option>
                       <option value="alpha-asc">Alphabetically: A-Z</option>
@@ -3081,7 +2855,7 @@ export default function CatalogPage() {
                       onClick={() => { setMinPrice(''); setMaxPrice(''); }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', background: '#e6f6f4', color: '#2a9d8f', border: '1px solid #2a9d8f', borderRadius: '2px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      Price: {minPrice ? `Rs ${minPrice}` : '0'} – {maxPrice ? `Rs ${maxPrice}` : '∞'} <span style={{ fontWeight: 800 }}>×</span>
+                      Price: {minPrice ? `$${minPrice}` : '$0'} – {maxPrice ? `$${maxPrice}` : '∞'} <span style={{ fontWeight: 800 }}>×</span>
                     </span>
                   )}
                   {selectedColors.map((color) => (
@@ -3111,7 +2885,7 @@ export default function CatalogPage() {
                       setMaxPrice('');
                       setSelectedColors([]);
                       setSelectedStorage([]);
-                      setAvailabilityFilter({ inStock: false, outOfStock: false });
+                      setAvailabilityFilter({ inStock: true, outOfStock: true });
                     }}
                     style={{ background: 'none', border: 'none', color: '#c08457', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: '2px 6px', textDecoration: 'underline', marginLeft: 'auto' }}
                   >
@@ -3229,7 +3003,15 @@ export default function CatalogPage() {
                   >
                     <p style={{ color: '#78716c', margin: '0 0 12px 0', fontSize: '0.95rem' }}>No products found matching your selection.</p>
                     <button
-                      onClick={() => { setSelectedCategory(''); setSearchQuery(''); setMinPrice(''); setMaxPrice(''); }}
+                      onClick={() => {
+                        setSelectedCategory('');
+                        setSearchQuery('');
+                        setMinPrice('');
+                        setMaxPrice('');
+                        setSelectedColors([]);
+                        setSelectedStorage([]);
+                        setAvailabilityFilter({ inStock: true, outOfStock: true });
+                      }}
                       style={{
                         padding: '8px 18px',
                         borderRadius: '9999px',
@@ -3248,7 +3030,7 @@ export default function CatalogPage() {
                     {filteredProducts.map((p) => {
                       const photoUrl = getProductPhoto(p);
                       const basePrice = Number(p.base_price) || 0;
-                      const isInStock = p.is_active !== 0;
+                      const isInStock = Number(p.total_stock) > 0 && p.is_active !== 0;
 
                       return (
                         <div
@@ -3549,12 +3331,22 @@ export default function CatalogPage() {
               />
             </Field>
 
-            <Field label="Base Price (Rs) *">
+            <Field label="Base Price ($) *">
               <input
                 type="number"
-                placeholder="4999.00"
+                placeholder="49.99"
                 value={productForm.base_price}
                 onChange={(e) => setProductForm((f) => ({ ...f, base_price: e.target.value }))}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </Field>
+
+            <Field label="Image URL">
+              <input
+                type="url"
+                placeholder="https://images.unsplash.com/..."
+                value={productForm.image_url || ''}
+                onChange={(e) => setProductForm((f) => ({ ...f, image_url: e.target.value }))}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
@@ -3706,6 +3498,31 @@ export default function CatalogPage() {
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </Field>
+
+            {!editVariant && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <Field label="Initial Stock Quantity">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={variantForm.stock_quantity ?? 0}
+                    onChange={(e) => setVariantForm((f) => ({ ...f, stock_quantity: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </Field>
+                <Field label="Low Stock Threshold">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="10"
+                    value={variantForm.low_stock_threshold ?? 10}
+                    onChange={(e) => setVariantForm((f) => ({ ...f, low_stock_threshold: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '2px', border: '1px solid #e7d7c1', fontSize: '0.94rem', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </Field>
+              </div>
+            )}
 
             {variantFormError && <p style={{ color: '#dc2626', fontSize: '0.88rem', margin: 0, fontWeight: 500 }}>{variantFormError}</p>}
 
