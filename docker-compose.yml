@@ -1,0 +1,38 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stockflow-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DB_HOST=${DB_HOST:-gateway01.ap-southeast-1.prod.aws.tidbcloud.com}
+      - DB_PORT=${DB_PORT:-4000}
+      - DB_USER=${DB_USER:-267V6EDBqFQa5aK.root}
+      - DB_PASSWORD=${DB_PASSWORD:-zZ46EFtaty3bVmtw}
+      - DB_NAME=${DB_NAME:-StockFlow}
+      - DB_USE_SSL=${DB_USE_SSL:-true}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-32-bytes-minimum-length}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:80,http://localhost,http://127.0.0.1:5173}
+    restart: unless-stopped
+    networks:
+      - stockflow-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stockflow-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - stockflow-network
+
+networks:
+  stockflow-network:
+    driver: bridge

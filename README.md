@@ -236,7 +236,30 @@ erDiagram
 
 ---
 
-## ⚙️ Local Development Setup
+## 🐳 Quick Start with Docker (Recommended)
+
+You can build and launch both the Flask backend and React frontend with a single command:
+
+```bash
+docker compose up --build
+```
+
+- **Frontend (Storefront & Portals):** [`http://localhost:5173`](http://localhost:5173)
+- **Backend API & Health Check:** [`http://localhost:5000/api/health`](http://localhost:5000/api/health)
+
+To run the containers in the background:
+```bash
+docker compose up -d --build
+```
+
+To stop all services:
+```bash
+docker compose down
+```
+
+---
+
+## ⚙️ Manual Local Development Setup
 
 ### 1. Prerequisites
 - **Python 3.10+** (Python 3.12 recommended)
