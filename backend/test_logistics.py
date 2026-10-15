@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import requests
 from app import app
+from flask_jwt_extended import create_access_token
 
 BASE_URL = "http://localhost:5000/api/logistics"
 PASS = "\033[92m[PASS]\033[0m"
@@ -36,24 +37,32 @@ class ApiClient:
         except Exception:
             self.use_live = False
         self.test_client = app.test_client()
+        # Create a manager JWT token for authenticated routes in in-memory tests
+        try:
+            with app.app_context():
+                # identity must be a string for JWT 'sub' claim; provide role_id claim for manager
+                token = create_access_token(identity=str(2), additional_claims={"role_id": 2})
+                self.auth_header = {"Authorization": f"Bearer {token}"}
+        except Exception:
+            self.auth_header = {}
 
     def get(self, path, params=None):
         if self.use_live:
-            return requests.get(f"{BASE_URL}{path}", params=params)
+            return requests.get(f"{BASE_URL}{path}", params=params, headers=self.auth_header)
         query = f"?{'&'.join([f'{k}={v}' for k, v in params.items()])}" if params else ""
-        resp = self.test_client.get(f"/api/logistics{path}{query}")
+        resp = self.test_client.get(f"/api/logistics{path}{query}", headers=self.auth_header)
         return self._wrap(resp)
 
     def post(self, path, json=None):
         if self.use_live:
-            return requests.post(f"{BASE_URL}{path}", json=json)
-        resp = self.test_client.post(f"/api/logistics{path}", json=json)
+            return requests.post(f"{BASE_URL}{path}", json=json, headers=self.auth_header)
+        resp = self.test_client.post(f"/api/logistics{path}", json=json, headers=self.auth_header)
         return self._wrap(resp)
 
     def patch(self, path, json=None):
         if self.use_live:
-            return requests.patch(f"{BASE_URL}{path}", json=json)
-        resp = self.test_client.patch(f"/api/logistics{path}", json=json)
+            return requests.patch(f"{BASE_URL}{path}", json=json, headers=self.auth_header)
+        resp = self.test_client.patch(f"/api/logistics{path}", json=json, headers=self.auth_header)
         return self._wrap(resp)
 
     def _wrap(self, resp):
