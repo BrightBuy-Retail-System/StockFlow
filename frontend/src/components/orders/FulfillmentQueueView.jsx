@@ -149,48 +149,7 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
         </button>
       </div>
 
-      {/* Domain Separation Notice */}
-      <div
-        style={{
-          background: '#fdfbf7',
-          border: '1.5px solid #e7d7c1',
-          borderRadius: '2px',
-          padding: '12px 18px',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          fontSize: '0.8125rem',
-          color: '#5c4b4b',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div>
-            <strong style={{ color: '#3b2f2f' }}>Order Operations:</strong> Confirm incoming orders or handle cancellations. For courier dispatch and delivery tracking, visit the <strong>Logistics</strong> portal.
-          </div>
-        </div>
-        <Link
-          to="/logistics"
-          style={{
-            color: '#2a9d8f',
-            fontWeight: 700,
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.8125rem',
-            padding: '4px 10px',
-            background: '#ffffff',
-            borderRadius: '2px',
-            border: '1px solid #e7d7c1',
-          }}
-        >
-          <span>Open Logistics</span>
-          <span>&rarr;</span>
-        </Link>
-      </div>
+
 
       {/* Feedback Alerts */}
       {actionSuccessMessage && (
