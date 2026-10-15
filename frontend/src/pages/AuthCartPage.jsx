@@ -39,15 +39,18 @@ export default function AuthCartPage() {
           const localItems = JSON.parse(rawLocal);
           if (Array.isArray(localItems) && localItems.length > 0) {
             const existingVariantIds = new Set(
-              currentItems.map((it) => it.variant_id || it.product_id)
+              currentItems.map((it) => it.variant_id).filter(Boolean)
+            );
+            const existingProductIds = new Set(
+              currentItems.map((it) => it.product_id).filter(Boolean)
             );
             let syncedAny = false;
             for (const item of localItems) {
               const variantId = item.variant_id || null;
               const productId = item.product_id || null;
-              const checkKey = variantId || productId;
+              const alreadyInCart = (variantId && existingVariantIds.has(variantId)) || (!variantId && productId && existingProductIds.has(productId));
               // Only add if not already present in the user's database cart
-              if (checkKey && !existingVariantIds.has(checkKey)) {
+              if (!alreadyInCart && (variantId || productId)) {
                 const payload = { quantity: item.quantity || 1 };
                 if (variantId) payload.variant_id = variantId;
                 if (productId) payload.product_id = productId;
@@ -58,10 +61,13 @@ export default function AuthCartPage() {
             localStorage.removeItem('cart');
             if (syncedAny) {
               const updatedRes = await api.get('/auth_cart/cart');
+              currentItems = updatedRes.data?.items || [];
               setCart(updatedRes.data);
             }
           }
         }
+        syncLocalStorage(currentItems);
+        window.dispatchEvent(new Event('cartUpdated'));
       } catch (err) {
         console.warn('Cart sync warning:', err);
       } finally {
@@ -86,12 +92,16 @@ export default function AuthCartPage() {
         attribute_value: it.attribute_value,
         price: it.unit_price,
         quantity: it.quantity,
+        image_url: it.image_url || it.image || null,
+        available_stock: it.available_stock,
       }));
       const uid = user?.id || user?.user_id;
       if (uid) {
         localStorage.setItem(`cart_${uid}`, JSON.stringify(formatted));
+        localStorage.removeItem('cart');
+      } else {
+        localStorage.setItem('cart', JSON.stringify(formatted));
       }
-      localStorage.setItem('cart', JSON.stringify(formatted));
     } catch {
       // ignore
     }
@@ -198,7 +208,7 @@ export default function AuthCartPage() {
       syncLocalStorage(res.data.items);
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update item quantity.');
+      setError(err.response?.data?.message || 'Failed to update item quantity.');
     } finally {
       setUpdatingId(null);
     }
@@ -234,7 +244,7 @@ export default function AuthCartPage() {
       syncLocalStorage(res.data.items);
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to remove item.');
+      setError(err.response?.data?.message || 'Failed to remove item.');
     } finally {
       setUpdatingId(null);
     }
@@ -258,7 +268,7 @@ export default function AuthCartPage() {
       syncLocalStorage(res.data.items);
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to clear cart.');
+      setError(err.response?.data?.message || 'Failed to clear cart.');
     } finally {
       setLoading(false);
     }
@@ -355,7 +365,9 @@ export default function AuthCartPage() {
               <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Total Price</span>
             </div>
 
-            {cart.items.map((item) => (
+            {cart.items.map((item) => {
+              const maxReached = item.available_stock !== undefined && item.available_stock !== null && item.quantity >= item.available_stock;
+              return (
               <div
                 key={item.cart_item_id}
                 style={{
@@ -369,6 +381,20 @@ export default function AuthCartPage() {
                   transition: 'opacity 0.2s ease',
                 }}
               >
+                {item.image_url && (
+                  <img
+                    src={item.image_url}
+                    alt={item.product_name}
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      background: '#ffffff',
+                    }}
+                  />
+                )}
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>{item.product_name}</h4>
                   <div style={{ margin: '4px 0 8px 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -378,6 +404,11 @@ export default function AuthCartPage() {
                       </span>
                     )}
                     <span>SKU: {item.sku}</span>
+                    {item.available_stock !== undefined && (
+                      <span style={{ marginLeft: '12px', color: item.available_stock <= 5 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                        (Available: {item.available_stock})
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
@@ -412,14 +443,16 @@ export default function AuthCartPage() {
                       <button
                         type="button"
                         onClick={() => handleUpdateQuantity(item.cart_item_id, item.quantity + 1)}
-                        disabled={updatingId === item.cart_item_id}
+                        disabled={updatingId === item.cart_item_id || maxReached}
+                        title={maxReached ? 'Maximum available stock reached' : 'Increase quantity'}
                         style={{
                           background: 'var(--bg-card)',
                           border: 'none',
                           padding: '6px 12px',
-                          cursor: 'pointer',
+                          cursor: (updatingId === item.cart_item_id || maxReached) ? 'not-allowed' : 'pointer',
                           color: 'var(--text-main)',
                           fontWeight: 700,
+                          opacity: maxReached ? 0.4 : 1,
                         }}
                       >
                         +
@@ -451,7 +484,7 @@ export default function AuthCartPage() {
                   </span>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
 
           {/* Order Summary */}
