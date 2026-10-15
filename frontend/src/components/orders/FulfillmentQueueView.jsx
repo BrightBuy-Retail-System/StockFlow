@@ -329,7 +329,7 @@ export default function FulfillmentQueueView({ isStaff, onInspectOrder }) {
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: '#3b2f2f' }}>
-                        Rs {parseFloat(ord.total_amount).toFixed(2)}
+                        ${parseFloat(ord.total_amount).toFixed(2)}
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
