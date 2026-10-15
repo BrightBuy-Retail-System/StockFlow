@@ -160,7 +160,7 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                     <div>
                       <div style={{ fontSize: '0.72rem', color: '#826e6e', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
                       <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1.05rem', fontWeight: 800, color: '#3b2f2f' }}>
-                        Rs {parseFloat(ord.total_amount).toFixed(2)}
+                        ${parseFloat(ord.total_amount).toFixed(2)}
                       </div>
                     </div>
                     <div style={{ height: '24px', width: '1px', background: '#e7d7c1' }} />
@@ -219,7 +219,7 @@ export default function OrderHistoryView({ activeUserId, onInspectOrder, onNavig
                                 {it.product_title || `Item SKU: ${it.sku || 'N/A'}`}
                               </div>
                               <div style={{ fontSize: '0.72rem', color: '#826e6e' }}>
-                                Qty: {it.quantity} × Rs {parseFloat(it.unit_price).toFixed(2)}
+                                Qty: {it.quantity} × ${parseFloat(it.unit_price).toFixed(2)}
                               </div>
                             </div>
                           </div>
